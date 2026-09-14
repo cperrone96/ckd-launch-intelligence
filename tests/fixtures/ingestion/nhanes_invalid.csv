@@ -1,0 +1,3 @@
+respondent_id,age_years,sex,race_ethnicity,serum_creatinine_mg_dl,urine_albumin_mg_l,urine_creatinine_mg_dl,sample_weight,strata,psu,survey_cycle
+1001,9999,Female,Non-Hispanic White,1.20,35.0,100.0,8123.4,132,1,2017-2018
+1001,52,Male,Non-Hispanic Black,0.95,18.2,90.0,-1,133,2,2017-2018
