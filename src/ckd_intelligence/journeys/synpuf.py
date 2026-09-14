@@ -7,8 +7,11 @@ are synthetic and must never be presented as estimates for Medicare beneficiarie
 
 from __future__ import annotations
 
+import hashlib
+import json
 from dataclasses import dataclass, field
 from datetime import date, timedelta
+from pathlib import Path
 from typing import Any, Final, cast
 
 import pandas as pd
@@ -16,6 +19,7 @@ import pandas as pd
 from ckd_intelligence.statistics.time_to_event import kaplan_meier
 
 EvidenceType: Final[str] = "public_synthetic"
+SYNPUF_FIXTURE_RELATIVE_PATH: Final[str] = "data/fixtures/synpuf_journeys.csv"
 CKD_ICD9_PREFIXES: Final[tuple[str, ...]] = ("585", "586", "588")
 REQUIRED_COLUMNS: Final[frozenset[str]] = frozenset(
     {
@@ -28,6 +32,39 @@ REQUIRED_COLUMNS: Final[frozenset[str]] = frozenset(
         "diagnosis_code",
     }
 )
+
+
+def validate_synpuf_fixture_manifest(
+    manifest_path: Path, fixture_path: Path
+) -> dict[str, Any]:
+    """Validate the synthetic fixture boundary before any CSV bytes are read."""
+
+    try:
+        manifest = cast(
+            dict[str, Any], json.loads(manifest_path.read_text(encoding="utf-8"))
+        )
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError("SynPUF fixture manifest is unreadable") from error
+    if manifest.get("fixture_path") != SYNPUF_FIXTURE_RELATIVE_PATH:
+        raise ValueError("SynPUF fixture manifest fixture_path is invalid")
+    if manifest.get("evidence_type") != EvidenceType:
+        raise ValueError("SynPUF fixture manifest evidence_type must be public_synthetic")
+    if manifest.get("fixture_kind") != "fixture_only":
+        raise ValueError("SynPUF fixture manifest fixture_kind must be fixture_only")
+    if manifest.get("source_rows_are_official") is not False:
+        raise ValueError("SynPUF fixture manifest source_rows_are_official must be false")
+    if manifest.get("no_cross_source_join") is not True:
+        raise ValueError("SynPUF fixture manifest no_cross_source_join must be true")
+    if not isinstance(manifest.get("limitations"), str) or not manifest["limitations"].strip():
+        raise ValueError("SynPUF fixture manifest limitations must be non-empty")
+    try:
+        fixture_bytes = fixture_path.read_bytes()
+    except OSError as error:
+        raise ValueError("SynPUF fixture is unreadable") from error
+    digest = hashlib.sha256(fixture_bytes).hexdigest()
+    if manifest.get("fixture_sha256") != digest:
+        raise ValueError("SynPUF fixture manifest fixture_sha256 is stale")
+    return manifest
 
 
 @dataclass(frozen=True, slots=True)

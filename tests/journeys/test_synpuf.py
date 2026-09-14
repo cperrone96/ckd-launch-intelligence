@@ -37,11 +37,12 @@ def test_synpuf_manifest_rejects_changed_bytes_and_metadata(tmp_path: Path) -> N
     load_verified_synpuf_fixture(manifest_path, fixture_path)
 
     fixture_path.write_bytes(fixture_path.read_bytes() + b"\n")
-    with pytest.raises(AssertionError, match="fixture_sha256"):
+    with pytest.raises(ValueError, match="fixture_sha256"):
         load_verified_synpuf_fixture(manifest_path, fixture_path)
 
     shutil.copyfile(FIXTURE, fixture_path)
     for field, value in (
+        ("fixture_path", "data/fixtures/other.csv"),
         ("evidence_type", "public_observed"),
         ("fixture_kind", "official_extract"),
         ("source_rows_are_official", True),
@@ -50,8 +51,17 @@ def test_synpuf_manifest_rejects_changed_bytes_and_metadata(tmp_path: Path) -> N
         changed = dict(manifest)
         changed[field] = value
         manifest_path.write_text(json.dumps(changed), encoding="utf-8")
-        with pytest.raises(AssertionError, match=field):
+        with pytest.raises(ValueError, match=field):
             load_verified_synpuf_fixture(manifest_path, fixture_path)
+
+
+def test_notebook_validates_manifest_before_reading_fixture() -> None:
+    notebook = FIXTURE.parents[2] / "notebooks" / "04_synthetic_journeys.ipynb"
+    cells = json.loads(notebook.read_text(encoding="utf-8"))["cells"]
+    load_cell = next(cell for cell in cells if cell.get("id") == "load-synthetic-fixture")
+    source = "".join(load_cell["source"])
+    assert source.index("validate_synpuf_fixture_manifest") < source.index("pd.read_csv")
+    assert "data' / 'manifests' / 'synpuf-journeys-fixture.json" in source
 
 
 def test_journey_events_are_chronological(claims: pd.DataFrame) -> None:

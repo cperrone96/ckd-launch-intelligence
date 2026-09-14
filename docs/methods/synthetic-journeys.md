@@ -6,6 +6,11 @@ DE-SynPUF 2008–2010 contract. The fixture is not an extract of actual CMS sour
 rows. It is not a Medicare utilization estimate and must not be generalized to
 Medicare beneficiaries.
 
+The notebook calls the production `validate_synpuf_fixture_manifest` boundary
+before reading the CSV. It verifies the committed fixture path, SHA-256 digest,
+synthetic/fixture-only classification, non-official source-row flag, and the
+no-cross-source-join flag.
+
 ## Journey contract
 
 - **Index date:** the first valid `service_from_date` for each synthetic beneficiary

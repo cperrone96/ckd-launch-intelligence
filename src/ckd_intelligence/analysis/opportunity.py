@@ -231,8 +231,8 @@ def _parse_evidence(
         # provenance says exactly what it is; it is not presented as source data.
         source_population = "caller-supplied illustrative scenario aggregate"
         grain = "scenario aggregate"
-        evidence_type = "public_synthetic"
-        provenance = "caller-supplied scenario input"
+        evidence_type = "fixture_only"
+        provenance = "caller-supplied fixture-only scenario input"
         geography_scope = "scenario"
         item_time = time_period
         item_key = compatibility_key
@@ -257,6 +257,15 @@ def _parse_evidence(
     if not isinstance(limitations, (list, tuple)):
         raise ValueError(f"{component}.limitations must be a sequence of text")
     limitation_values = tuple(_text(item, f"{component}.limitations") for item in limitations)
+    if not limitation_values:
+        raise ValueError(f"{component}.limitations must be non-empty")
+    if evidence == "public_synthetic" and any(
+        token in f"{source} {item_provenance}".lower()
+        for token in ("caller", "illustrative", "notebook", "test")
+    ):
+        raise ValueError(
+            f"{component} caller-created illustrative values must use fixture_only"
+        )
     return ComponentEvidence(
         value=numeric_value,
         source_population=source,
@@ -326,11 +335,13 @@ def _parse_row(
 
 
 def _normalization(
-    evidence_rows: Sequence[dict[str, ComponentEvidence]], component: str
+    evidence_rows: Sequence[dict[str, ComponentEvidence]],
+    component: str,
+    eligible_indices: set[int],
 ) -> tuple[dict[str, float | str], dict[int, float | None]]:
     available: list[float] = []
-    for item in evidence_rows:
-        value = item[component].value
+    for index in eligible_indices:
+        value = evidence_rows[index][component].value
         if value is not None:
             available.append(value)
     if not available:
@@ -348,6 +359,9 @@ def _normalization(
     }
     normalized: dict[int, float | None] = {}
     for index, row in enumerate(evidence_rows):
+        if index not in eligible_indices:
+            normalized[index] = None
+            continue
         value = row[component].value
         if value is None:
             normalized[index] = None
@@ -392,6 +406,8 @@ def rank_opportunities(
     compatibility key, and coverage.  Missing values remain null and make a row
     unscorable; they are never imputed to zero.  Raw NHANES/MEPS/Part D/trial
     panels should be displayed separately, not passed directly to this function.
+    Eligibility is resolved before component min/max fitting so incomplete rows
+    cannot distort the scores of eligible candidates.
     """
 
     if not inputs:
@@ -405,23 +421,52 @@ def rank_opportunities(
     if len(set(keys)) != len(keys):
         raise ValueError("opportunity input keys must be unique")
     evidence_rows = [row[3] for row in parsed]
-    normalization: dict[str, Mapping[str, float | str]] = {}
-    normalized_by_component: dict[str, dict[int, float | None]] = {}
-    for component in COMPONENTS:
-        params, normalized = _normalization(evidence_rows, component)
-        normalization[component] = params
-        normalized_by_component[component] = normalized
-    normalized_rows: list[dict[str, float | None]] = [
-        {component: normalized_by_component[component][index] for component in COMPONENTS}
-        for index in range(len(parsed))
-    ]
+    candidate_keys = {
+        evidence[component].compatibility_key
+        for evidence in evidence_rows
+        for component in COMPONENTS
+    }
+    if len(candidate_keys) != 1:
+        raise ValueError(
+            "candidates ranked together must share one exact compatible compatibility_key"
+        )
+    candidate_periods = {
+        evidence[component].time_period
+        for evidence in evidence_rows
+        for component in COMPONENTS
+    }
+    if len(candidate_periods) != 1:
+        raise ValueError("candidates ranked together must share one exact time period")
     coverage_rows = [
         {component: evidence[component].coverage for component in COMPONENTS}
         for evidence in evidence_rows
     ]
+    eligible_indices = {
+        index
+        for index, evidence in enumerate(evidence_rows)
+        if all(
+            evidence[component].value is not None
+            and coverage_rows[index][component] >= minimum
+            for component in COMPONENTS
+        )
+    }
+    normalization: dict[str, Mapping[str, float | str]] = {}
+    normalized_by_component: dict[str, dict[int, float | None]] = {}
+    for component in COMPONENTS:
+        params, normalized = _normalization(evidence_rows, component, eligible_indices)
+        normalization[component] = params
+        normalized_by_component[component] = normalized
+    normalized_rows: list[dict[str, float | None]] = [
+        (
+            {component: normalized_by_component[component][index] for component in COMPONENTS}
+            if index in eligible_indices
+            else {component: None for component in COMPONENTS}
+        )
+        for index in range(len(parsed))
+    ]
     base_scores: dict[str, float] = {}
     for index, key in enumerate(keys):
-        if not all(coverage_rows[index][component] >= minimum for component in COMPONENTS):
+        if index not in eligible_indices:
             continue
         score = _score(normalized_rows[index], canonical)
         if score is not None:

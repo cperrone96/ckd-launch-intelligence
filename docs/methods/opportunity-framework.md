@@ -12,7 +12,7 @@ The source families in this project do not share a defensible geography:
 | Source | Population and grain | Geographic interpretation |
 | --- | --- | --- |
 | NHANES | Survey participants; weighted national/domain estimates | National or documented survey domain |
-| MEPS | Survey households/persons/events; weighted national estimates | National or documented survey domain |
+| MEPS | HC-243 consolidated person-year records; weighted national estimates | National or documented survey domain |
 | CMS Part D | Provider/drug/geography aggregate | Provider-reported geography, not beneficiary residence |
 | ClinicalTrials.gov | Registered study and study-country mention | Study-country activity, not patient demand |
 
@@ -44,7 +44,9 @@ renormalize weights.
 
 ## Normalization and score
 
-For each component, observed non-null scenario values are min-max normalized:
+Eligibility is determined before normalization. For each component, only rows
+with complete values and coverage at or above the explicit threshold contribute
+to the observed min/max; eligible values are then min-max normalized:
 
 `normalized = (value - component_min) / (component_max - component_min)`
 
@@ -56,7 +58,8 @@ The weighted score is:
 
 A row is `scorable=false` when any component is missing or any component's
 coverage is below the explicit `minimum_coverage` threshold (default 80%). It
-receives no rank and no score. Coverage is not a statistical confidence level;
+receives null normalized values, no rank, and no score. Its extreme or missing
+values cannot change an eligible candidate's normalization. Coverage is not a statistical confidence level;
 it is a completeness gate for the scenario input.
 
 Ranks are deterministic: score descending, then candidate key ascending. This
@@ -85,7 +88,7 @@ inputs = [{
             "value": 0.80,
             "source_population": "illustrative survey aggregate",
             "grain": "scenario aggregate",
-            "evidence_type": "public_synthetic",
+            "evidence_type": "fixture_only",
             "provenance": "notebook cell",
             "geography_scope": "scenario",
             "time_period": "2024",

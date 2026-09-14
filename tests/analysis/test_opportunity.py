@@ -16,17 +16,22 @@ def _evidence(
     key: str,
     time_period: str = "2024",
     coverage: float = 1.0,
+    evidence_type: str = "fixture_only",
+    limitations: list[str] | None = None,
 ) -> dict[str, object]:
     return {
         "value": value,
         "source_population": f"illustrative {component} aggregate",
         "grain": "scenario aggregate",
-        "evidence_type": "public_synthetic",
+        "evidence_type": evidence_type,
         "provenance": f"tests/{component}.json",
         "geography_scope": "scenario",
         "time_period": time_period,
         "compatibility_key": key,
         "coverage": coverage,
+        "limitations": limitations
+        if limitations is not None
+        else ["Fixture-only scenario input; not observed geographic evidence."],
     }
 
 
@@ -98,6 +103,24 @@ def test_incompatible_time_period_fails_closed() -> None:
         rank_opportunities([row])
 
 
+def test_candidates_ranked_together_must_share_compatibility_and_time() -> None:
+    rows = sample_inputs()
+    rows[1]["compatibility_key"] = "other"
+    for component in rows[1]["components"].values():
+        assert isinstance(component, dict)
+        component["compatibility_key"] = "other"
+    with pytest.raises(ValueError, match="candidates.*compatible"):
+        rank_opportunities(rows)
+
+    rows = sample_inputs()
+    rows[1]["time_period"] = "2025"
+    for component in rows[1]["components"].values():
+        assert isinstance(component, dict)
+        component["time_period"] = "2025"
+    with pytest.raises(ValueError, match="candidates.*time"):
+        rank_opportunities(rows)
+
+
 def test_missing_value_is_not_zero_and_makes_row_unscorable() -> None:
     rows = sample_inputs()
     component = rows[0]["components"]["need"]
@@ -136,6 +159,55 @@ def test_low_coverage_is_explicitly_unscorable() -> None:
     assert result.rows[1].limitations
 
 
+def test_ineligible_extreme_values_cannot_distort_eligible_normalization() -> None:
+    baseline = rank_opportunities(sample_inputs())
+    rows = sample_inputs()
+    rows.append(
+        {
+            "key": "Extreme but incomplete",
+            "geography": "Extreme but incomplete",
+            "time_period": "2024",
+            "scenario_only": True,
+            "compatibility_key": "demo",
+            "components": {
+                component: _evidence(
+                    1_000_000.0,
+                    component=component,
+                    key="demo",
+                    coverage=0.0,
+                )
+                for component in ("need", "screening_gap", "prescribing", "trial_activity")
+            },
+        }
+    )
+    result = rank_opportunities(rows)
+    baseline_by_key = {row.key: row for row in baseline.rows}
+    result_by_key = {row.key: row for row in result.rows}
+    for key in ("Alpha", "Beta"):
+        assert result_by_key[key].score == baseline_by_key[key].score
+        assert result_by_key[key].normalized == baseline_by_key[key].normalized
+    assert result_by_key["Extreme but incomplete"].scorable is False
+    assert result_by_key["Extreme but incomplete"].score is None
+    assert result_by_key["Extreme but incomplete"].rank is None
+
+
+def test_evidence_requires_limitations_and_rejects_caller_public_synthetic() -> None:
+    row = sample_inputs()[0]
+    component = row["components"]["need"]
+    assert isinstance(component, dict)
+    del component["limitations"]
+    with pytest.raises(ValueError, match="limitations"):
+        rank_opportunities([row])
+
+    row = sample_inputs()[0]
+    component = row["components"]["need"]
+    assert isinstance(component, dict)
+    component["evidence_type"] = "public_synthetic"
+    component["provenance"] = "caller-created illustrative notebook value"
+    with pytest.raises(ValueError, match="fixture_only"):
+        rank_opportunities([row])
+
+
 def test_scalar_components_require_explicit_scenario_compatibility() -> None:
     row = {
         "key": "Alpha",
@@ -150,6 +222,7 @@ def test_scalar_components_require_explicit_scenario_compatibility() -> None:
     }
     result = rank_opportunities([row])
     assert result.rows[0].scorable is True
+    assert result.rows[0].evidence["need"].evidence_type == "fixture_only"
     assert all(value is not None for value in result.rows[0].normalized.values())
 
 
