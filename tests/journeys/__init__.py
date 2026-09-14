@@ -1,0 +1,1 @@
+"""Synthetic journey tests."""

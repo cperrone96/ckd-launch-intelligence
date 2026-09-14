@@ -1,0 +1,12 @@
+{
+  "evidence_type": "public_synthetic",
+  "source": "CMS DE-SynPUF",
+  "release": "2008-2010",
+  "source_url": "https://www.cms.gov/data-research/statistics-trends-and-reports/medicare-claims-synthetic-public-use-files",
+  "fixture_path": "data/fixtures/synpuf_journeys.csv",
+  "fixture_sha256": "b5113203989dc8c78e5669cdce7fcc6505acbae4317b0e5542267028f8011fe4",
+  "purpose": "Deterministic offline demonstration of synthetic claims journey and time-to-event methods",
+  "limitations": "Not representative of Medicare beneficiaries; no Medicare inference or clinical conclusion is supported.",
+  "observation_window": ["2008-01-01", "2010-12-31"],
+  "no_cross_source_join": true
+}

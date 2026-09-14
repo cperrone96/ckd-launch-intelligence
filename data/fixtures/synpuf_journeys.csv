@@ -1,0 +1,7 @@
+source_release,beneficiary_id,claim_id,claim_type,service_from_date,service_through_date,diagnosis_code,provider_id,payment_amount_usd,year,evidence_type
+2008-2010,SYN001,J001,outpatient,2009-01-01,2009-01-01,4019,P100,10.00,2009,public_synthetic
+2008-2010,SYN001,J002,inpatient,2009-01-10,2009-01-11,5853,P100,20.00,2009,public_synthetic
+2008-2010,SYN001,J003,outpatient,2009-04-10,2009-04-10,5853,P100,15.00,2009,public_synthetic
+2008-2010,SYN002,J004,outpatient,2009-02-01,2009-02-01,5853,P200,12.00,2009,public_synthetic
+2008-2010,SYN003,J005,outpatient,2009-01-01,2009-01-01,4019,P300,8.00,2009,public_synthetic
+2008-2010,SYN003,J006,outpatient,2009-05-01,2009-05-01,5853,P300,9.00,2009,public_synthetic
