@@ -87,3 +87,16 @@ def test_nonbinary_outcome_and_empty_domain_are_rejected() -> None:
         weighted_prevalence(
             [1, 0], [1, 1], [1, 1], [1, 2], domain=[False, False]
         )
+
+
+def test_excluded_missing_counts_only_missing_outcomes_inside_domain() -> None:
+    estimate = weighted_prevalence(
+        [pd.NA, pd.NA, 1, 0],
+        [1, 1, 1, 1],
+        [1, 1, 2, 2],
+        [1, 2, 1, 2],
+        domain=[False, True, True, True],
+    )
+
+    assert estimate.denominator == 2
+    assert estimate.excluded_missing == 1

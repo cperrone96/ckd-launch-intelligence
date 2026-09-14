@@ -2,6 +2,11 @@
   "retrieved_at": "2026-09-11",
   "source": "CDC/NCHS NHANES",
   "release": "2017-2018",
+  "variable_documentation": {
+    "demographics": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DEMO_J.htm",
+    "albumin_creatinine": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/ALB_CR_J.htm",
+    "uacr_field": "URDACT: albumin creatinine ratio, mg/g"
+  },
   "files": [
     {
       "name": "DEMO_J.xpt",

@@ -33,12 +33,32 @@ SHA-256 values before any calculation. CI never downloads source data. When thos
 files are unavailable, the notebook uses a small committed representative fixture
 and labels every output `fixture_only`; such output is not a population finding.
 
-The population analysis is limited to participants with positive 2-year MEC exam
-weights and valid masked variance strata/PSUs. Adults are age 18 or older. The
-primary cross-sectional indicator is eGFR <60 mL/min/1.73 m² OR UACR >=30 mg/g,
+The population analysis is limited to records with `RIDSTATR=2` (MEC examined),
+true positive 2-year MEC exam weights, and valid masked variance strata/PSUs. The SAS
+pseudo-zero value used for missing weights is normalized to missing before filtering.
+Adults are age 18 or older. Known pregnant participants (`RIDEXPRG=1`) are excluded
+from the surveillance domain. `RIDEXPRG=2` (not pregnant), `3` (cannot ascertain),
+and missing/not-applicable values (including males and age groups not asked) remain
+eligible; this is therefore described as “excluding known pregnancy,” not as proof
+that every retained participant was nonpregnant.
+
+The primary cross-sectional indicator is eGFR <60 mL/min/1.73 m² OR UACR >=30 mg/g,
 requiring both defining measures. eGFR uses the race-free 2021 CKD-EPI creatinine
-equation. Missing defining labs are unknown and excluded, never assigned zero or
-negative. eGFR-only and albuminuria-only definitions are reported as sensitivity
-analyses. Estimates use 2-year MEC weights, stratified-PSU Taylor linearization,
-Student-t confidence limits with design degrees of freedom, and full-sample domain
-estimation. A lonely PSU is an error rather than an implicit variance assumption.
+equation. UACR uses the official NHANES `URDACT` albumin-creatinine ratio in mg/g,
+documented in the official codebook URL committed with the source manifest. The
+component-based fallback uses a tolerance-safe threshold comparison so values such
+as urine albumin 10.2 mg/L and urine creatinine 34 mg/dL classify at exactly 30 mg/g.
+Missing defining labs are unknown and excluded, never assigned zero or negative.
+
+eGFR-only and albuminuria-only definitions are reported on the same primary
+complete-case domain to isolate definition sensitivity rather than availability.
+The headline and limitations qualify that complete-case inference may differ if
+eligible adults with missing defining labs have different prevalence. Estimates use
+2-year MEC weights, stratified-PSU Taylor linearization, Student-t confidence limits
+with design degrees of freedom, and full-sample domain estimation. A lonely PSU is
+an error rather than an implicit variance assumption.
+
+Official public-observed and fixture-only outputs are written to separate paths.
+Running the notebook without the raw CDC cache therefore cannot overwrite the
+committed official aggregate. The root-runnable checksum names the full processed
+artifact path.

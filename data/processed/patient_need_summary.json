@@ -3,71 +3,73 @@
   "definition": {
     "interpretation": "Cross-sectional indicator, not confirmed chronic diagnosis",
     "missing_labs": "Unknown and excluded; never false or zero",
-    "population": "Adults age 18+ with complete defining labs",
+    "population": "Adults age 18+ excluding known pregnancy, with complete defining labs",
+    "pregnancy": "RIDEXPRG=1 excluded; codes 2/3 and missing/not-applicable retained",
     "primary": "Race-free CKD-EPI 2021 creatinine eGFR <60 mL/min/1.73 m2 OR UACR >=30 mg/g",
     "sensitivity": [
-      "eGFR <60 only",
-      "UACR >=30 mg/g only"
-    ]
+      "eGFR <60 only on common complete-case domain",
+      "UACR >=30 mg/g only on common complete-case domain"
+    ],
+    "uacr_source": "Official NHANES URDACT albumin creatinine ratio (mg/g)"
   },
   "estimates": {
     "primary_egfr_or_albuminuria": {
-      "ci_high": 0.15148314690008668,
-      "ci_low": 0.12393343731111546,
+      "ci_high": 0.15305137245500294,
+      "ci_low": 0.125326077968197,
       "confidence_level": 0.95,
       "degrees_freedom": 15,
-      "denominator": 5063,
-      "design_observations": 9254,
-      "excluded_missing": 4191,
+      "denominator": 5016,
+      "design_observations": 8704,
+      "excluded_missing": 462,
       "lonely_psu_strategy": "error",
-      "point": 0.13770829210560107,
+      "point": 0.13918872521159997,
       "psus": 30,
-      "source_population": "NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults",
-      "standard_error": 0.006462669887345591,
+      "source_population": "NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults excluding known pregnant participants",
+      "standard_error": 0.006503858968785621,
       "strata": 15,
-      "sum_weights": 230237813.46567738,
-      "unweighted_point": 0.18526565277503457,
+      "sum_weights": 227884099.89416954,
+      "unweighted_point": 0.18700159489633175,
       "variance_method": "Taylor linearization for a stratified PSU ratio"
     },
     "sensitivity_albuminuria_only": {
-      "ci_high": 0.10813030840529332,
-      "ci_low": 0.08907394036454543,
+      "ci_high": 0.10968964377543824,
+      "ci_low": 0.09035922265761287,
       "confidence_level": 0.95,
       "degrees_freedom": 15,
-      "denominator": 5387,
-      "design_observations": 9254,
-      "excluded_missing": 3867,
+      "denominator": 5016,
+      "design_observations": 8704,
+      "excluded_missing": 462,
       "lonely_psu_strategy": "error",
-      "point": 0.09860212438491937,
+      "point": 0.10002443321652556,
       "psus": 30,
-      "source_population": "NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults",
-      "standard_error": 0.004470283634075697,
+      "source_population": "NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults excluding known pregnant participants",
+      "standard_error": 0.004534571591923062,
       "strata": 15,
-      "sum_weights": 242515116.42351037,
-      "unweighted_point": 0.13625394468164098,
+      "sum_weights": 227884099.89416954,
+      "unweighted_point": 0.13656299840510366,
       "variance_method": "Taylor linearization for a stratified PSU ratio"
     },
     "sensitivity_egfr_only": {
-      "ci_high": 0.06834538158809665,
-      "ci_low": 0.04723092632921702,
+      "ci_high": 0.06628878414223555,
+      "ci_low": 0.04513168924797878,
       "confidence_level": 0.95,
       "degrees_freedom": 15,
-      "denominator": 5154,
-      "design_observations": 9254,
-      "excluded_missing": 4100,
+      "denominator": 5016,
+      "design_observations": 8704,
+      "excluded_missing": 462,
       "lonely_psu_strategy": "error",
-      "point": 0.057788153958656836,
+      "point": 0.05571023669510716,
       "psus": 30,
-      "source_population": "NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults",
-      "standard_error": 0.004953074142164225,
+      "source_population": "NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults excluding known pregnant participants",
+      "standard_error": 0.004963076639165848,
       "strata": 15,
-      "sum_weights": 233234204.7804139,
-      "unweighted_point": 0.08595265812960808,
+      "sum_weights": 227884099.89416954,
+      "unweighted_point": 0.0819377990430622,
       "variance_method": "Taylor linearization for a stratified PSU ratio"
     }
   },
   "evidence_type": "public_observed",
-  "finding": "Weighted cross-sectional CKD-indicator prevalence was 13.8% (95% CI 12.4%\u201315.1%; n=5,063) in NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults.",
+  "finding": "Among complete cases, weighted cross-sectional CKD-indicator prevalence was 13.9% (95% CI 12.5%\u201315.3%; n=5,016) in NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults excluding known pregnant participants.",
   "input_provenance": [
     {
       "bytes": 3412720,
@@ -91,14 +93,15 @@
   "limitations": [
     "One cross-sectional survey cycle cannot confirm chronicity or support diagnosis.",
     "A single serum creatinine and spot UACR are subject to biological and measurement variability.",
+    "The complete-case estimate excludes eligible adults missing either defining laboratory measure and may differ if their prevalence differs.",
     "Estimates describe the documented survey population and should not be interpreted as individual risk."
   ],
-  "result_scope": "NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults",
+  "result_scope": "NHANES 2017-2018 MEC-exam-weighted U.S. civilian, noninstitutionalized adults excluding known pregnant participants",
   "source_manifest": "data/manifests/nhanes-2017-2018-patient-need.json",
   "source_release": "2017-2018",
   "survey_method": {
     "confidence_interval": "95% Student-t using PSU-minus-strata design degrees of freedom, bounded to [0,1]",
-    "domain_handling": "Full valid MEC design retained; adults/complete outcomes enter the ratio domain",
+    "domain_handling": "Full valid MEC-exam design retained; adult participants excluding known pregnancy form the domain; all definitions use the common complete-case subset",
     "lonely_psu": "error",
     "psu": "SDMVPSU",
     "strata": "SDMVSTRA",
@@ -108,23 +111,33 @@
   "waterfall": [
     {
       "people": 9254,
-      "stage": "MEC participants with valid design and positive weight",
+      "stage": "NHANES 2017-2018 participants",
       "stage_order": 1
     },
     {
-      "people": 5856,
-      "stage": "Adults age 18+",
+      "people": 8704,
+      "stage": "MEC examined with valid design and positive weight",
       "stage_order": 2
     },
     {
-      "people": 5063,
-      "stage": "Complete eGFR and UACR defining labs",
+      "people": 5533,
+      "stage": "adults age 18+",
       "stage_order": 3
     },
     {
-      "people": 938,
-      "stage": "Cross-sectional CKD indicator positive",
+      "people": 5478,
+      "stage": "adults excluding known pregnancy",
       "stage_order": 4
+    },
+    {
+      "people": 5016,
+      "stage": "complete eGFR and UACR defining labs",
+      "stage_order": 5
+    },
+    {
+      "people": 938,
+      "stage": "cross-sectional CKD indicator positive",
+      "stage_order": 6
     }
   ]
 }

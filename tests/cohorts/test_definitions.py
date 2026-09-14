@@ -122,3 +122,70 @@ def test_missing_sex_needed_for_egfr_produces_unknown() -> None:
     result = classify_ckd(person, CKDDefinition.primary())
 
     assert result.isna().item()
+
+
+def test_known_pregnancy_is_excluded_but_negative_unknown_and_not_applicable_are_kept() -> None:
+    people = pd.DataFrame(
+        {
+            "age_years": [30, 30, 30, 30],
+            "sex": ["Female", "Female", "Female", "Male"],
+            "pregnancy_status_code": [1, 2, 3, pd.NA],
+            "serum_creatinine_mg_dl": [0.8] * 4,
+            "urine_albumin_mg_l": [5.0] * 4,
+            "urine_creatinine_mg_dl": [100.0] * 4,
+        }
+    )
+
+    result = classify_ckd(people, CKDDefinition.primary())
+
+    assert result.isna().tolist() == [True, False, False, False]
+
+
+def test_official_uacr_is_preferred_over_recalculation() -> None:
+    person = pd.DataFrame(
+        {
+            "age_years": [50],
+            "sex": ["Male"],
+            "serum_creatinine_mg_dl": [0.9],
+            "urine_albumin_mg_l": [40.0],
+            "urine_creatinine_mg_dl": [100.0],
+            "uacr_mg_g": [29.0],
+        }
+    )
+
+    result = classify_ckd(person, CKDDefinition.primary())
+
+    assert result.tolist() == [False]
+
+
+def test_recalculated_uacr_exact_threshold_is_positive() -> None:
+    person = pd.DataFrame(
+        {
+            "age_years": [50],
+            "sex": ["Male"],
+            "serum_creatinine_mg_dl": [0.9],
+            "urine_albumin_mg_l": [10.2],
+            "urine_creatinine_mg_dl": [34.0],
+        }
+    )
+
+    result = classify_ckd(person, CKDDefinition.primary())
+
+    assert result.tolist() == [True]
+
+
+def test_missing_official_uacr_uses_component_fallback() -> None:
+    person = pd.DataFrame(
+        {
+            "age_years": [50],
+            "sex": ["Male"],
+            "serum_creatinine_mg_dl": [0.9],
+            "urine_albumin_mg_l": [10.2],
+            "urine_creatinine_mg_dl": [34.0],
+            "uacr_mg_g": [pd.NA],
+        }
+    )
+
+    result = classify_ckd(person, CKDDefinition.primary())
+
+    assert result.tolist() == [True]

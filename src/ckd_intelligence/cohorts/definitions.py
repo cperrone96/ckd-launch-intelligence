@@ -106,6 +106,9 @@ def classify_ckd(frame: pd.DataFrame, definition: CKDDefinition) -> pd.Series:
 
     The primary result requires both eGFR and UACR to be evaluable. Any missing
     defining laboratory measure produces unknown, never a false/zero outcome.
+    Known pregnant adults (NHANES RIDEXPRG code 1) are excluded from the standard
+    surveillance domain. Code 2 (not pregnant), code 3 (cannot ascertain), and
+    missing/not-applicable values remain eligible and are described transparently.
     Single-marker sensitivity definitions require only their named marker.
     """
 
@@ -120,6 +123,14 @@ def classify_ckd(frame: pd.DataFrame, definition: CKDDefinition) -> pd.Series:
 
     age = pd.to_numeric(frame["age_years"], errors="coerce")
     adult = age.ge(definition.minimum_age_years)
+    known_pregnant = pd.Series(False, index=frame.index)
+    if "pregnancy_status_code" in frame:
+        pregnancy = pd.to_numeric(frame["pregnancy_status_code"], errors="coerce")
+        invalid_pregnancy = pregnancy.dropna().loc[~pregnancy.dropna().isin([1, 2, 3])]
+        if not invalid_pregnancy.empty:
+            raise ValueError("pregnancy_status_code must be NHANES code 1, 2, 3, or missing")
+        known_pregnant = pregnancy.eq(1).fillna(False)
+    eligible = adult & ~known_pregnant
     result = pd.Series(pd.NA, index=frame.index, dtype="boolean", name=definition.name)
     tests: list[tuple[pd.Series, pd.Series]] = []
 
@@ -127,7 +138,7 @@ def classify_ckd(frame: pd.DataFrame, definition: CKDDefinition) -> pd.Series:
         egfr = calculate_egfr_ckd_epi_2021(
             frame["serum_creatinine_mg_dl"], frame["age_years"], frame["sex"]
         )
-        egfr_available = adult & egfr.notna()
+        egfr_available = eligible & egfr.notna()
         tests.append((egfr_available, egfr.lt(definition.egfr_threshold)))
 
     if definition.include_albuminuria:
@@ -137,15 +148,38 @@ def classify_ckd(frame: pd.DataFrame, definition: CKDDefinition) -> pd.Series:
             raise ValueError("urine albumin must be non-negative when present")
         if bool((urine_creatinine.dropna() <= 0).any()):
             raise ValueError("urine creatinine must be positive when present")
-        uacr_mg_g = 100.0 * albumin / urine_creatinine
-        uacr_available = adult & albumin.notna() & urine_creatinine.notna()
-        tests.append((uacr_available, uacr_mg_g.ge(definition.uacr_threshold)))
+        component_available = albumin.notna() & urine_creatinine.notna()
+        scaled_albumin = 100.0 * albumin
+        scaled_threshold = definition.uacr_threshold * urine_creatinine
+        component_positive = scaled_albumin.ge(scaled_threshold) | pd.Series(
+            np.isclose(
+                scaled_albumin,
+                scaled_threshold,
+                rtol=1e-12,
+                atol=1e-12,
+                equal_nan=False,
+            ),
+            index=frame.index,
+        )
+        if "uacr_mg_g" in frame:
+            uacr_mg_g = pd.to_numeric(frame["uacr_mg_g"], errors="coerce")
+            if bool((uacr_mg_g.dropna() < 0).any()):
+                raise ValueError("official UACR must be non-negative when present")
+            use_fallback = uacr_mg_g.isna()
+            uacr_available = eligible & (uacr_mg_g.notna() | component_available)
+            albuminuria_positive = uacr_mg_g.ge(definition.uacr_threshold).fillna(
+                False
+            ) | (use_fallback & component_positive)
+        else:
+            uacr_available = eligible & component_available
+            albuminuria_positive = component_positive
+        tests.append((uacr_available, albuminuria_positive))
 
     any_positive = pd.Series(False, index=frame.index)
     all_available = pd.Series(True, index=frame.index)
     for available, positive in tests:
         any_positive |= available & positive
         all_available &= available
-    result.loc[adult & all_available & any_positive] = True
-    result.loc[adult & all_available & ~any_positive] = False
+    result.loc[eligible & all_available & any_positive] = True
+    result.loc[eligible & all_available & ~any_positive] = False
     return result
