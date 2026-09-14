@@ -5,14 +5,19 @@ from typing import Annotated, Literal, cast
 from fastapi import APIRouter, Query, Request
 
 from ..schemas import (
-    CollectionResponse,
     ErrorResponse,
     HealthResponse,
     JourneyResponse,
+    MEPSCollectionResponse,
     OpportunityResponse,
+    PartDCollectionResponse,
     PerformanceResponse,
+    PopulationEstimateCollectionResponse,
     ScoreResponse,
     ScoringRequest,
+    SourcesResponse,
+    TrialCollectionResponse,
+    WaterfallCollectionResponse,
 )
 from ..services import CKDAnalyticsService
 
@@ -42,12 +47,12 @@ def health() -> dict[str, str]:
     }
 
 
-@router.get("/sources")
+@router.get("/sources", response_model=SourcesResponse)
 def sources(request: Request) -> dict[str, object]:
     return service(request).sources()
 
 
-@router.get("/cohorts", response_model=CollectionResponse)
+@router.get("/cohorts", response_model=WaterfallCollectionResponse)
 def cohorts(
     request: Request,
     page: Annotated[int, Query(ge=1)] = 1,
@@ -64,7 +69,7 @@ def cohorts(
     )
 
 
-@router.get("/population-estimates", response_model=CollectionResponse)
+@router.get("/population-estimates", response_model=PopulationEstimateCollectionResponse)
 def population_estimates(
     request: Request,
     page: Annotated[int, Query(ge=1)] = 1,
@@ -93,7 +98,7 @@ def score(request: Request, payload: ScoringRequest) -> dict[str, object]:
     return service(request).score(payload.model_dump())
 
 
-@router.get("/utilization", response_model=CollectionResponse)
+@router.get("/utilization", response_model=MEPSCollectionResponse)
 def utilization(
     request: Request,
     page: Annotated[int, Query(ge=1)] = 1,
@@ -110,7 +115,7 @@ def utilization(
     )
 
 
-@router.get("/prescribing", response_model=CollectionResponse)
+@router.get("/prescribing", response_model=PartDCollectionResponse)
 def prescribing(
     request: Request,
     provider_state: Annotated[str | None, Query(pattern=r"^[A-Z]{2}$")] = None,
@@ -146,7 +151,7 @@ def opportunity(request: Request) -> dict[str, object]:
     return service(request).opportunity()
 
 
-@router.get("/trials", response_model=CollectionResponse)
+@router.get("/trials", response_model=TrialCollectionResponse)
 def trials(
     request: Request,
     dimension: Annotated[

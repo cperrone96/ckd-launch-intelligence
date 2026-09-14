@@ -101,17 +101,58 @@ class CKDAnalyticsService:
         artifact = self.repository.load_json(key)
         rows = artifact.payload.get(rows_key, [])
         if isinstance(rows, dict):
-            items = [
-                {"key": str(key), **value} for key, value in rows.items() if isinstance(value, dict)
-            ]
+            if not all(isinstance(value, dict) for value in rows.values()):
+                raise APIValidationError(
+                    "artifact collection is invalid", code="artifact_schema_error"
+                )
+            items = [{"key": str(row_key), **value} for row_key, value in rows.items()]
         elif isinstance(rows, list):
-            items = [row for row in rows if isinstance(row, dict)]
+            if not all(isinstance(row, dict) for row in rows):
+                raise APIValidationError(
+                    "artifact collection is invalid", code="artifact_schema_error"
+                )
+            items = list(rows)
         else:
             raise APIValidationError("artifact collection is invalid", code="artifact_schema_error")
         for field, value in (filters or {}).items():
             items = [row for row in items if str(row.get(field, "")) == value]
         result = paginate(items, page, page_size)
         result["evidence"] = self.evidence(key, population=population, grain=grain, window=window)
+        return result
+
+    def complete_collection(
+        self,
+        key: str,
+        rows_key: str,
+        *,
+        population: str,
+        grain: str,
+        window: str,
+    ) -> dict[str, Any]:
+        result = self.collection(
+            key,
+            rows_key,
+            1,
+            100,
+            population=population,
+            grain=grain,
+            window=window,
+        )
+        total = result["pagination"]["total"]
+        if len(result["items"]) != total:
+            artifact = self.repository.load_json(key)
+            rows = artifact.payload[rows_key]
+            if isinstance(rows, dict):
+                items = [{"key": str(row_key), **value} for row_key, value in rows.items()]
+            elif isinstance(rows, list):
+                items = list(rows)
+            else:
+                raise APIValidationError(
+                    "artifact collection is invalid", code="artifact_schema_error"
+                )
+            result["items"] = items
+        result["total"] = len(result["items"])
+        result["pagination_complete"] = len(result["items"]) == result["total"]
         return result
 
     def score(self, record: dict[str, Any]) -> dict[str, Any]:
@@ -151,6 +192,8 @@ class CKDAnalyticsService:
             key: artifact.payload[key]
             for key in (
                 "artifact_schema",
+                "analysis_population",
+                "outcome",
                 "selected_model",
                 "selection_policy",
                 "selected_threshold",
@@ -181,25 +224,33 @@ class CKDAnalyticsService:
         }
 
     def opportunity(self) -> dict[str, Any]:
-        panels = {
-            "prescribing_provider_state": self.collection(
+        prescribing = self.complete_collection(
                 "partd",
                 "aggregates",
-                1,
-                100,
                 population="Medicare Part D prescriber-drug aggregates",
                 grain="provider-drug-state aggregate",
                 window="2024",
-            )["items"],
-            "trials_country": self.collection(
+            )
+        trials = self.complete_collection(
                 "trials",
                 "geography",
-                1,
-                100,
                 population="registered CKD studies",
                 grain="registered study-country mention",
                 window="API release snapshot",
-            )["items"],
+            )
+        panels = {
+            "prescribing_provider_state": {
+                "items": prescribing["items"],
+                "total": prescribing["total"],
+                "pagination_complete": prescribing["pagination_complete"],
+                "evidence": prescribing["evidence"],
+            },
+            "trials_country": {
+                "items": trials["items"],
+                "total": trials["total"],
+                "pagination_complete": trials["pagination_complete"],
+                "evidence": trials["evidence"],
+            },
         }
         evidence = [
             self.evidence(

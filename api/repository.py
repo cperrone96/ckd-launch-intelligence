@@ -6,7 +6,19 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
 
+from pydantic import TypeAdapter, ValidationError
+
 from ckd_intelligence.journeys.synpuf import validate_synpuf_fixture_manifest
+
+from .schemas import (
+    MEPSItem,
+    ModelSet,
+    PartDItem,
+    PerformanceComparison,
+    PopulationEstimateItem,
+    TrialItem,
+    WaterfallItem,
+)
 
 
 class ArtifactIntegrityError(RuntimeError):
@@ -34,6 +46,53 @@ _ARTIFACTS: dict[str, tuple[str, str]] = {
     "trials": ("clinicaltrials_ckd_landscape.json", "clinicaltrials_ckd_landscape.json"),
 }
 _EXPECTED_EVIDENCE_TYPE = "public_observed"
+_ALLOWED_SOURCE_MANIFESTS = frozenset(
+    {
+        "data/manifests/nhanes-2017-2018-patient-need.json",
+    }
+)
+_REQUIRED_KEYS: dict[str, frozenset[str]] = {
+    "patient_need": frozenset({"waterfall", "estimates", "evidence_type", "limitations"}),
+    "patient_finding": frozenset(
+        {
+            "analysis_population",
+            "outcome",
+            "artifact_schema",
+            "models",
+            "subgroups",
+            "cohort_sensitivity",
+            "paired_differences",
+            "limitations",
+            "selected_model",
+            "selected_threshold",
+            "selection_policy",
+            "development_capacity",
+            "threshold_capacity",
+            "holdout_prevalence",
+            "holdout_n",
+            "features",
+            "split",
+            "performance_interpretation",
+            "intended_use",
+            "scorer",
+            "evidence_type",
+        }
+    ),
+    "meps": frozenset({"estimates", "evidence_type", "limitations"}),
+    "partd": frozenset({"aggregates", "evidence_type", "limitations"}),
+    "trials": frozenset(
+        {
+            "geography",
+            "intervention",
+            "phase_or_type",
+            "change_over_time",
+            "status",
+            "sponsor",
+            "evidence_type",
+            "limitations",
+        }
+    ),
+}
 
 
 class ArtifactRepository:
@@ -50,11 +109,128 @@ class ArtifactRepository:
         except OSError as error:
             raise ArtifactIntegrityError("artifact or checksum is unreadable") from error
         expected_names = {path.name, Path("data/processed", path.name).as_posix()}
-        if separator != "  " or not any(filename == f"{name}\n" for name in expected_names):
+        if separator != "  " or filename not in {f"{name}\n" for name in expected_names}:
+            raise ArtifactIntegrityError("artifact checksum is invalid")
+        if len(digest) != 64 or any(char not in "0123456789abcdef" for char in digest):
             raise ArtifactIntegrityError("artifact checksum is invalid")
         if digest != computed:
             raise ArtifactIntegrityError("artifact checksum does not match artifact")
         return computed
+
+    @staticmethod
+    def _validate_payload(key: str, payload: object) -> dict[str, Any]:
+        if not isinstance(payload, dict):
+            raise ArtifactIntegrityError("artifact JSON must be an object")
+        required = _REQUIRED_KEYS[key]
+        if not required.issubset(payload):
+            raise ArtifactIntegrityError("artifact required schema is incomplete")
+        if key not in {"patient_need", "patient_finding"} and any(
+            not isinstance(payload.get(field), str) or not payload[field].strip()
+            for field in ("source", "release")
+        ):
+            raise ArtifactIntegrityError("artifact source metadata is invalid")
+        evidence_type = payload.get("evidence_type")
+        if evidence_type != _EXPECTED_EVIDENCE_TYPE:
+            raise ArtifactIntegrityError("artifact evidence classification is invalid")
+        limitations = payload.get("limitations")
+        if isinstance(limitations, list):
+            if not limitations or not all(
+                isinstance(item, str) and item.strip() for item in limitations
+            ):
+                raise ArtifactIntegrityError("artifact limitations are invalid")
+        elif isinstance(limitations, dict):
+            if not limitations or not all(
+                isinstance(item, str) and item.strip() for item in limitations.values()
+            ):
+                raise ArtifactIntegrityError("artifact limitations are invalid")
+        else:
+            raise ArtifactIntegrityError("artifact limitations are invalid")
+        list_fields = {
+            "patient_need": ("waterfall",),
+            "meps": ("estimates",),
+            "partd": ("aggregates", "dictionary"),
+            "trials": (
+                "geography",
+                "intervention",
+                "phase_or_type",
+                "change_over_time",
+                "status",
+                "sponsor",
+            ),
+        }.get(key, ())
+        for field in list_fields:
+            value = payload.get(field)
+            if not isinstance(value, list) or not all(isinstance(item, dict) for item in value):
+                raise ArtifactIntegrityError("artifact list schema is invalid")
+        if key == "patient_need":
+            estimates = payload.get("estimates")
+            if not isinstance(estimates, dict) or not all(
+                isinstance(item, dict) for item in estimates.values()
+            ):
+                raise ArtifactIntegrityError("artifact estimate schema is invalid")
+        if key == "patient_finding":
+            models = payload.get("models")
+            subgroups = payload.get("subgroups")
+            if not isinstance(models, dict) or not models or not all(
+                isinstance(item, dict) for item in models.values()
+            ):
+                raise ArtifactIntegrityError("artifact model schema is invalid")
+            if not isinstance(subgroups, dict) or not subgroups or not all(
+                isinstance(item, list) and all(isinstance(row, dict) for row in item)
+                for item in subgroups.values()
+            ):
+                raise ArtifactIntegrityError("artifact subgroup schema is invalid")
+        try:
+            if key == "patient_need":
+                TypeAdapter(list[WaterfallItem]).validate_python(payload["waterfall"])
+                TypeAdapter(
+                    list[PopulationEstimateItem]
+                ).validate_python(
+                    [{"key": row_key, **row} for row_key, row in payload["estimates"].items()]
+                )
+            elif key == "meps":
+                TypeAdapter(list[MEPSItem]).validate_python(payload["estimates"])
+            elif key == "partd":
+                TypeAdapter(list[PartDItem]).validate_python(payload["aggregates"])
+            elif key == "trials":
+                for field in (
+                    "geography",
+                    "intervention",
+                    "phase_or_type",
+                    "change_over_time",
+                    "status",
+                    "sponsor",
+                ):
+                    TypeAdapter(list[TrialItem]).validate_python(payload[field])
+            elif key == "patient_finding":
+                comparison_keys = (
+                    "artifact_schema",
+                    "analysis_population",
+                    "outcome",
+                    "selected_model",
+                    "selection_policy",
+                    "selected_threshold",
+                    "threshold_capacity",
+                    "development_capacity",
+                    "holdout_prevalence",
+                    "holdout_n",
+                    "features",
+                    "split",
+                    "models",
+                    "subgroups",
+                    "cohort_sensitivity",
+                    "paired_differences",
+                    "performance_interpretation",
+                    "intended_use",
+                    "limitations",
+                )
+                PerformanceComparison.model_validate(
+                    {field: payload[field] for field in comparison_keys}
+                )
+                ModelSet.model_validate(payload["models"])
+        except (ValidationError, TypeError, KeyError) as error:
+            raise ArtifactIntegrityError("artifact member schema is invalid") from error
+        return cast(dict[str, Any], payload)
 
     def load_json(self, key: str) -> Artifact:
         if key not in _ARTIFACTS:
@@ -67,8 +243,11 @@ class ArtifactRepository:
             if self.data_root not in path.parents or self.data_root not in manifest_path.parents:
                 raise ArtifactIntegrityError("artifact path is outside the data root")
             digest = self._verify_checksum(path, checksum)
-            payload = cast(dict[str, Any], json.loads(path.read_text(encoding="utf-8")))
-            manifest = cast(dict[str, Any], json.loads(manifest_path.read_text(encoding="utf-8")))
+            payload = self._validate_payload(key, json.loads(path.read_text(encoding="utf-8")))
+            manifest_obj = json.loads(manifest_path.read_text(encoding="utf-8"))
+            if not isinstance(manifest_obj, dict):
+                raise ArtifactIntegrityError("artifact manifest JSON must be an object")
+            manifest = cast(dict[str, Any], manifest_obj)
         except ArtifactIntegrityError:
             raise
         except (OSError, json.JSONDecodeError, TypeError) as error:
@@ -89,12 +268,13 @@ class ArtifactRepository:
             raise ArtifactIntegrityError("artifact manifest evidence classification is invalid")
         source_manifest = manifest.get("source_manifest")
         if source_manifest is not None:
-            if not isinstance(source_manifest, str) or not source_manifest.startswith(
-                "data/manifests/"
-            ):
+            if source_manifest not in _ALLOWED_SOURCE_MANIFESTS:
                 raise ArtifactIntegrityError("source manifest path is invalid")
             source_path = (self.data_root.parent / source_manifest).resolve()
-            if self.data_root not in source_path.parents or not source_path.is_file():
+            if (
+                source_path != (self.data_root.parent / source_manifest)
+                or not source_path.is_file()
+            ):
                 raise ArtifactIntegrityError("source manifest is unavailable")
         return Artifact(key, path, manifest_path, digest, payload, manifest)
 

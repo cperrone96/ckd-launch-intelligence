@@ -52,6 +52,19 @@ def test_health_and_exact_routes(client: TestClient) -> None:
     }
 
 
+def test_sources_are_strictly_typed_and_all_openapi_objects_forbid_extra_fields(
+    client: TestClient,
+) -> None:
+    sources = client.get("/api/v1/sources")
+    assert sources.status_code == 200
+    assert len(sources.json()["sources"]) == 5
+    schemas = client.get("/openapi.json").json()["components"]["schemas"]
+    assert all(
+        schema.get("type") != "object" or schema.get("additionalProperties") is False
+        for schema in schemas.values()
+    )
+
+
 def test_scoring_response_is_not_diagnostic(
     client: TestClient, score_request: dict[str, object]
 ) -> None:
@@ -116,6 +129,8 @@ def test_cohort_waterfall_and_full_model_comparison(client: TestClient) -> None:
     assert comparison["models"]
     assert comparison["subgroups"]
     assert comparison["cohort_sensitivity"]
+    assert comparison["analysis_population"]
+    assert comparison["outcome"]
 
 
 def test_collection_pagination_and_filters(client: TestClient) -> None:
@@ -155,6 +170,9 @@ def test_opportunity_is_source_specific_and_scenario_safe(client: TestClient) ->
     assert body["scenario_rankings"] == []
     assert "source_panels" in body
     assert "composite" in body["limitations"].lower()
+    for panel in body["source_panels"].values():
+        assert panel["pagination_complete"] is True
+        assert panel["total"] == len(panel["items"])
 
 
 def test_journey_is_synthetic_and_has_no_beneficiary_ids(client: TestClient) -> None:
@@ -228,6 +246,35 @@ def test_api_fails_closed_on_tampered_committed_artifact(tmp_path: Path) -> None
         "message": "A committed analytics artifact failed integrity verification.",
         "details": {},
     }
+
+
+@pytest.mark.parametrize("replacement", ["[]", "{\"waterfall\": [1]}"])
+def test_api_fails_closed_on_non_object_or_invalid_artifact_member(
+    tmp_path: Path, replacement: str
+) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    shutil.copytree(source, root)
+    artifact = root / "processed" / "patient_need_summary.json"
+    artifact.write_text(replacement, encoding="utf-8")
+    response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
+        "/api/v1/population-estimates"
+    )
+    assert response.status_code == 503
+
+
+def test_api_rejects_manifest_source_namespace_traversal(tmp_path: Path) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    shutil.copytree(source, root)
+    manifest = root / "manifests" / "patient_need_summary.json"
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload["source_manifest"] = "data/manifests/../processed/patient_need_summary.json"
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
+        "/api/v1/population-estimates"
+    )
+    assert response.status_code == 503
 
 
 def test_api_fails_closed_on_tampered_synthetic_manifest(tmp_path: Path) -> None:
