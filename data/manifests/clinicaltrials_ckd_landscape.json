@@ -2,6 +2,7 @@
   "api_total_count": 3706,
   "artifact_path": "data/processed/clinicaltrials_ckd_landscape.json",
   "artifact_sha256": "e2ae12a4957a4890687cf2b72bab66ebd07c8d7c4f4c8dc98ac314d20f03613c",
+  "evidence_type": "public_observed",
   "endpoint": "https://clinicaltrials.gov/api/v2/studies",
   "grain": "registered study aggregate; no study IDs committed",
   "initial_request_url": "https://clinicaltrials.gov/api/v2/studies?query.term=AREA%5BConditionSearch%5D%28%22Chronic+Kidney+Disease%22%29&pageSize=1000&countTotal=true&format=json",

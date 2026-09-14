@@ -46,6 +46,13 @@ _ARTIFACTS: dict[str, tuple[str, str]] = {
     "trials": ("clinicaltrials_ckd_landscape.json", "clinicaltrials_ckd_landscape.json"),
 }
 _EXPECTED_EVIDENCE_TYPE = "public_observed"
+_TRIAL_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
+    "geography": ("country",),
+    "status": ("overall_status",),
+    "sponsor": ("sponsor",),
+    "intervention": ("intervention",),
+    "change_over_time": ("update_year",),
+}
 _ALLOWED_SOURCE_MANIFESTS = frozenset(
     {
         "data/manifests/nhanes-2017-2018-patient-need.json",
@@ -202,6 +209,25 @@ class ArtifactRepository:
                     "sponsor",
                 ):
                     TypeAdapter(list[TrialItem]).validate_python(payload[field])
+                    required_fields = _TRIAL_REQUIRED_FIELDS.get(field, ())
+                    for row in payload[field]:
+                        if any(
+                            field_name not in row
+                            or row[field_name] is None
+                            or (isinstance(row[field_name], str) and not row[field_name].strip())
+                            for field_name in required_fields
+                        ):
+                            raise ArtifactIntegrityError(
+                                f"trial {field} dimension is missing its defining field"
+                            )
+                for row in payload["phase_or_type"]:
+                    if not (
+                        (row.get("phase") is not None and str(row["phase"]).strip())
+                        or (row.get("study_type") is not None and str(row["study_type"]).strip())
+                    ):
+                        raise ArtifactIntegrityError(
+                            "trial phase_or_type dimension is missing its defining field"
+                        )
             elif key == "patient_finding":
                 comparison_keys = (
                     "artifact_schema",
@@ -252,6 +278,26 @@ class ArtifactRepository:
             raise
         except (OSError, json.JSONDecodeError, TypeError) as error:
             raise ArtifactIntegrityError("artifact or manifest is unreadable") from error
+        required_manifest_fields = (
+            "source",
+            "release",
+            "evidence_type",
+            "artifact_path",
+            "artifact_sha256",
+        )
+        if any(
+            not isinstance(manifest.get(field), str) or not str(manifest[field]).strip()
+            for field in required_manifest_fields
+        ):
+            raise ArtifactIntegrityError("artifact manifest schema is incomplete")
+        if manifest["evidence_type"] != _EXPECTED_EVIDENCE_TYPE:
+            raise ArtifactIntegrityError("artifact manifest evidence classification is invalid")
+        source_manifest = manifest.get("source_manifest")
+        requires_source_manifest = key in {"patient_need", "patient_finding"}
+        if requires_source_manifest and source_manifest not in _ALLOWED_SOURCE_MANIFESTS:
+            raise ArtifactIntegrityError("artifact source manifest is required")
+        if source_manifest is not None and source_manifest not in _ALLOWED_SOURCE_MANIFESTS:
+            raise ArtifactIntegrityError("artifact source manifest path is invalid")
         declared = manifest.get("artifact_sha256")
         if not isinstance(declared, str) or declared != digest:
             raise ArtifactIntegrityError("artifact manifest digest is stale")
@@ -263,10 +309,6 @@ class ArtifactRepository:
             raise ArtifactIntegrityError("artifact manifest path is stale")
         if payload.get("evidence_type") != _EXPECTED_EVIDENCE_TYPE:
             raise ArtifactIntegrityError("artifact evidence classification is invalid")
-        manifest_evidence = manifest.get("evidence_type")
-        if manifest_evidence is not None and manifest_evidence != _EXPECTED_EVIDENCE_TYPE:
-            raise ArtifactIntegrityError("artifact manifest evidence classification is invalid")
-        source_manifest = manifest.get("source_manifest")
         if source_manifest is not None:
             if source_manifest not in _ALLOWED_SOURCE_MANIFESTS:
                 raise ArtifactIntegrityError("source manifest path is invalid")

@@ -1,6 +1,7 @@
 {
   "artifact_path": "data/processed/meps_hc243_2022_landscape.json",
   "artifact_sha256": "d081901e6b538a15ebe58fbca65532befb9d533fb05e171e5525e84732ff3216",
+  "evidence_type": "public_observed",
   "grain": "source-specific person-year aggregate; no event-person linkage",
   "quarantine_count": 0,
   "record_count": 22431,

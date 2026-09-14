@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import shutil
 import sys
@@ -307,6 +308,68 @@ def test_api_rejects_missing_or_stale_manifest_metadata(tmp_path: Path, field: s
     manifest.write_text(json.dumps(payload), encoding="utf-8")
     response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
         "/api/v1/population-estimates"
+    )
+    assert response.status_code == 503
+
+
+@pytest.mark.parametrize("field", ["source", "release", "evidence_type", "source_manifest"])
+def test_api_rejects_incomplete_manifest_metadata(tmp_path: Path, field: str) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    shutil.copytree(source, root)
+    manifest = root / "manifests" / "patient_need_summary.json"
+    payload = json.loads(manifest.read_text(encoding="utf-8"))
+    payload.pop(field)
+    manifest.write_text(json.dumps(payload), encoding="utf-8")
+    response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
+        "/api/v1/population-estimates"
+    )
+    assert response.status_code == 503
+
+
+@pytest.mark.parametrize(
+    ("dimension", "field"),
+    [
+        ("geography", "country"),
+        ("status", "overall_status"),
+        ("sponsor", "sponsor"),
+        ("intervention", "intervention"),
+        ("change_over_time", "update_year"),
+    ],
+)
+def test_trial_dimension_requires_semantic_key(
+    tmp_path: Path, dimension: str, field: str
+) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    shutil.copytree(source, root)
+    artifact = root / "processed" / "clinicaltrials_ckd_landscape.json"
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+    payload[dimension][0].pop(field, None)
+    artifact.write_text(json.dumps(payload), encoding="utf-8")
+    sidecar = root / "processed" / "clinicaltrials_ckd_landscape.sha256"
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    sidecar.write_text(f"{digest}  data/processed/clinicaltrials_ckd_landscape.json\n")
+    response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
+        "/api/v1/trials", params={"dimension": dimension}
+    )
+    assert response.status_code == 503
+
+
+def test_phase_or_type_requires_phase_or_study_type(tmp_path: Path) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    shutil.copytree(source, root)
+    artifact = root / "processed" / "clinicaltrials_ckd_landscape.json"
+    payload = json.loads(artifact.read_text(encoding="utf-8"))
+    payload["phase_or_type"][0].pop("phase", None)
+    payload["phase_or_type"][0].pop("study_type", None)
+    artifact.write_text(json.dumps(payload), encoding="utf-8")
+    sidecar = root / "processed" / "clinicaltrials_ckd_landscape.sha256"
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    sidecar.write_text(f"{digest}  data/processed/clinicaltrials_ckd_landscape.json\n")
+    response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
+        "/api/v1/trials", params={"dimension": "phase_or_type"}
     )
     assert response.status_code == 503
 

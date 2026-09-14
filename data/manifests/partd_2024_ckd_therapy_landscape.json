@@ -1,6 +1,7 @@
 {
   "artifact_path": "data/processed/partd_2024_ckd_therapy_landscape.json",
   "artifact_sha256": "b944c3171c694189a4d8142233420fe80e9e19f3ad0f983c04a13b21e869a122",
+  "evidence_type": "public_observed",
   "dataset_uuid": "9552739e-3d05-4c1b-8eff-ecabf391e2e5",
   "grain": "provider-drug-state aggregate; provider identifiers removed from committed output",
   "pagination_complete": true,
