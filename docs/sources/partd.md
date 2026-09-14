@@ -19,6 +19,11 @@ state, removes NPIs, and proves that the selected generic pages ended with a
 short page. It does not claim national all-activity coverage beyond those
 selected generics.
 
+`provider_state` is the provider-reported/NPPES geography in the CMS file, not a
+beneficiary residence or a guaranteed prescribing-site location. Postal and
+territory codes such as `AE`, `AP`, `XX`, and `ZZ` are retained as source values
+when present and are not silently recoded to U.S. states.
+
 CMS detailed provider-drug rows exclude providers with fewer than 11 total
 claims. An absent provider-drug row is therefore not zero, and beneficiary
 fields are not used. The artifact cannot establish CKD indication, adherence,

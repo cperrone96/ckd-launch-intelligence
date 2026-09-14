@@ -250,9 +250,9 @@ def test_spoofed_release_identity_fails_before_manifest_creation(
 def test_release_date_coherence_is_enforced(tmp_path: Path) -> None:
     bad = tmp_path / "synpuf.csv"
     bad.write_text(
-        (FIXTURES / "synpuf.csv").read_text().replace(
-            "2009-01-02,2009-01-05", "2012-01-02,2012-01-05", 1
-        ),
+        (FIXTURES / "synpuf.csv")
+        .read_text()
+        .replace("2009-01-02,2009-01-05", "2012-01-02,2012-01-05", 1),
         encoding="utf-8",
     )
 
@@ -300,18 +300,18 @@ def test_documented_code_domains_reject_invalid_values(tmp_path: Path) -> None:
     )
     synpuf = tmp_path / "synpuf.csv"
     synpuf.write_text(
-        (FIXTURES / "synpuf.csv")
-        .read_text()
-        .replace(",5853,P100,", ",? ,bad-provider!,", 1),
+        (FIXTURES / "synpuf.csv").read_text().replace(",5853,P100,", ",? ,bad-provider!,", 1),
         encoding="utf-8",
     )
 
-    assert "race_ethnicity:invalid_code" in ingest_nhanes(
-        nhanes, cache_dir=tmp_path / "cache1"
-    ).quarantine[0].reasons
-    assert "provider_state:invalid_code" in ingest_partd(
-        partd, cache_dir=tmp_path / "cache2"
-    ).quarantine[0].reasons
+    assert (
+        "race_ethnicity:invalid_code"
+        in ingest_nhanes(nhanes, cache_dir=tmp_path / "cache1").quarantine[0].reasons
+    )
+    assert (
+        "provider_state:invalid_code"
+        in ingest_partd(partd, cache_dir=tmp_path / "cache2").quarantine[0].reasons
+    )
     synpuf_reasons = ingest_synpuf(synpuf, cache_dir=tmp_path / "cache4").quarantine[0].reasons
     assert "diagnosis_code:invalid_code" in synpuf_reasons
     assert "provider_id:invalid_code" in synpuf_reasons
@@ -327,9 +327,9 @@ def test_trials_require_exact_query_and_strict_nested_types(tmp_path: Path) -> N
 
     for index, invalid_value in enumerate((True, 12, [], {})):
         typed_document = json.loads((FIXTURES / "clinicaltrials.json").read_text())
-        typed_document["studies"][0]["protocolSection"]["identificationModule"][
-            "briefTitle"
-        ] = invalid_value
+        typed_document["studies"][0]["protocolSection"]["identificationModule"]["briefTitle"] = (
+            invalid_value
+        )
         path = tmp_path / f"bad-type-{index}.json"
         with path.open("w", encoding="utf-8") as handle:
             json.dump(typed_document, handle)
@@ -361,6 +361,24 @@ def test_trial_nested_blank_values_are_quarantined(
 
     assert not result.valid
     assert reason in result.quarantine[0].reasons
+
+
+def test_trial_optional_modules_preserve_core_study_as_null_dimensions(
+    tmp_path: Path,
+) -> None:
+    document = json.loads((FIXTURES / "clinicaltrials.json").read_text())
+    protocol = document["studies"][0]["protocolSection"]
+    protocol.pop("armsInterventionsModule")
+    protocol.pop("contactsLocationsModule")
+    path = tmp_path / "optional-modules.json"
+    path.write_text(json.dumps(document), encoding="utf-8")
+
+    result = ingest_trials(path, cache_dir=tmp_path / "cache")
+
+    assert len(result.valid) == 1
+    assert len(result.quarantine) == 0
+    assert result.valid[0]["intervention"] is None
+    assert result.valid[0]["country"] is None
 
 
 def test_malformed_trial_is_quarantined_without_aborting_valid_study(tmp_path: Path) -> None:
@@ -431,8 +449,7 @@ def test_nhanes_xpt_boundary_dispatches_native_normalization(
     path.write_bytes(b"representative-xpt-boundary")
     rows = [dict(row) for row in ingest_nhanes(FIXTURES / "nhanes.csv", cache_dir=None).valid]
     rows_as_text = [
-        {key: str(value) for key, value in row.items() if key != "evidence_type"}
-        for row in rows
+        {key: str(value) for key, value in row.items() if key != "evidence_type"} for row in rows
     ]
     monkeypatch.setattr(
         "ckd_intelligence.ingestion.nhanes._xpt_rows", lambda _payload: rows_as_text
@@ -446,8 +463,16 @@ def test_nhanes_xpt_boundary_dispatches_native_normalization(
 
 class _DecodedXptFrame:
     columns = {
-        "SEQN", "RIDAGEYR", "RIAGENDR", "RIDRETH3", "LBXSCR", "URXUMA",
-        "URXUCR", "WTMEC2YR", "SDMVSTRA", "SDMVPSU",
+        "SEQN",
+        "RIDAGEYR",
+        "RIAGENDR",
+        "RIDRETH3",
+        "LBXSCR",
+        "URXUMA",
+        "URXUCR",
+        "WTMEC2YR",
+        "SDMVSTRA",
+        "SDMVPSU",
     }
 
     def to_dict(self, *, orient: str) -> list[dict[str, float]]:
@@ -478,9 +503,7 @@ def test_decoded_xpt_missing_seqn_quarantines_only_bad_participant(
 ) -> None:
     path = tmp_path / "nhanes_2017_2018.xpt"
     path.write_bytes(b"simulated-xpt-container")
-    monkeypatch.setattr(
-        "ckd_intelligence.ingestion.nhanes._pandas", lambda: _DecodedXptPandas()
-    )
+    monkeypatch.setattr("ckd_intelligence.ingestion.nhanes._pandas", lambda: _DecodedXptPandas())
 
     result = ingest_nhanes(path, cache_dir=tmp_path / "cache")
 
@@ -504,8 +527,7 @@ def test_nhanes_native_xpt_bundle_dispatches_three_component_join(
     _write_zip(path, "placeholder.csv", "not used")
     rows = [dict(row) for row in ingest_nhanes(FIXTURES / "nhanes.csv", cache_dir=None).valid]
     rows_as_text = [
-        {key: str(value) for key, value in row.items() if key != "evidence_type"}
-        for row in rows
+        {key: str(value) for key, value in row.items() if key != "evidence_type"} for row in rows
     ]
     monkeypatch.setattr(
         "ckd_intelligence.ingestion.nhanes._xpt_bundle_rows",

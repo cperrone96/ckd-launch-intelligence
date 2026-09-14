@@ -19,7 +19,10 @@ ROOT = Path(__file__).parents[2]
     reason="set CKD_POSTGRES_URL to run the PostgreSQL integration contract",
 )
 def test_landscape_marts_execute_on_postgresql() -> None:
-    psycopg = pytest.importorskip("psycopg")
+    try:
+        import psycopg  # type: ignore[import-not-found]
+    except ImportError:
+        pytest.fail("CKD_POSTGRES_URL is configured but psycopg is not installed")
     with (
         psycopg.connect(os.environ["CKD_POSTGRES_URL"]) as connection,
         connection.cursor() as cursor,
@@ -88,4 +91,16 @@ def test_landscape_marts_execute_on_postgresql() -> None:
         cursor.execute("SELECT COUNT(*) FROM analytics_observed.mart_partd_prescribing")
         assert cursor.fetchone()[0] == 1
         cursor.execute("SELECT COUNT(*) FROM analytics_observed.mart_trial_status")
+        assert cursor.fetchone()[0] == 1
+        cursor.execute(
+            "SELECT total_reported_enrollment, studies_with_reported_enrollment, "
+            "evidence_type, source_retrieved_at, source_manifest_checksum "
+            "FROM analytics_observed.mart_trial_status"
+        )
+        trial_row = cursor.fetchone()
+        assert trial_row == (None, 0, "fixture_only", "2026-09-11T00:00:00Z", "fixture")
+        cursor.execute(
+            "SELECT COUNT(*) FROM analytics_observed.mart_partd_prescribing "
+            "WHERE source_release = '2024' AND provider_npi = 'fixture-provider'"
+        )
         assert cursor.fetchone()[0] == 1

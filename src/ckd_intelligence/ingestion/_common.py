@@ -209,9 +209,7 @@ def parse_csv(payload: bytes, required_columns: frozenset[str]) -> list[dict[str
         raise ValueError("CSV header contains duplicate columns")
     for row in reader:
         parsed_row = {
-            key: value if value is not None else ""
-            for key, value in row.items()
-            if key is not None
+            key: value if value is not None else "" for key, value in row.items() if key is not None
         }
         if None in row:
             parsed_row["_ingestion_error"] = "csv:extra_values"
@@ -233,9 +231,7 @@ def reject_forbidden_fields(
         raise ValueError(f"Forbidden patient-level fields: {', '.join(present)}")
 
 
-def require_release_identity(
-    rows: Sequence[Mapping[str, str]], field: str, expected: str
-) -> None:
+def require_release_identity(rows: Sequence[Mapping[str, str]], field: str, expected: str) -> None:
     """Fail before manifest creation when bytes identify a different release."""
 
     identified = {row[field].strip() for row in rows if row.get(field, "").strip()}
@@ -368,9 +364,7 @@ def number_value(
         return None
     if not math.isfinite(parsed):
         reasons.append(f"{field}:invalid_number")
-    elif (minimum is not None and parsed < minimum) or (
-        maximum is not None and parsed > maximum
-    ):
+    elif (minimum is not None and parsed < minimum) or (maximum is not None and parsed > maximum):
         reasons.append(f"{field}:out_of_range")
     return parsed
 
@@ -392,9 +386,7 @@ def integer_value(
     except ValueError:
         reasons.append(f"{field}:invalid_integer")
         return None
-    if (minimum is not None and parsed < minimum) or (
-        maximum is not None and parsed > maximum
-    ):
+    if (minimum is not None and parsed < minimum) or (maximum is not None and parsed > maximum):
         reasons.append(f"{field}:out_of_range")
     return parsed
 

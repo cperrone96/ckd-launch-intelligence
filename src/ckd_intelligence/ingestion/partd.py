@@ -39,11 +39,66 @@ FORBIDDEN = frozenset({"beneficiary_id", "patient_id", "person_id"})
 MAX_SOURCE_BYTES = 256 * 1024 * 1024
 MAX_UNCOMPRESSED_BYTES = 1024 * 1024 * 1024
 US_POSTAL_CODES = {
-    "AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DE", "DC", "FL", "GA", "HI",
-    "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD", "MA", "MI", "MN",
-    "MS", "MO", "MT", "NE", "NV", "NH", "NJ", "NM", "NY", "NC", "ND", "OH",
-    "OK", "OR", "PA", "RI", "SC", "SD", "TN", "TX", "UT", "VT", "VA", "WA",
-    "WV", "WI", "WY", "AS", "GU", "MP", "PR", "VI", "UM", "FM", "MH", "PW",
+    "AL",
+    "AK",
+    "AZ",
+    "AR",
+    "CA",
+    "CO",
+    "CT",
+    "DE",
+    "DC",
+    "FL",
+    "GA",
+    "HI",
+    "ID",
+    "IL",
+    "IN",
+    "IA",
+    "KS",
+    "KY",
+    "LA",
+    "ME",
+    "MD",
+    "MA",
+    "MI",
+    "MN",
+    "MS",
+    "MO",
+    "MT",
+    "NE",
+    "NV",
+    "NH",
+    "NJ",
+    "NM",
+    "NY",
+    "NC",
+    "ND",
+    "OH",
+    "OK",
+    "OR",
+    "PA",
+    "RI",
+    "SC",
+    "SD",
+    "TN",
+    "TX",
+    "UT",
+    "VT",
+    "VA",
+    "WA",
+    "WV",
+    "WI",
+    "WY",
+    "AS",
+    "GU",
+    "MP",
+    "PR",
+    "VI",
+    "UM",
+    "FM",
+    "MH",
+    "PW",
 }
 NATIVE_REQUIRED = frozenset(
     {
@@ -77,9 +132,7 @@ def _rows_from_payload(payload: bytes, source_uri: str) -> list[dict[str, str]]:
             "total_drug_cost_usd": row["Tot_Drug_Cst"],
             "year": "2024",
             **(
-                {"_ingestion_error": row["_ingestion_error"]}
-                if row.get("_ingestion_error")
-                else {}
+                {"_ingestion_error": row["_ingestion_error"]} if row.get("_ingestion_error") else {}
             ),
         }
         for row in native
@@ -98,12 +151,11 @@ def ingest_partd(
         cache_dir=cache_dir,
         max_bytes=MAX_SOURCE_BYTES,
     )
-    csv_payload = csv_payload_from_snapshot(
-        snapshot, max_uncompressed_bytes=MAX_UNCOMPRESSED_BYTES
-    )
+    csv_payload = csv_payload_from_snapshot(snapshot, max_uncompressed_bytes=MAX_UNCOMPRESSED_BYTES)
     rows = _rows_from_payload(csv_payload, snapshot.source_uri)
     require_release_identity(rows, "source_release", registry.version)
     reject_forbidden_fields(rows, FORBIDDEN)
+
     def key(row: Mapping[str, str]) -> tuple[str, ...]:
         return (
             row["provider_npi"].strip(),

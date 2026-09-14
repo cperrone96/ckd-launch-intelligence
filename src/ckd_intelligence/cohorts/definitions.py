@@ -167,9 +167,9 @@ def classify_ckd(frame: pd.DataFrame, definition: CKDDefinition) -> pd.Series:
                 raise ValueError("official UACR must be non-negative when present")
             use_fallback = uacr_mg_g.isna()
             uacr_available = eligible & (uacr_mg_g.notna() | component_available)
-            albuminuria_positive = uacr_mg_g.ge(definition.uacr_threshold).fillna(
-                False
-            ) | (use_fallback & component_positive)
+            albuminuria_positive = uacr_mg_g.ge(definition.uacr_threshold).fillna(False) | (
+                use_fallback & component_positive
+            )
         else:
             uacr_available = eligible & component_available
             albuminuria_positive = component_positive

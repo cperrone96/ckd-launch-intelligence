@@ -36,6 +36,4 @@ def test_official_aggregate_artifact_reconciles_to_reviewed_nhanes_snapshot() ->
     estimates = artifact["estimates"]
     assert {estimate["denominator"] for estimate in estimates.values()} == {5016}
     assert {estimate["excluded_missing"] for estimate in estimates.values()} == {462}
-    assert estimates["primary_egfr_or_albuminuria"]["point"] == pytest.approx(
-        0.139189, abs=1e-6
-    )
+    assert estimates["primary_egfr_or_albuminuria"]["point"] == pytest.approx(0.139189, abs=1e-6)

@@ -10,12 +10,14 @@ page count, total count, retrieval timestamp, and raw SHA-256. All API pages are
 retrieved before validation. The current snapshot reconciles the API total to
 valid plus quarantined records and deduplicates NCT IDs during ingestion.
 
-The aggregate reports status, phase/type, lead sponsor, study-country mentions,
-and update-year change over time. Missing enrollment is preserved as null and
-reported separately; it is never recoded to zero. Registered status, sponsor,
-geography, and enrollment are submitted metadata, not patient outcomes or
-treatment effectiveness. Malformed modules are quarantined with reasons rather
-than silently coerced.
+The aggregate reports status, phase/type, intervention, lead sponsor,
+study-country mentions, and update-year change over time. Status, study type, and
+update-year denominators use all exact-query studies; phase, intervention, and
+location denominators use only studies where that optional field is available.
+Missing enrollment is preserved as null and reported separately; it is never
+recoded to zero. Registered status, sponsor, geography, and enrollment are
+submitted metadata, not patient outcomes or treatment effectiveness. Optional
+module omissions become null/unknown; malformed core identity remains quarantined.
 
 The safe output is `data/processed/clinicaltrials_ckd_landscape.json`; its dated
 manifest and checksum are committed alongside it. No NCT IDs or raw study rows

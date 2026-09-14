@@ -1,11 +1,11 @@
 {
   "artifact_path": "data/processed/meps_hc243_2022_landscape.json",
-  "artifact_sha256": "2ccad870d7179815b20611ab5d8f30138c87380ff5f21e3b783806b1cb4e6373",
+  "artifact_sha256": "9e50d5d1ec28190f91153e50d76a7d598f99dee191468a264b59bb06709af2d1",
   "grain": "source-specific person-year aggregate; no event-person linkage",
   "quarantine_count": 0,
   "record_count": 22431,
   "release": "HC-243-2022",
-  "retrieved_at": "2026-09-11T21:59:37.844924Z",
+  "retrieved_at": "2026-09-11T22:26:56.649533Z",
   "source": "MEPS / AHRQ",
   "source_bytes": 6123666,
   "source_sha256": "aa17c8bacf091adbeacbef411cf3630759fe49c30ab4765a5964dacaa745938e",

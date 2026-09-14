@@ -45,6 +45,8 @@ def test_partd_artifact_proves_pages_and_suppression_limit() -> None:
         item["rows_retrieved"] for item in artifact["pagination"]["generic_pages"]
     )
     assert "fewer than 11" in artifact["limitations"]["privacy_suppression"].lower()
+    assert artifact["row_validation"]["quarantined_rows"] == 0
+    assert artifact["row_validation"]["valid_rows"] == artifact["pagination"]["rows_retrieved"]
     assert artifact["retrieved_at"] == manifest["retrieved_at"]
     assert all("beneficiary" not in json.dumps(row).lower() for row in artifact["aggregates"])
 
@@ -53,9 +55,17 @@ def test_trials_public_artifact_reconciles_total_valid_quarantine_and_missing_en
     artifact, manifest = _verified_artifact("clinicaltrials_ckd_landscape")
     counts = artifact["counts"]
     assert artifact["evidence_type"] == "public_observed"
+    assert counts["api_total_count"] == 3706
     assert counts["api_total_count"] == counts["valid_count"] + counts["quarantine_count"]
-    assert counts["unique_nct_ids"] == counts["api_total_count"]
+    assert counts["valid_count"] == counts["unique_nct_ids"] == 3706
     assert counts["studies_with_missing_enrollment"] > 0
+    assert counts["dimension_denominators"]["intervention_available"] < 3706
+    assert counts["dimension_denominators"]["location_available"] < 3706
+    assert artifact["intervention"]
+    assert artifact["pagination"]["initial_request_url"].startswith(
+        "https://clinicaltrials.gov/api/v2/studies?"
+    )
+    assert len(artifact["pagination"]["page_audit"]) == 4
     assert artifact["retrieved_at"] == manifest["retrieved_at"]
     assert artifact["status"]
     assert artifact["phase_or_type"]

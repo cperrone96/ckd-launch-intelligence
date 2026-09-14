@@ -25,9 +25,7 @@ def test_registry_covers_each_source_family_exactly_once() -> None:
 
 
 def test_only_synpuf_is_public_synthetic() -> None:
-    evidence_by_name = {
-        source.name: source.evidence_type for source in get_source_registry()
-    }
+    evidence_by_name = {source.name: source.evidence_type for source in get_source_registry()}
 
     assert evidence_by_name == {
         "nhanes": "public_observed",
@@ -59,6 +57,7 @@ def test_partd_registry_identifies_latest_verified_cms_release() -> None:
             "No source rows; metadata identifies the CMS public-use dataset release."
         ),
     }
+
 
 def test_registry_is_an_immutable_tuple_of_frozen_records() -> None:
     registry = get_source_registry()

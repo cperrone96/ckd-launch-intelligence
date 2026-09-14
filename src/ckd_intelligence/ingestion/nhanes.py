@@ -188,9 +188,7 @@ def ingest_nhanes(
         race = text_value(row, "race_ethnicity", reasons)
         if race not in RACE_CODES:
             reasons.append("race_ethnicity:invalid_code")
-        creatinine = number_value(
-            row, "serum_creatinine_mg_dl", reasons, minimum=0.01, maximum=30
-        )
+        creatinine = number_value(row, "serum_creatinine_mg_dl", reasons, minimum=0.01, maximum=30)
         albumin = number_value(row, "urine_albumin_mg_l", reasons, minimum=0, maximum=50000)
         urine_creatinine = number_value(
             row, "urine_creatinine_mg_dl", reasons, minimum=0.01, maximum=5000

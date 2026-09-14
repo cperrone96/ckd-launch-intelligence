@@ -12,12 +12,14 @@ import json
 from collections import defaultdict
 from dataclasses import asdict
 from datetime import UTC, datetime
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
 from ckd_intelligence.analysis.trials import (
     summarize_trial_composition,
     summarize_trial_geography,
+    summarize_trial_interventions,
     summarize_trial_status,
     summarize_trial_updates,
 )
@@ -91,7 +93,7 @@ def build_meps() -> None:
             int(row["kidney_problem_proxy"] == 1) if is_complete else None
             for row, is_complete in zip(domain_rows, complete, strict=True)
         ],
-        **common,
+        **common,  # type: ignore[arg-type]
     )
     estimates = [_estimate_dict(prevalence, metric="proxy_positive_prevalence", unit="proportion")]
     for field, unit in (
@@ -102,7 +104,7 @@ def build_meps() -> None:
         ("prescription_medicines", "medicines per person-year"),
         ("total_expenditure_usd", "USD per person-year"),
     ):
-        estimate = weighted_mean([row[field] for row in domain_rows], **common)
+        estimate = weighted_mean([row[field] for row in domain_rows], **common)  # type: ignore[arg-type]
         estimates.append(_estimate_dict(estimate, metric=field, unit=unit))
     artifact = {
         "artifact": "MEPS HC-243 2022 utilization and expenditure landscape",
@@ -189,12 +191,41 @@ DICTIONARY: dict[str, dict[str, str]] = {
     },
 }
 
+GENERIC_ALIASES = {name: {name} for name in DICTIONARY}
+
+
+def _required_text(row: dict[str, Any], field: str) -> str:
+    value = row.get(field)
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError(f"{field}:missing_or_suppressed")
+    return value.strip()
+
+
+def _required_nonnegative(row: dict[str, Any], field: str, *, integer: bool = False) -> int | float:
+    value = row.get(field)
+    if value is None or (isinstance(value, str) and not value.strip()):
+        raise ValueError(f"{field}:missing_or_suppressed")
+    try:
+        numeric = Decimal(str(value).strip())
+    except (InvalidOperation, ValueError) as exc:
+        raise ValueError(f"{field}:malformed_number") from exc
+    if not numeric.is_finite() or numeric < 0:
+        raise ValueError(f"{field}:out_of_range")
+    if integer and numeric != numeric.to_integral_value():
+        raise ValueError(f"{field}:malformed_integer")
+    return int(numeric) if integer else float(numeric)
+
 
 def build_partd() -> None:
     retrieval = json.loads((PARTD_DIR / "retrieval-manifest.json").read_text(encoding="utf-8"))
     aggregate: dict[tuple[str, str, str], dict[str, Any]] = {}
+    validation_reasons: dict[str, int] = defaultdict(int)
+    valid_row_count = 0
+    quarantined_row_count = 0
     for item in retrieval["generics"]:
         generic = str(item["generic"])
+        if generic not in GENERIC_ALIASES:
+            raise ValueError(f"Generic is not in the versioned dictionary: {generic}")
         slug = generic.lower().replace(" ", "-")
         for page in item["pages"]:
             page_path = PARTD_DIR / f"{slug}-{page['offset']}.json"
@@ -204,11 +235,22 @@ def build_partd() -> None:
             if len(rows) != page["rows"]:
                 raise ValueError(f"CMS page row-count mismatch: {page_path}")
             for row in rows:
-                key = (
-                    generic,
-                    str(row.get("Brnd_Name", "")),
-                    str(row.get("Prscrbr_State_Abrvtn", "")),
-                )
+                try:
+                    row_generic = _required_text(row, "Gnrc_Name")
+                    if row_generic not in GENERIC_ALIASES[generic]:
+                        raise ValueError("generic_name:mismatch")
+                    brand = _required_text(row, "Brnd_Name")
+                    state = _required_text(row, "Prscrbr_State_Abrvtn")
+                    provider_npi = _required_text(row, "Prscrbr_NPI")
+                    claims = _required_nonnegative(row, "Tot_Clms", integer=True)
+                    fills = _required_nonnegative(row, "Tot_30day_Fills")
+                    cost = _required_nonnegative(row, "Tot_Drug_Cst")
+                except ValueError as exc:
+                    quarantined_row_count += 1
+                    validation_reasons[str(exc)] += 1
+                    continue
+                valid_row_count += 1
+                key = (generic, brand, state)
                 target = aggregate.setdefault(
                     key,
                     {
@@ -221,10 +263,10 @@ def build_partd() -> None:
                         "total_drug_cost_usd": 0.0,
                     },
                 )
-                target["provider_ids"].add(str(row.get("Prscrbr_NPI", "")))
-                target["total_claims"] += int(float(row.get("Tot_Clms") or 0))
-                target["total_30day_fills"] += float(row.get("Tot_30day_Fills") or 0)
-                target["total_drug_cost_usd"] += float(row.get("Tot_Drug_Cst") or 0)
+                target["provider_ids"].add(provider_npi)
+                target["total_claims"] += claims
+                target["total_30day_fills"] += fills
+                target["total_drug_cost_usd"] += cost
     aggregates = []
     for key in sorted(aggregate):
         row = aggregate[key]
@@ -286,6 +328,16 @@ def build_partd() -> None:
             ],
         },
         "aggregates": aggregates,
+        "row_validation": {
+            "api_rows_retrieved": sum(item["rows_retrieved"] for item in retrieval["generics"]),
+            "valid_rows": valid_row_count,
+            "quarantined_rows": quarantined_row_count,
+            "reasons": dict(sorted(validation_reasons.items())),
+            "generic_name_match": (
+                "Every retained row's Gnrc_Name must exactly match the "
+                "requested dictionary generic."
+            ),
+        },
         "limitations": {
             "privacy_suppression": (
                 "CMS detailed provider-drug data exclude providers with fewer than 11 "
@@ -325,6 +377,24 @@ def build_trials() -> None:
     }
     raw_ids.discard(None)
     missing = sum(row["enrollment"] is None for row in valid)
+    page_metadata = metadata.get("pages", [])
+    legacy_urls = metadata.get("request_urls", [])
+    initial_request_url = (
+        page_metadata[0]["request_url"]
+        if page_metadata and isinstance(page_metadata[0], dict)
+        else legacy_urls[0]
+        if legacy_urls
+        else metadata["endpoint"]
+    )
+    dimension_counts = {
+        "query_unique_studies": len(valid),
+        "status_available": len(valid),
+        "study_type_available": sum(row["study_type"] is not None for row in valid),
+        "phase_available": sum(row["phase"] is not None for row in valid),
+        "intervention_available": sum(row["intervention"] is not None for row in valid),
+        "location_available": sum(row["country"] is not None for row in valid),
+        "enrollment_reported": len(valid) - missing,
+    }
     artifact = {
         "artifact": "ClinicalTrials.gov CKD registry landscape",
         "evidence_type": "public_observed",
@@ -333,11 +403,41 @@ def build_trials() -> None:
         "source": "ClinicalTrials.gov",
         "endpoint": metadata["endpoint"],
         "query": metadata["query"],
+        "pagination": {
+            "page_count": metadata["page_count"],
+            "page_size": metadata["page_size"],
+            "total_count": metadata["total_count"],
+            "pagination_complete": metadata["pagination_complete"],
+            "request_parameter_contract": (
+                "query.term, pageSize, countTotal, format, and server-issued pageToken"
+            ),
+            "initial_request_url": initial_request_url,
+            "page_audit": [
+                {
+                    "page_number": page["page_number"],
+                    "rows": page["rows"],
+                    "bytes": page["bytes"],
+                    "sha256": page["sha256"],
+                    "has_page_token": bool(page.get("page_token")),
+                }
+                for page in page_metadata
+            ],
+        },
         "counts": {
             "api_total_count": metadata["total_count"],
             "valid_count": len(valid),
             "quarantine_count": len(result.quarantine),
             "unique_nct_ids": len(raw_ids),
+            "dimension_denominators": dimension_counts,
+            "missing_optional_fields": {
+                "phase": dimension_counts["query_unique_studies"]
+                - dimension_counts["phase_available"],
+                "intervention": dimension_counts["query_unique_studies"]
+                - dimension_counts["intervention_available"],
+                "location": dimension_counts["query_unique_studies"]
+                - dimension_counts["location_available"],
+                "enrollment": missing,
+            },
             "studies_with_missing_enrollment": missing,
             "studies_with_reported_enrollment": len(valid) - missing,
             "quarantine_reasons": {
@@ -350,6 +450,7 @@ def build_trials() -> None:
         },
         "status": summarize_trial_status(valid),
         "phase_or_type": summarize_trial_composition(valid),
+        "intervention": summarize_trial_interventions(valid),
         "sponsor": _group_sponsor(valid),
         "geography": summarize_trial_geography(valid),
         "change_over_time": summarize_trial_updates(valid),
@@ -369,12 +470,16 @@ def build_trials() -> None:
         "query": metadata["query"],
         "page_count": metadata["page_count"],
         "page_size": metadata["page_size"],
+        "initial_request_url": initial_request_url,
         "api_total_count": metadata["total_count"],
         "valid_count": len(valid),
         "quarantine_count": len(result.quarantine),
         "raw_snapshot_sha256": _sha(CTG_JSON),
         "raw_snapshot_bytes": CTG_JSON.stat().st_size,
         "pagination_complete": metadata["pagination_complete"],
+        "total_counts_observed": metadata.get("total_counts_observed", [metadata["total_count"]]),
+        "total_count_stable": metadata.get("total_count_stable", True),
+        "total_count_missing_pages": metadata.get("total_count_missing_pages", 0),
         "grain": "registered study aggregate; no study IDs committed",
     }
     _write("clinicaltrials_ckd_landscape", artifact, manifest)

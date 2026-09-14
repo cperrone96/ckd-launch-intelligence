@@ -112,9 +112,7 @@ def ingest_synpuf(
         cache_dir=cache_dir,
         max_bytes=MAX_SOURCE_BYTES,
     )
-    csv_payload = csv_payload_from_snapshot(
-        snapshot, max_uncompressed_bytes=MAX_UNCOMPRESSED_BYTES
-    )
+    csv_payload = csv_payload_from_snapshot(snapshot, max_uncompressed_bytes=MAX_UNCOMPRESSED_BYTES)
     rows = _rows_from_payload(csv_payload, snapshot.source_uri)
     require_release_identity(rows, "source_release", registry.version)
     duplicates = duplicate_keys(rows, lambda row: (row["claim_id"].strip(),))

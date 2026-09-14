@@ -2570,6 +2570,13 @@
   },
   "release": "2024",
   "retrieved_at": "2026-09-11T21:38:23.635394Z",
+  "row_validation": {
+    "api_rows_retrieved": 325586,
+    "generic_name_match": "Every retained row's Gnrc_Name must exactly match the requested dictionary generic.",
+    "quarantined_rows": 0,
+    "reasons": {},
+    "valid_rows": 325586
+  },
   "source": "CMS Medicare Part D Prescribers by Provider and Drug",
   "source_url": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/medicare-part-d-prescribers-by-provider-and-drug"
 }

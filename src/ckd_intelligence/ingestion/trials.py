@@ -22,11 +22,20 @@ from ckd_intelligence.quality.contracts import (
 CKD_QUERY = 'AREA[ConditionSearch]("Chronic Kidney Disease")'
 MAX_SOURCE_BYTES = 100 * 1024 * 1024
 STATUSES = {
-    "NOT_YET_RECRUITING", "RECRUITING", "ENROLLING_BY_INVITATION",
-    "ACTIVE_NOT_RECRUITING", "SUSPENDED", "TERMINATED", "COMPLETED", "WITHDRAWN",
+    "NOT_YET_RECRUITING",
+    "RECRUITING",
+    "ENROLLING_BY_INVITATION",
+    "ACTIVE_NOT_RECRUITING",
+    "SUSPENDED",
+    "TERMINATED",
+    "COMPLETED",
+    "WITHDRAWN",
     "UNKNOWN",
-    "WITHHELD", "NO_LONGER_AVAILABLE", "TEMPORARILY_NOT_AVAILABLE",
-    "APPROVED_FOR_MARKETING", "AVAILABLE",
+    "WITHHELD",
+    "NO_LONGER_AVAILABLE",
+    "TEMPORARILY_NOT_AVAILABLE",
+    "APPROVED_FOR_MARKETING",
+    "AVAILABLE",
 }
 PHASES = {"NA", "EARLY_PHASE1", "PHASE1", "PHASE2", "PHASE3", "PHASE4"}
 STUDY_TYPES = {"INTERVENTIONAL", "OBSERVATIONAL", "EXPANDED_ACCESS"}
@@ -37,6 +46,17 @@ def _object(value: object, field: str, reasons: list[str]) -> Mapping[str, objec
         reasons.append(f"{field}:invalid_type")
         return None
     return value
+
+
+def _optional_object(
+    container: Mapping[str, object], key: str, field: str, reasons: list[str]
+) -> Mapping[str, object] | None:
+    """Return an optional API module without treating omission as corruption."""
+
+    value = container.get(key)
+    if value is None:
+        return None
+    return _object(value, field, reasons)
 
 
 def _string(container: Mapping[str, object], key: str, field: str, reasons: list[str]) -> str:
@@ -76,16 +96,23 @@ def _strings(
 
 def _nested_names(
     container: Mapping[str, object], key: str, field: str, reasons: list[str]
-) -> list[str]:
+) -> list[str] | None:
     value = container.get(key)
+    if value is None:
+        return None
     if not isinstance(value, list) or not value:
         reasons.append(f"{field}:invalid_type")
-        return []
+        return None
     names: list[str] = []
     for item in value:
-        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+        if not isinstance(item, dict):
             reasons.append(f"{field}:invalid_type")
-            return []
+            return None
+        if "name" not in item:
+            return None
+        if not isinstance(item.get("name"), str):
+            reasons.append(f"{field}:invalid_type")
+            return None
         name = item["name"].strip()
         if not name:
             reasons.append(f"{field}:missing_sentinel")
@@ -93,16 +120,23 @@ def _nested_names(
     return names
 
 
-def _nested_countries(container: Mapping[str, object], reasons: list[str]) -> list[str]:
+def _nested_countries(container: Mapping[str, object], reasons: list[str]) -> list[str] | None:
     value = container.get("locations")
+    if value is None:
+        return None
     if not isinstance(value, list) or not value:
         reasons.append("country:invalid_type")
-        return []
+        return None
     countries: list[str] = []
     for item in value:
-        if not isinstance(item, dict) or not isinstance(item.get("country"), str):
+        if not isinstance(item, dict):
             reasons.append("country:invalid_type")
-            return []
+            return None
+        if "country" not in item:
+            return None
+        if not isinstance(item.get("country"), str):
+            reasons.append("country:invalid_type")
+            return None
         country = item["country"].strip()
         if not country:
             reasons.append("country:missing_sentinel")
@@ -125,9 +159,7 @@ def _normalize_study(study: object) -> tuple[dict[str, Scalar], list[str], str]:
     status_module = _object(protocol.get("statusModule"), "statusModule", reasons) or {}
     design = _object(protocol.get("designModule"), "designModule", reasons) or {}
     conditions = _object(protocol.get("conditionsModule"), "conditionsModule", reasons) or {}
-    arms = (
-        _object(protocol.get("armsInterventionsModule"), "armsInterventionsModule", reasons) or {}
-    )
+    arms = _optional_object(protocol, "armsInterventionsModule", "armsInterventionsModule", reasons)
     sponsors = (
         _object(
             protocol.get("sponsorCollaboratorsModule"),
@@ -136,9 +168,8 @@ def _normalize_study(study: object) -> tuple[dict[str, Scalar], list[str], str]:
         )
         or {}
     )
-    locations = (
-        _object(protocol.get("contactsLocationsModule"), "contactsLocationsModule", reasons)
-        or {}
+    locations = _optional_object(
+        protocol, "contactsLocationsModule", "contactsLocationsModule", reasons
     )
 
     nct_id = _string(identification, "nctId", "nct_id", reasons)
@@ -148,9 +179,10 @@ def _normalize_study(study: object) -> tuple[dict[str, Scalar], list[str], str]:
     status = _string(status_module, "overallStatus", "overall_status", reasons)
     if status not in STATUSES:
         reasons.append("overall_status:invalid_code")
-    update_struct = _object(
-        status_module.get("lastUpdatePostDateStruct"), "lastUpdatePostDateStruct", reasons
-    ) or {}
+    update_struct = (
+        _object(status_module.get("lastUpdatePostDateStruct"), "lastUpdatePostDateStruct", reasons)
+        or {}
+    )
     last_update = _string(update_struct, "date", "last_update_date", reasons)
     try:
         date.fromisoformat(last_update)
@@ -160,9 +192,14 @@ def _normalize_study(study: object) -> tuple[dict[str, Scalar], list[str], str]:
     study_type = _string(design, "studyType", "study_type", reasons)
     if study_type not in STUDY_TYPES:
         reasons.append("study_type:invalid_code")
-    phases_value = design.get("phases", [])
-    if phases_value == [] and study_type in {"OBSERVATIONAL", "EXPANDED_ACCESS"}:
+    phases_value = design.get("phases")
+    if phases_value in (None, []) and study_type in {"OBSERVATIONAL", "EXPANDED_ACCESS"}:
         phases = ["NA"]
+    elif phases_value in (None, []):
+        phases = []
+    elif not isinstance(phases_value, list):
+        reasons.append("phase:invalid_type")
+        phases = []
     else:
         phases = _strings(design, "phases", "phase", reasons)
     if any(phase not in PHASES for phase in phases):
@@ -180,25 +217,31 @@ def _normalize_study(study: object) -> tuple[dict[str, Scalar], list[str], str]:
         else _integer(enrollment_info, "count", "enrollment", reasons)
     )
     condition_values = _strings(conditions, "conditions", "condition", reasons)
-    interventions = _nested_names(arms, "interventions", "intervention", reasons)
+    interventions = (
+        None if arms is None else _nested_names(arms, "interventions", "intervention", reasons)
+    )
     lead_sponsor = _object(sponsors.get("leadSponsor"), "leadSponsor", reasons) or {}
     sponsor = _string(lead_sponsor, "name", "sponsor", reasons)
-    countries = _nested_countries(locations, reasons)
+    countries = None if locations is None else _nested_countries(locations, reasons)
 
-    return {
-        "nct_id": nct_id,
-        "brief_title": title,
-        "overall_status": status,
-        "phase": "|".join(phases),
-        "enrollment": enrollment,
-        "condition": " | ".join(condition_values),
-        "intervention": " | ".join(interventions),
-        "sponsor": sponsor,
-        "country": " | ".join(countries),
-        "last_update_date": last_update,
-        "study_type": study_type,
-        "evidence_type": "public_observed",
-    }, reasons, raw_json
+    return (
+        {
+            "nct_id": nct_id,
+            "brief_title": title,
+            "overall_status": status,
+            "phase": "|".join(phases) or None,
+            "enrollment": enrollment,
+            "condition": " | ".join(condition_values),
+            "intervention": None if interventions is None else " | ".join(interventions),
+            "sponsor": sponsor,
+            "country": None if countries is None else " | ".join(countries),
+            "last_update_date": last_update,
+            "study_type": study_type,
+            "evidence_type": "public_observed",
+        },
+        reasons,
+        raw_json,
+    )
 
 
 def _snapshot_timestamp(

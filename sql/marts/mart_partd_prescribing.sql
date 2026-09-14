@@ -1,6 +1,8 @@
 -- CMS Medicare Part D provider/drug aggregate mart.
 -- Grain: one provider NPI, provider geography, generic drug, and release year.
 -- No beneficiary or person identifier is selected or inferred.
+-- Evidence and source-manifest fields are grouping keys so mixed provenance cannot
+-- be hidden by an aggregate selector.
 CREATE OR REPLACE VIEW analytics_observed.mart_partd_prescribing AS
 SELECT
     'partd' AS source,
@@ -27,12 +29,13 @@ SELECT
     END AS is_ckd_relevant_therapy_proxy,
     'Medicare Part D prescriptions represented in CMS aggregate public-use data' AS source_population,
     'provider NPI, provider state, brand, generic drug, and year aggregate' AS source_grain,
-    MAX(evidence_type) AS evidence_type,
-    MAX(source_retrieved_at) AS source_retrieved_at,
-    MAX(source_manifest_checksum) AS source_manifest_checksum,
+    evidence_type,
+    source_retrieved_at,
+    source_manifest_checksum,
     'Therapy proxy is drug-name based and not an indication; aggregate records do not '
         || 'support beneficiary utilization, adherence, outcomes, or patient linkage. CMS '
         || 'detail rows exclude providers with fewer than 11 total claims; absent rows are not zero.'
         AS limitation
 FROM raw_partd.records
-GROUP BY source_release, year, provider_npi, provider_state, generic_name, drug_name;
+GROUP BY source_release, year, provider_npi, provider_state, generic_name, drug_name,
+    evidence_type, source_retrieved_at, source_manifest_checksum;

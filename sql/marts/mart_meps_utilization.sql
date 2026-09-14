@@ -2,6 +2,8 @@
 -- DSKIDN53 is a documented diabetes-related kidney-problem proxy, not confirmed CKD.
 -- Grain: year x proxy status. Counts and weighted quantities are never event-person
 -- estimates and no record is linked to another source family.
+-- Evidence type, retrieval timestamp, and manifest checksum are grouped explicitly;
+-- mixed provenance is segregated into separate output rows, never collapsed with MAX.
 CREATE OR REPLACE VIEW analytics_observed.mart_meps_utilization AS
 WITH classified AS (
     SELECT
@@ -42,9 +44,9 @@ SELECT
         THEN prescription_medicines * proxy_weight ELSE 0 END) AS weighted_prescription_medicines,
     SUM(CASE WHEN kidney_proxy_status IN ('proxy_positive', 'proxy_negative')
         THEN total_expenditure_usd * proxy_weight ELSE 0 END) AS weighted_expenditure_usd,
-    MAX(source_retrieved_at) AS source_retrieved_at,
-    MAX(source_manifest_checksum) AS source_manifest_checksum,
-    MAX(evidence_type) AS evidence_type,
+    source_retrieved_at,
+    source_manifest_checksum,
+    evidence_type,
     'U.S. civilian, noninstitutionalized population represented by MEPS HC-243 2022; '
         || 'proxy analysis is restricted to DCS-eligible respondents with reported diabetes.'
         AS source_population,
@@ -53,4 +55,5 @@ SELECT
     'Use DIABW22F for proxy-domain population estimates and VARSTR/VARPSU for variance. '
         || 'DSKIDN53 reflects diabetes-related kidney problems, not a CKD diagnosis.' AS limitation
 FROM classified
-GROUP BY source_release, year, kidney_proxy_status;
+GROUP BY source_release, year, kidney_proxy_status, evidence_type,
+    source_retrieved_at, source_manifest_checksum;

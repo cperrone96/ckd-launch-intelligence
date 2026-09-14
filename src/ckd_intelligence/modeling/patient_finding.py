@@ -43,9 +43,7 @@ PRE_LAB_FEATURES = (
     "hypertension_history",
     "smoking_status",
 )
-NUMERIC_FEATURES = frozenset(
-    {"age_years", "body_mass_index", "systolic_blood_pressure"}
-)
+NUMERIC_FEATURES = frozenset({"age_years", "body_mass_index", "systolic_blood_pressure"})
 CATEGORICAL_FEATURES = frozenset(PRE_LAB_FEATURES) - NUMERIC_FEATURES
 LEAKAGE_TOKENS = (
     "ckd",
@@ -202,9 +200,7 @@ class LogisticScorer:
                     raise FeatureValidationError(f"{name} must be finite")
                 lower, upper = _numeric_range(name)
                 if not lower <= number <= upper:
-                    raise FeatureValidationError(
-                        f"{name} must be between {lower:g} and {upper:g}"
-                    )
+                    raise FeatureValidationError(f"{name} must be between {lower:g} and {upper:g}")
                 validated[name] = number
             else:
                 text = str(value).strip()
@@ -343,16 +339,11 @@ class LogisticScorer:
             raise FeatureValidationError(
                 "scorer numeric preprocessing fields do not match feature_order"
             )
-        expected_categorical = {
-            name for name in feature_order if name in CATEGORICAL_FEATURES
-        }
+        expected_categorical = {name for name in feature_order if name in CATEGORICAL_FEATURES}
         if set(categorical_levels) != expected_categorical or any(
-            not levels or len(set(levels)) != len(levels)
-            for levels in categorical_levels.values()
+            not levels or len(set(levels)) != len(levels) for levels in categorical_levels.values()
         ):
-            raise FeatureValidationError(
-                "scorer categorical levels do not match feature_order"
-            )
+            raise FeatureValidationError("scorer categorical levels do not match feature_order")
         expected_coefficients = sum(name in NUMERIC_FEATURES for name in feature_order) + sum(
             len(categorical_levels.get(name, ()))
             for name in feature_order
@@ -449,8 +440,7 @@ class ModelComparison:
             },
             "cohort_sensitivity": self.cohort_sensitivity,
             "paired_differences": {
-                name: asdict(difference)
-                for name, difference in self.paired_differences.items()
+                name: asdict(difference) for name, difference in self.paired_differences.items()
             },
             "scorer": self.scorer.as_dict(),
             "intended_use": self.intended_use,
@@ -458,9 +448,7 @@ class ModelComparison:
         }
 
     def to_json(self) -> str:
-        return json.dumps(
-            self.to_artifact(), sort_keys=True, indent=2, allow_nan=False
-        ) + "\n"
+        return json.dumps(self.to_artifact(), sort_keys=True, indent=2, allow_nan=False) + "\n"
 
 
 def _looks_like_leakage(column: str) -> bool:
@@ -486,9 +474,11 @@ def build_pre_lab_features(
 ) -> pd.DataFrame:
     """Return only explicitly allowed variables plausibly available before kidney labs."""
 
-    chosen = list(requested) if requested is not None else [
-        name for name in PRE_LAB_FEATURES if name in frame.columns
-    ]
+    chosen = (
+        list(requested)
+        if requested is not None
+        else [name for name in PRE_LAB_FEATURES if name in frame.columns]
+    )
     leaked = sorted(name for name in chosen if _looks_like_leakage(name))
     if leaked:
         raise LeakageError(f"outcome-defining or derived fields requested: {', '.join(leaked)}")
@@ -575,13 +565,9 @@ def _percentile_interval(
         raise FeatureValidationError("cluster bootstrap produced no valid replicates")
     caveats: list[str] = []
     if cluster_count < 20:
-        caveats.append(
-            f"Only {cluster_count} holdout clusters; interval precision is limited."
-        )
+        caveats.append(f"Only {cluster_count} holdout clusters; interval precision is limited.")
     if len(valid) < max(20, int(0.8 * requested)):
-        caveats.append(
-            f"Only {len(valid)} of {requested} bootstrap replicates were estimable."
-        )
+        caveats.append(f"Only {len(valid)} of {requested} bootstrap replicates were estimable.")
     low, high = np.percentile(valid, [2.5, 97.5])
     return UncertaintyInterval(
         low=float(low),
@@ -707,11 +693,7 @@ def _metrics(
     matrix = confusion_matrix(y, predicted, labels=[0, 1])
     tn, fp, fn, tp = (int(value) for value in matrix.ravel())
     roc = float(roc_auc_score(y, probabilities)) if len(np.unique(y)) == 2 else float("nan")
-    pr = (
-        float(average_precision_score(y, probabilities))
-        if int(y.sum()) > 0
-        else float("nan")
-    )
+    pr = float(average_precision_score(y, probabilities)) if int(y.sum()) > 0 else float("nan")
     intervals = _metric_intervals(
         y,
         probabilities,
@@ -832,23 +814,24 @@ def _subgroups(
             )
             if subgroup_cluster_count < 2:
                 caveats.append(
-                    "Fewer than two contributing clusters; uncertainty intervals "
-                    "are unavailable."
+                    "Fewer than two contributing clusters; uncertainty intervals are unavailable."
                 )
             elif sparse:
-                caveats.append(
-                    "Sparse subgroup; uncertainty intervals are unavailable."
+                caveats.append("Sparse subgroup; uncertainty intervals are unavailable.")
+            intervals = (
+                _subgroup_metric_intervals(
+                    y,
+                    probabilities,
+                    groups,
+                    values.to_numpy(dtype=object),
+                    value,
+                    capacity,
+                    replicates=replicates,
+                    random_state=random_state + len(records),
                 )
-            intervals = _subgroup_metric_intervals(
-                y,
-                probabilities,
-                groups,
-                values.to_numpy(dtype=object),
-                value,
-                capacity,
-                replicates=replicates,
-                random_state=random_state + len(records),
-            ) if not sparse else {"precision": None, "recall": None, "brier": None}
+                if not sparse
+                else {"precision": None, "recall": None, "brier": None}
+            )
             if int(predicted.sum()) == 0:
                 intervals["precision"] = None
             if positives == 0:
@@ -968,9 +951,7 @@ def _validate_training_features(features: pd.DataFrame) -> pd.DataFrame:
                 raise FeatureValidationError(f"{name} must be complete, numeric, and finite")
             lower, upper = _numeric_range(name)
             if bool((~values.between(lower, upper)).any()):
-                raise FeatureValidationError(
-                    f"{name} must be between {lower:g} and {upper:g}"
-                )
+                raise FeatureValidationError(f"{name} must be between {lower:g} and {upper:g}")
             validated[name] = values.astype(float)
         else:
             if validated[name].isna().any():
@@ -1035,8 +1016,7 @@ def _paired_metric_differences(
         "pr_auc": (
             float(average_precision_score(y, logistic) - average_precision_score(y, forest)),
             lambda truth, first, second: float(
-                average_precision_score(truth, first)
-                - average_precision_score(truth, second)
+                average_precision_score(truth, first) - average_precision_score(truth, second)
             ),
         ),
         "brier_score": (
@@ -1046,9 +1026,7 @@ def _paired_metric_differences(
             ),
         ),
     }
-    bootstraps = _bootstrap_indices(
-        groups, replicates=replicates, random_state=random_state
-    )
+    bootstraps = _bootstrap_indices(groups, replicates=replicates, random_state=random_state)
     output: dict[str, PairedDifference] = {}
     for metric, (estimate, calculate) in specifications.items():
         values: list[float] = []
@@ -1136,9 +1114,7 @@ def train_patient_finding_models(
         raise FeatureValidationError("age_years, sex, and race_ethnicity are required")
     y = y_series.astype(int).to_numpy()
     split_cv = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=random_state)
-    outer_splits = _validated_grouped_splits(
-        split_cv, features, y, group_series, context="outer"
-    )
+    outer_splits = _validated_grouped_splits(split_cv, features, y, group_series, context="outer")
     development_index, holdout_index = outer_splits[0]
     development = features.iloc[development_index].reset_index(drop=True)
     holdout = features.iloc[holdout_index].reset_index(drop=True)
@@ -1265,9 +1241,7 @@ def train_patient_finding_models(
                     "holdout_n": int(len(alternative_y)),
                     "holdout_prevalence": float(alternative_y.mean()),
                     "roc_auc": float(roc_auc_score(alternative_y, logistic_holdout)),
-                    "pr_auc": float(
-                        average_precision_score(alternative_y, logistic_holdout)
-                    ),
+                    "pr_auc": float(average_precision_score(alternative_y, logistic_holdout)),
                 }
 
     return ModelComparison(

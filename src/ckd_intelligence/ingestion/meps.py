@@ -31,28 +31,61 @@ from ckd_intelligence.quality.contracts import (
 
 REQUIRED = frozenset(
     {
-        "source_release", "person_id", "year", "dcs_eligible", "diabetes_reported",
-        "kidney_problem_proxy", "total_expenditure_usd", "office_visits",
-        "outpatient_visits", "emergency_visits", "inpatient_stays",
-        "prescription_medicines", "person_weight", "proxy_weight", "variance_stratum",
+        "source_release",
+        "person_id",
+        "year",
+        "dcs_eligible",
+        "diabetes_reported",
+        "kidney_problem_proxy",
+        "total_expenditure_usd",
+        "office_visits",
+        "outpatient_visits",
+        "emergency_visits",
+        "inpatient_stays",
+        "prescription_medicines",
+        "person_weight",
+        "proxy_weight",
+        "variance_stratum",
         "variance_psu",
     }
 )
 MAX_SOURCE_BYTES = 750 * 1024 * 1024
 SURVEY_MISSING = frozenset({"-1", "-2", "-7", "-8", "-9", "-15"})
 NATIVE_REQUIRED = {
-    "DUPERSID", "DATAYEAR", "DCSELIG", "DSDIA53", "DSKIDN53", "TOTEXP22",
-    "OBTOTV22", "OPTOTV22", "ERTOT22", "IPDIS22", "RXTOT22", "PERWT22F",
-    "DIABW22F", "VARSTR", "VARPSU",
+    "DUPERSID",
+    "DATAYEAR",
+    "DCSELIG",
+    "DSDIA53",
+    "DSKIDN53",
+    "TOTEXP22",
+    "OBTOTV22",
+    "OPTOTV22",
+    "ERTOT22",
+    "IPDIS22",
+    "RXTOT22",
+    "PERWT22F",
+    "DIABW22F",
+    "VARSTR",
+    "VARPSU",
 }
 
 # Official H243.DAT fixed-width positions from the AHRQ Stata programming file.
 FIXED_WIDTHS: dict[str, tuple[int, int]] = {
-    "DUPERSID": (11, 20), "DATAYEAR": (23, 26), "DCSELIG": (836, 836),
-    "DSDIA53": (837, 838), "DSKIDN53": (902, 904), "TOTEXP22": (2616, 2622),
-    "OBTOTV22": (2691, 2693), "OPTOTV22": (2852, 2854), "ERTOT22": (3188, 3189),
-    "IPDIS22": (3385, 3385), "RXTOT22": (3925, 3927), "PERWT22F": (4001, 4013),
-    "DIABW22F": (4053, 4065), "VARSTR": (4066, 4069), "VARPSU": (4070, 4070),
+    "DUPERSID": (11, 20),
+    "DATAYEAR": (23, 26),
+    "DCSELIG": (836, 836),
+    "DSDIA53": (837, 838),
+    "DSKIDN53": (902, 904),
+    "TOTEXP22": (2616, 2622),
+    "OBTOTV22": (2691, 2693),
+    "OPTOTV22": (2852, 2854),
+    "ERTOT22": (3188, 3189),
+    "IPDIS22": (3385, 3385),
+    "RXTOT22": (3925, 3927),
+    "PERWT22F": (4001, 4013),
+    "DIABW22F": (4053, 4065),
+    "VARSTR": (4066, 4069),
+    "VARPSU": (4070, 4070),
 }
 
 
@@ -64,7 +97,8 @@ def _fixed_value(line: str, field: str) -> str:
 def _native_meps_ascii_rows(payload: bytes) -> list[dict[str, str]]:
     with zipfile.ZipFile(io.BytesIO(payload)) as archive:
         members = [
-            info for info in archive.infolist()
+            info
+            for info in archive.infolist()
             if not info.is_dir() and info.filename.lower().endswith(".dat")
         ]
         if len(members) != 1:
@@ -77,8 +111,10 @@ def _native_meps_ascii_rows(payload: bytes) -> list[dict[str, str]]:
         source = {field: _fixed_value(line, field) for field in FIXED_WIDTHS}
         rows.append(
             {
-                "source_release": "HC-243-2022", "person_id": source["DUPERSID"],
-                "year": source["DATAYEAR"], "dcs_eligible": source["DCSELIG"],
+                "source_release": "HC-243-2022",
+                "person_id": source["DUPERSID"],
+                "year": source["DATAYEAR"],
+                "dcs_eligible": source["DCSELIG"],
                 "diabetes_reported": source["DSDIA53"],
                 "kidney_problem_proxy": source["DSKIDN53"],
                 "total_expenditure_usd": source["TOTEXP22"],
@@ -87,8 +123,10 @@ def _native_meps_ascii_rows(payload: bytes) -> list[dict[str, str]]:
                 "emergency_visits": source["ERTOT22"],
                 "inpatient_stays": source["IPDIS22"],
                 "prescription_medicines": source["RXTOT22"],
-                "person_weight": source["PERWT22F"], "proxy_weight": source["DIABW22F"],
-                "variance_stratum": source["VARSTR"], "variance_psu": source["VARPSU"],
+                "person_weight": source["PERWT22F"],
+                "proxy_weight": source["DIABW22F"],
+                "variance_stratum": source["VARSTR"],
+                "variance_psu": source["VARPSU"],
             }
         )
     return rows
@@ -107,7 +145,8 @@ def _native_meps_xpt_rows(payload: bytes) -> list[dict[str, str]]:
     for row in frame.to_dict(orient="records"):
         rows.append(
             {
-                "source_release": "HC-243-2022", "person_id": native_scalar_text(row["DUPERSID"]),
+                "source_release": "HC-243-2022",
+                "person_id": native_scalar_text(row["DUPERSID"]),
                 "year": native_scalar_text(row["DATAYEAR"]),
                 "dcs_eligible": native_scalar_text(row["DCSELIG"]),
                 "diabetes_reported": native_scalar_text(row["DSDIA53"]),
@@ -171,17 +210,28 @@ def _validate_rows(
         year = integer_value(row, "year", reasons, minimum=2022, maximum=2022)
         dcs = integer_value(row, "dcs_eligible", reasons, minimum=0, maximum=2)
         diabetes = integer_value(
-            row, "diabetes_reported", reasons, minimum=-15, maximum=2,
+            row,
+            "diabetes_reported",
+            reasons,
+            minimum=-15,
+            maximum=2,
         )
         kidney = integer_value(
-            row, "kidney_problem_proxy", reasons, minimum=-15, maximum=2,
+            row,
+            "kidney_problem_proxy",
+            reasons,
+            minimum=-15,
+            maximum=2,
         )
         expenditure = _survey_number(row, "total_expenditure_usd", reasons)
         visits = {
             field: _survey_number(row, field, reasons, integer=True)
             for field in (
-                "office_visits", "outpatient_visits", "emergency_visits",
-                "inpatient_stays", "prescription_medicines",
+                "office_visits",
+                "outpatient_visits",
+                "emergency_visits",
+                "inpatient_stays",
+                "prescription_medicines",
             )
         }
         person_weight = number_value(row, "person_weight", reasons, minimum=0.0)
@@ -191,11 +241,18 @@ def _validate_rows(
         if (person_id,) in duplicates:
             reasons.append("person_id:duplicate_key")
         return {
-            "source_release": source_release, "person_id": person_id, "year": year,
-            "dcs_eligible": dcs, "diabetes_reported": diabetes,
-            "kidney_problem_proxy": kidney, "total_expenditure_usd": expenditure,
-            **visits, "person_weight": person_weight, "proxy_weight": proxy_weight,
-            "variance_stratum": variance_stratum, "variance_psu": variance_psu,
+            "source_release": source_release,
+            "person_id": person_id,
+            "year": year,
+            "dcs_eligible": dcs,
+            "diabetes_reported": diabetes,
+            "kidney_problem_proxy": kidney,
+            "total_expenditure_usd": expenditure,
+            **visits,
+            "person_weight": person_weight,
+            "proxy_weight": proxy_weight,
+            "variance_stratum": variance_stratum,
+            "variance_psu": variance_psu,
             "evidence_type": registry.evidence_type,
         }, reasons
 
@@ -219,6 +276,9 @@ def ingest_meps(
         rows = parse_csv(snapshot.payload, REQUIRED)
     valid, quarantine = _validate_rows(rows, registry.version)
     return result_with_manifest(
-        registry=registry, snapshot=snapshot, valid=valid, quarantine=quarantine,
+        registry=registry,
+        snapshot=snapshot,
+        valid=valid,
+        quarantine=quarantine,
         coverage_values=(str(row["year"]) for row in valid),
     )

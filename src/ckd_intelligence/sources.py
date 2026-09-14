@@ -63,8 +63,7 @@ _SOURCE_REGISTRY: tuple[SourceRecord, ...] = (
         evidence_type="public_observed",
         checksum="f92772168e307682c70f9036d965fd1149d1dd41b7a13f739b77cd6f352b69c0",
         limitations=(
-            "Aggregate records do not support beneficiary-level utilization or "
-            "patient journeys."
+            "Aggregate records do not support beneficiary-level utilization or patient journeys."
         ),
     ),
     SourceRecord(

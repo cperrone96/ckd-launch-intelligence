@@ -33,9 +33,7 @@ def test_fixture_model_output_cannot_overwrite_official_model_artifact() -> None
 
     assert official == Path("data/processed/patient_finding_model_comparison.json")
     assert official_checksum == Path("data/processed/patient_finding_model_comparison.sha256")
-    assert fixture == Path(
-        "data/processed/fixture/patient_finding_model_comparison_fixture.json"
-    )
+    assert fixture == Path("data/processed/fixture/patient_finding_model_comparison_fixture.json")
     assert fixture_checksum == Path(
         "data/processed/fixture/patient_finding_model_comparison_fixture.sha256"
     )
@@ -71,9 +69,7 @@ def test_official_model_artifact_is_aggregate_checksummed_and_nonclinical() -> N
         "data/manifests/nhanes-2017-2018-patient-need.json"
     )
     assert len(artifact["source_provenance"]["files"]) == 3
-    sparse_age = next(
-        row for row in artifact["subgroups"]["age_band"] if row["value"] == "18-39"
-    )
+    sparse_age = next(row for row in artifact["subgroups"]["age_band"] if row["value"] == "18-39")
     assert sparse_age["positives"] == 18
     assert sparse_age["precision_interval"] is None
     assert sparse_age["recall_interval"] is None
@@ -251,9 +247,7 @@ def test_capacity_policy_never_exceeds_limit_when_probabilities_tie() -> None:
 
 def test_scalar_threshold_rejects_boundary_ties_that_cannot_encode_exact_capacity() -> None:
     cohort, groups = _modeling_cohort()
-    comparison = train_patient_finding_models(
-        cohort, groups, bootstrap_replicates=20
-    )
+    comparison = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
     tied = replace(comparison, selection_probabilities=(0.8, 0.8, 0.8, 0.2))
 
     with pytest.raises(CapacityBoundaryError, match="select_capacity_decision"):
@@ -288,9 +282,7 @@ def test_subgroup_bootstrap_recomputes_exact_fractional_capacity_per_full_replic
         probabilities: list[float], capacity: float | int
     ) -> patient_finding.CapacityDecision:
         decision = original(probabilities, capacity)
-        observed.append(
-            (len(probabilities), decision.requested_count, decision.selected_count)
-        )
+        observed.append((len(probabilities), decision.requested_count, decision.selected_count))
         return decision
 
     monkeypatch.setattr(patient_finding, "select_capacity_decision", recording_decision)
@@ -314,12 +306,8 @@ def test_subgroup_bootstrap_recomputes_exact_fractional_capacity_per_full_replic
 def test_training_and_json_artifact_are_deterministic() -> None:
     cohort, groups = _modeling_cohort()
 
-    first = train_patient_finding_models(
-        cohort, groups, capacity=0.15, bootstrap_replicates=20
-    )
-    second = train_patient_finding_models(
-        cohort, groups, capacity=0.15, bootstrap_replicates=20
-    )
+    first = train_patient_finding_models(cohort, groups, capacity=0.15, bootstrap_replicates=20)
+    second = train_patient_finding_models(cohort, groups, capacity=0.15, bootstrap_replicates=20)
 
     assert first.to_json() == second.to_json()
     assert "respondent_id" not in first.to_json()
@@ -369,21 +357,15 @@ def test_scoring_artifact_rejects_incomplete_out_of_range_and_extra_input() -> N
     )
     scorer = comparison.scorer
 
-    probability = scorer.score_one(
-        {"age_years": 67, "sex": "Female", "race_ethnicity": "Group B"}
-    )
+    probability = scorer.score_one({"age_years": 67, "sex": "Female", "race_ethnicity": "Group B"})
 
     assert 0 <= probability <= 1
     with pytest.raises(FeatureValidationError, match="missing required"):
         scorer.score_one({"age_years": 67, "sex": "Female"})
     with pytest.raises(FeatureValidationError, match="age_years"):
-        scorer.score_one(
-            {"age_years": 121, "sex": "Female", "race_ethnicity": "Group B"}
-        )
+        scorer.score_one({"age_years": 121, "sex": "Female", "race_ethnicity": "Group B"})
     with pytest.raises(FeatureValidationError, match="JSON number"):
-        scorer.score_one(
-            {"age_years": "67", "sex": "Female", "race_ethnicity": "Group B"}
-        )
+        scorer.score_one({"age_years": "67", "sex": "Female", "race_ethnicity": "Group B"})
     with pytest.raises(LeakageError):
         scorer.score_one(
             {

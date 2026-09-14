@@ -111,9 +111,7 @@ def test_nonbinary_outcome_and_empty_domain_are_rejected() -> None:
     with pytest.raises(ValueError, match="binary"):
         weighted_prevalence([1, 2], [1, 1], [1, 1], [1, 2])
     with pytest.raises(ValueError, match="domain"):
-        weighted_prevalence(
-            [1, 0], [1, 1], [1, 1], [1, 2], domain=[False, False]
-        )
+        weighted_prevalence([1, 0], [1, 1], [1, 1], [1, 2], domain=[False, False])
 
 
 def test_excluded_missing_counts_only_missing_outcomes_inside_domain() -> None:

@@ -186,7 +186,7 @@ def test_trial_status_totals_reconcile(landscape_db: duckdb.DuckDBPyConnection) 
 def test_meps_mart_preserves_weighted_utilization_and_source_scope(
     landscape_db: duckdb.DuckDBPyConnection,
 ) -> None:
-    rows = landscape_db.sql(
+    rows = landscape_db.execute(
         """
         SELECT year, kidney_proxy_status, weighted_population,
                weighted_expenditure_usd, source_population, source_grain
@@ -230,3 +230,37 @@ def test_trial_analysis_returns_reconciled_status_and_composition(tmp_path: Path
     assert result[0]["overall_status"] == "RECRUITING"
     assert result[0]["study_count"] == 1
     assert result[0]["total_reported_enrollment"] == 120
+
+
+def test_mixed_partd_provenance_is_segregated_not_maximized(
+    landscape_db: duckdb.DuckDBPyConnection,
+) -> None:
+    landscape_db.execute(
+        """
+        INSERT INTO raw_partd.records
+        SELECT source_release, provider_npi, provider_state, drug_name, generic_name,
+               total_claim_count, total_30_day_fill_count, total_drug_cost_usd, year,
+               'fixture_only', '2026-09-12T00:00:00Z', 'fixture-alt'
+        FROM raw_partd.records
+        LIMIT 1
+        """
+    )
+    landscape_db.execute(
+        (ROOT / "sql/marts/mart_partd_prescribing.sql").read_text(encoding="utf-8")
+    )
+    provider_row = landscape_db.sql("SELECT provider_npi FROM raw_partd.records LIMIT 1").fetchone()
+    assert provider_row is not None
+    provider_npi = provider_row[0]
+    rows = landscape_db.execute(
+        """
+        SELECT evidence_type, source_retrieved_at, source_manifest_checksum
+        FROM analytics_observed.mart_partd_prescribing
+        WHERE provider_npi = ?
+        ORDER BY evidence_type
+        """,
+        [provider_npi],
+    ).fetchall()
+    assert rows == [
+        ("fixture_only", "2026-09-12T00:00:00Z", "fixture-alt"),
+        ("public_observed", "2026-09-11T21:20:41Z", "fixture-partd"),
+    ]
