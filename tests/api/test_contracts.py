@@ -29,6 +29,20 @@ def score_request() -> dict[str, object]:
     }
 
 
+def reseal_artifact(root: Path, artifact_name: str) -> None:
+    """Update both integrity declarations after an intentional fixture mutation."""
+
+    artifact = root / "processed" / artifact_name
+    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+    (root / "processed" / f"{artifact.stem}.sha256").write_text(
+        f"{digest}  data/processed/{artifact_name}\n", encoding="utf-8"
+    )
+    manifest_path = root / "manifests" / artifact_name
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["artifact_sha256"] = digest
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+
 def test_health_and_exact_routes(client: TestClient) -> None:
     assert client.get("/api/v1/health").json() == {
         "status": "ok",
@@ -258,6 +272,9 @@ def test_api_fails_closed_on_non_object_or_invalid_artifact_member(
     shutil.copytree(source, root)
     artifact = root / "processed" / "patient_need_summary.json"
     artifact.write_text(replacement, encoding="utf-8")
+    reseal_artifact(root, "patient_need_summary.json")
+    with pytest.raises(ArtifactIntegrityError):
+        ArtifactRepository(root).load_json("patient_need")
     response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
         "/api/v1/population-estimates"
     )
@@ -347,9 +364,9 @@ def test_trial_dimension_requires_semantic_key(
     payload = json.loads(artifact.read_text(encoding="utf-8"))
     payload[dimension][0].pop(field, None)
     artifact.write_text(json.dumps(payload), encoding="utf-8")
-    sidecar = root / "processed" / "clinicaltrials_ckd_landscape.sha256"
-    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
-    sidecar.write_text(f"{digest}  data/processed/clinicaltrials_ckd_landscape.json\n")
+    reseal_artifact(root, "clinicaltrials_ckd_landscape.json")
+    with pytest.raises(ArtifactIntegrityError, match="defining field"):
+        ArtifactRepository(root).load_json("trials")
     response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
         "/api/v1/trials", params={"dimension": dimension}
     )
@@ -365,9 +382,9 @@ def test_phase_or_type_requires_phase_or_study_type(tmp_path: Path) -> None:
     payload["phase_or_type"][0].pop("phase", None)
     payload["phase_or_type"][0].pop("study_type", None)
     artifact.write_text(json.dumps(payload), encoding="utf-8")
-    sidecar = root / "processed" / "clinicaltrials_ckd_landscape.sha256"
-    digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
-    sidecar.write_text(f"{digest}  data/processed/clinicaltrials_ckd_landscape.json\n")
+    reseal_artifact(root, "clinicaltrials_ckd_landscape.json")
+    with pytest.raises(ArtifactIntegrityError, match="defining field"):
+        ArtifactRepository(root).load_json("trials")
     response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
         "/api/v1/trials", params={"dimension": "phase_or_type"}
     )
