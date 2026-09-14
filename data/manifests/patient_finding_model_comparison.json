@@ -1,0 +1,8 @@
+{
+  "artifact_path": "data/processed/patient_finding_model_comparison.json",
+  "artifact_sha256": "d21b9405fd7d9f76edc1ebe2fe354df18a66b741dbf42ee86f25954f5a0c551e",
+  "evidence_type": "public_observed",
+  "source": "CDC/NCHS NHANES",
+  "release": "2017-2018",
+  "source_manifest": "data/manifests/nhanes-2017-2018-patient-need.json"
+}
