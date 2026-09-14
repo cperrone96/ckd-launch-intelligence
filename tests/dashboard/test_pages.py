@@ -172,6 +172,7 @@ def test_mobile_disclosures_and_summary_actions_have_touch_targets() -> None:
         Path(__file__).resolve().parents[2] / "dashboard" / "assets" / "styles.css"
     ).read_text()
     assert ".method-details summary, .table-alternative summary" in styles
+    assert "display: list-item" in styles
     assert ".summary-links a" in styles
     assert styles.count("min-height: 44px") >= 3
     assert ".subgroup-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }" in styles

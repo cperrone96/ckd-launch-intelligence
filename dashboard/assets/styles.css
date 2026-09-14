@@ -42,7 +42,7 @@ p { line-height: 1.55; }
 .evidence-chip { background: var(--calm); color: var(--nav); font-weight: 700; padding: 5px 8px; text-transform: uppercase; font-size: .72rem; letter-spacing: .08em; }
 .evidence-meta { font-size: .82rem; }
 .evidence-note { margin: 12px 0; color: var(--muted); }
-.method-details summary, .table-alternative summary { cursor: pointer; font-weight: 700; min-height: 44px; display: flex; align-items: center; }
+.method-details summary, .table-alternative summary { cursor: pointer; font-weight: 700; min-height: 44px; display: list-item; padding: 8px 0; }
 .method-details { margin-top: 12px; color: var(--muted); }
 .method-details p { margin: 6px 0; font-size: .87rem; }
 .section { margin-top: 38px; }
