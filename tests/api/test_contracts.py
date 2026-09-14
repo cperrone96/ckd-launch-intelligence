@@ -433,6 +433,77 @@ def test_repository_rejects_tampered_upstream_source_manifest(
         ArtifactRepository(root).load_json("patient_need")
 
 
+def test_repository_rejects_resealed_patient_finding_substring_source_spoof(
+    tmp_path: Path,
+) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    copy_api_data(source, root)
+    artifact_name = "patient_finding_model_comparison.json"
+    artifact_path = root / "processed" / artifact_name
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    artifact["source"] = "Verified CDC/NCHS NHANES 2017-2018 public-use files, spoofed"
+    artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
+    reseal_artifact(root, artifact_name)
+    with pytest.raises(ArtifactIntegrityError, match="provenance"):
+        ArtifactRepository(root).load_json("patient_finding")
+
+
+@pytest.mark.parametrize("mutation", ["fake_file", "retrieved_at"])
+def test_repository_rejects_resealed_artifacts_when_canonical_source_manifest_changes(
+    tmp_path: Path, mutation: str
+) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    copy_api_data(source, root)
+    source_manifest_path = root / "manifests" / "nhanes-2017-2018-patient-need.json"
+    source_manifest = json.loads(source_manifest_path.read_text(encoding="utf-8"))
+    if mutation == "fake_file":
+        source_manifest["files"][0] = {
+            "name": "DEMO_J.xpt",
+            "url": "https://example.invalid/fake/DEMO_J.xpt",
+            "sha256": "f" * 64,
+            "bytes": 3412720,
+        }
+    else:
+        source_manifest["retrieved_at"] = "2026-09-12"
+    source_manifest_path.write_text(json.dumps(source_manifest), encoding="utf-8")
+    artifact_name = "patient_need_summary.json"
+    artifact_path = root / "processed" / artifact_name
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    artifact["limitations"] = [*artifact["limitations"], "review fixture mutation"]
+    artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
+    reseal_artifact(root, artifact_name)
+    with pytest.raises(ArtifactIntegrityError, match="source manifest"):
+        ArtifactRepository(root).load_json("patient_need")
+
+
+@pytest.mark.parametrize("key", ["patient_need", "patient_finding"])
+def test_repository_rejects_resealed_artifact_with_substituted_embedded_file_list(
+    tmp_path: Path, key: str
+) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    copy_api_data(source, root)
+    artifact_name = {
+        "patient_need": "patient_need_summary.json",
+        "patient_finding": "patient_finding_model_comparison.json",
+    }[key]
+    artifact_path = root / "processed" / artifact_name
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    provenance_key = "input_provenance" if key == "patient_need" else "source_provenance"
+    if key == "patient_need":
+        artifact[provenance_key] = list(reversed(artifact[provenance_key]))
+    else:
+        artifact[provenance_key]["files"] = list(
+            reversed(artifact[provenance_key]["files"])
+        )
+    artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
+    reseal_artifact(root, artifact_name)
+    with pytest.raises(ArtifactIntegrityError, match="embedded provenance"):
+        ArtifactRepository(root).load_json(key)
+
+
 @pytest.mark.parametrize(
     ("dimension", "field"),
     [
