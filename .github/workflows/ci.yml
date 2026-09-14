@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  release-gate:
+    runs-on: ubuntu-latest
+    env:
+      CKD_OFFLINE: "1"
+      PYTHONUNBUFFERED: "1"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install bounded project dependencies
+        run: python -m pip install --upgrade pip && python -m pip install -e ".[dev]"
+
+      - name: Verify committed artifact and fixture checksums
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          from pathlib import Path
+
+          root = Path(".")
+          manifests = root / "data" / "manifests"
+          processed = root / "data" / "processed"
+          for manifest_path in sorted(manifests.glob("*.json")):
+              manifest = json.loads(manifest_path.read_text())
+              if "artifact_path" in manifest:
+                  artifact = root / manifest["artifact_path"]
+                  digest = hashlib.sha256(artifact.read_bytes()).hexdigest()
+                  sidecar = artifact.with_suffix(".sha256")
+                  sidecar_digest, sidecar_name = sidecar.read_text().strip().split()
+                  assert digest == manifest["artifact_sha256"] == sidecar_digest
+                  assert sidecar_name in {
+                      artifact.name,
+                      str(artifact.relative_to(root)),
+                  }
+              if "fixture_path" in manifest:
+                  fixture = root / manifest["fixture_path"]
+                  assert hashlib.sha256(fixture.read_bytes()).hexdigest() == manifest["fixture_sha256"]
+                  assert manifest["fixture_kind"] == "fixture_only"
+                  assert manifest["source_rows_are_official"] is False
+                  assert manifest["no_cross_source_join"] is True
+          assert any(processed.glob("*.json"))
+          PY
+
+      - name: Ruff
+        run: python -m ruff check .
+
+      - name: Strict mypy
+        run: python -m mypy
+
+      - name: Offline tests
+        run: python -m pytest -q
+
+      - name: Notebook smoke tests
+        run: |
+          output_dir="${RUNNER_TEMP}/ckd-notebooks"
+          mkdir -p "$output_dir"
+          for notebook in notebooks/*.ipynb; do
+            PYTHONPATH="${GITHUB_WORKSPACE}/src" python -m jupyter nbconvert --to notebook --execute "$notebook" \
+              --output-dir "$output_dir" --ExecutePreprocessor.timeout=120
+          done
