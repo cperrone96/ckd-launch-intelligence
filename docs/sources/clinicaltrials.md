@@ -7,8 +7,11 @@
 
 The dated snapshot records the exact query, endpoint, page size, request URLs,
 page count, total count, retrieval timestamp, and raw SHA-256. All API pages are
-retrieved before validation. The current snapshot reconciles the API total to
-valid plus quarantined records and deduplicates NCT IDs during ingestion.
+retrieved before validation. Retrieval fails closed unless the stable API total,
+retrieved row count, and unique valid NCT-ID count all reconcile; duplicate or
+missing IDs, repeated page tokens, premature pagination, and total-count drift
+are rejected before any snapshot is written. The current snapshot reconciles the
+API total to valid plus quarantined records and deduplicates NCT IDs during ingestion.
 
 The aggregate reports status, phase/type, intervention, lead sponsor,
 study-country mentions, and update-year change over time. Status, study type, and

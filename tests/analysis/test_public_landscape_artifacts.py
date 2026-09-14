@@ -57,6 +57,8 @@ def test_trials_public_artifact_reconciles_total_valid_quarantine_and_missing_en
     assert artifact["evidence_type"] == "public_observed"
     assert counts["api_total_count"] == 3706
     assert counts["api_total_count"] == counts["valid_count"] + counts["quarantine_count"]
+    assert counts["api_total_count"] == counts["retrieved_row_count"]
+    assert counts["api_total_count"] == counts["unique_valid_nct_id_count"]
     assert counts["valid_count"] == counts["unique_nct_ids"] == 3706
     assert counts["studies_with_missing_enrollment"] > 0
     assert counts["dimension_denominators"]["intervention_available"] < 3706

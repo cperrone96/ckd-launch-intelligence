@@ -175,9 +175,11 @@
     },
     "quarantine_count": 0,
     "quarantine_reasons": {},
+    "retrieved_row_count": 3706,
     "studies_with_missing_enrollment": 31,
     "studies_with_reported_enrollment": 3675,
     "unique_nct_ids": 3706,
+    "unique_valid_nct_id_count": 3706,
     "valid_count": 3706
   },
   "endpoint": "https://clinicaltrials.gov/api/v2/studies",

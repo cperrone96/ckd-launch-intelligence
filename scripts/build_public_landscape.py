@@ -425,6 +425,8 @@ def build_trials() -> None:
         },
         "counts": {
             "api_total_count": metadata["total_count"],
+            "retrieved_row_count": metadata.get("retrieved_row_count", len(document["studies"])),
+            "unique_valid_nct_id_count": metadata.get("unique_valid_nct_id_count", len(raw_ids)),
             "valid_count": len(valid),
             "quarantine_count": len(result.quarantine),
             "unique_nct_ids": len(raw_ids),
@@ -480,6 +482,8 @@ def build_trials() -> None:
         "total_counts_observed": metadata.get("total_counts_observed", [metadata["total_count"]]),
         "total_count_stable": metadata.get("total_count_stable", True),
         "total_count_missing_pages": metadata.get("total_count_missing_pages", 0),
+        "retrieved_row_count": metadata.get("retrieved_row_count", len(document["studies"])),
+        "unique_valid_nct_id_count": metadata.get("unique_valid_nct_id_count", len(raw_ids)),
         "grain": "registered study aggregate; no study IDs committed",
     }
     _write("clinicaltrials_ckd_landscape", artifact, manifest)

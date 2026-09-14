@@ -20,7 +20,7 @@ ROOT = Path(__file__).parents[2]
 )
 def test_landscape_marts_execute_on_postgresql() -> None:
     try:
-        import psycopg  # type: ignore[import-not-found]
+        import psycopg
     except ImportError:
         pytest.fail("CKD_POSTGRES_URL is configured but psycopg is not installed")
     with (
@@ -31,6 +31,13 @@ def test_landscape_marts_execute_on_postgresql() -> None:
         cursor.execute("CREATE SCHEMA IF NOT EXISTS raw_partd")
         cursor.execute("CREATE SCHEMA IF NOT EXISTS raw_trials")
         cursor.execute("CREATE SCHEMA IF NOT EXISTS analytics_observed")
+        cursor.execute(
+            "DROP VIEW IF EXISTS analytics_observed.mart_meps_utilization, "
+            "analytics_observed.mart_partd_prescribing, "
+            "analytics_observed.mart_trial_status, "
+            "analytics_observed.mart_trial_composition, "
+            "analytics_observed.mart_trial_sponsors CASCADE"
+        )
         cursor.execute("DROP TABLE IF EXISTS raw_meps.people")
         cursor.execute("DROP TABLE IF EXISTS raw_partd.records")
         cursor.execute("DROP TABLE IF EXISTS raw_trials.studies")
@@ -87,7 +94,9 @@ def test_landscape_marts_execute_on_postgresql() -> None:
         ):
             cursor.execute((ROOT / script).read_text(encoding="utf-8"))
         cursor.execute("SELECT COUNT(*) FROM analytics_observed.mart_meps_utilization")
-        assert cursor.fetchone()[0] == 1
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == 1
         cursor.execute(
             "SELECT COUNT(*), COUNT(DISTINCT (source_release, year, kidney_proxy_status, "
             "evidence_type, source_retrieved_at, source_manifest_checksum)), "
@@ -96,17 +105,26 @@ def test_landscape_marts_execute_on_postgresql() -> None:
         )
         assert cursor.fetchone() == (1, 1, 1)
         cursor.execute("SELECT COUNT(*) FROM analytics_observed.mart_partd_prescribing")
-        assert cursor.fetchone()[0] == 1
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == 1
         cursor.execute(
             "SELECT COUNT(*), COUNT(DISTINCT (source_release, year, provider_npi, "
-            "provider_state, generic_name, drug_name, evidence_type, source_retrieved_at, "
+            "provider_state, generic_name, brand_name, evidence_type, source_retrieved_at, "
             "source_manifest_checksum)), COUNT(DISTINCT evidence_type), "
             "SUM(total_claim_count) "
             "FROM analytics_observed.mart_partd_prescribing"
         )
         assert cursor.fetchone() == (1, 1, 1, 11)
+        cursor.execute(
+            "SELECT provider_state, generic_name, brand_name "
+            "FROM analytics_observed.mart_partd_prescribing"
+        )
+        assert cursor.fetchone() == ("PA", "Empagliflozin", "Jardiance")
         cursor.execute("SELECT COUNT(*) FROM analytics_observed.mart_trial_status")
-        assert cursor.fetchone()[0] == 1
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == 1
         cursor.execute(
             "SELECT SUM(study_count), COUNT(DISTINCT overall_status), "
             "COUNT(DISTINCT evidence_type), COUNT(DISTINCT source_retrieved_at), "
@@ -125,4 +143,6 @@ def test_landscape_marts_execute_on_postgresql() -> None:
             "SELECT COUNT(*) FROM analytics_observed.mart_partd_prescribing "
             "WHERE source_release = '2024' AND provider_npi = 'fixture-provider'"
         )
-        assert cursor.fetchone()[0] == 1
+        row = cursor.fetchone()
+        assert row is not None
+        assert row[0] == 1
