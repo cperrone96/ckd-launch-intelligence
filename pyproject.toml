@@ -9,6 +9,7 @@ description = "Public-data CKD launch intelligence portfolio project"
 requires-python = ">=3.12"
 dependencies = [
   "duckdb>=1.1,<2",
+  "pandas>=2.2,<3",
   "pydantic>=2.9,<3",
   "pydantic-settings>=2.5,<3",
 ]

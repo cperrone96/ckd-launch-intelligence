@@ -6,10 +6,11 @@ import csv
 import hashlib
 import io
 import math
+import zipfile
 from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 from pathlib import Path
 from types import MappingProxyType
 from urllib.parse import urlparse
@@ -24,7 +25,7 @@ from ckd_intelligence.quality.contracts import (
 )
 from ckd_intelligence.sources import SourceRecord, get_source_registry
 
-DEFAULT_MAX_DOWNLOAD_BYTES = 10 * 1024 * 1024
+READ_CHUNK_BYTES = 1024 * 1024
 MISSING_SENTINELS = frozenset({"", ".", "NA", "N/A", "NULL", "NONE"})
 
 RowValidator = Callable[[Mapping[str, str]], tuple[dict[str, Scalar], list[str]]]
@@ -35,6 +36,7 @@ class RawSnapshot:
     """Exact retrieved bytes and their content-addressed provenance."""
 
     payload: bytes
+    requested_source_uri: str
     source_uri: str
     suffix: str
     checksum: str
@@ -50,9 +52,9 @@ def source_record(name: str) -> SourceRecord:
 def read_bounded_source(
     source_path_or_url: str | Path,
     *,
-    max_bytes: int = DEFAULT_MAX_DOWNLOAD_BYTES,
-) -> tuple[bytes, str, str]:
-    """Read a local file or bounded HTTPS response and return bytes, URI, suffix."""
+    max_bytes: int,
+) -> tuple[bytes, str, str, str]:
+    """Stream a bounded local/HTTPS source and return bytes and canonical locators."""
 
     raw_source = str(source_path_or_url)
     parsed = urlparse(raw_source)
@@ -61,19 +63,35 @@ def read_bounded_source(
             raise ValueError("Only HTTPS source URLs are accepted")
         request = Request(raw_source, headers={"User-Agent": "ckd-launch-intelligence/0.1"})
         with urlopen(request, timeout=30) as response:  # noqa: S310 - HTTPS enforced above
+            final_url = response.geturl()
+            if urlparse(final_url).scheme != "https":
+                raise ValueError("HTTPS source redirected to a non-HTTPS location")
             content_length = response.headers.get("Content-Length")
             if content_length is not None and int(content_length) > max_bytes:
                 raise ValueError(f"Source exceeds {max_bytes} byte download limit")
-            payload = response.read(max_bytes + 1)
+            chunks: list[bytes] = []
+            byte_count = 0
+            while True:
+                chunk = response.read(min(READ_CHUNK_BYTES, max_bytes - byte_count + 1))
+                if not chunk:
+                    break
+                byte_count += len(chunk)
+                if byte_count > max_bytes:
+                    raise ValueError(f"Source exceeds {max_bytes} byte download limit")
+                chunks.append(chunk)
+            payload = b"".join(chunks)
         if len(payload) > max_bytes:
             raise ValueError(f"Source exceeds {max_bytes} byte download limit")
-        suffix = Path(parsed.path).suffix.lower() or ".bin"
-        return payload, raw_source, suffix
+        suffix = Path(urlparse(final_url).path).suffix.lower() or ".bin"
+        return payload, raw_source, final_url, suffix
 
     path = Path(source_path_or_url).expanduser().resolve(strict=True)
     if path.stat().st_size > max_bytes:
         raise ValueError(f"Source exceeds {max_bytes} byte read limit")
-    return path.read_bytes(), str(path), path.suffix.lower() or ".bin"
+    with path.open("rb") as handle:
+        local_chunks = iter(lambda: handle.read(READ_CHUNK_BYTES), b"")
+        payload = b"".join(local_chunks)
+    return payload, str(path), str(path), path.suffix.lower() or ".bin"
 
 
 def cache_snapshot(
@@ -106,10 +124,14 @@ def load_source(
     *,
     registry: SourceRecord,
     cache_dir: Path | None,
+    max_bytes: int,
 ) -> RawSnapshot:
     """Retrieve and immediately cache exact bytes before record validation."""
 
-    payload, source_uri, suffix = read_bounded_source(source_path_or_url)
+    payload, requested_uri, source_uri, suffix = read_bounded_source(
+        source_path_or_url, max_bytes=max_bytes
+    )
+    suffix = infer_suffix(payload, suffix)
     checksum, cache_path = cache_snapshot(
         payload,
         source=registry.name,
@@ -117,7 +139,56 @@ def load_source(
         suffix=suffix,
         cache_dir=cache_dir,
     )
-    return RawSnapshot(payload, source_uri, suffix, checksum, cache_path)
+    return RawSnapshot(payload, requested_uri, source_uri, suffix, checksum, cache_path)
+
+
+def infer_suffix(payload: bytes, hinted_suffix: str) -> str:
+    """Identify common public-data formats when a download endpoint has no extension."""
+
+    if payload.startswith((b"PK\x03\x04", b"PK\x05\x06", b"PK\x07\x08")):
+        return ".zip"
+    stripped = payload.lstrip()
+    if stripped.startswith((b"{", b"[")):
+        return ".json"
+    if payload.startswith(b"HEADER RECORD*******LIBRARY HEADER RECORD"):
+        return ".xpt"
+    if hinted_suffix in {".csv", ".json", ".xpt", ".zip"}:
+        return hinted_suffix
+    try:
+        first_line = payload.decode("utf-8-sig").splitlines()[0]
+    except (UnicodeDecodeError, IndexError):
+        return hinted_suffix
+    return ".csv" if "," in first_line else hinted_suffix
+
+
+def csv_payload_from_snapshot(
+    snapshot: RawSnapshot,
+    *,
+    max_uncompressed_bytes: int,
+) -> bytes:
+    """Return CSV bytes directly or from a single-member bounded ZIP archive."""
+
+    if snapshot.suffix != ".zip":
+        return snapshot.payload
+    try:
+        with zipfile.ZipFile(io.BytesIO(snapshot.payload)) as archive:
+            members = [
+                info
+                for info in archive.infolist()
+                if not info.is_dir() and info.filename.lower().endswith(".csv")
+            ]
+            if len(members) != 1:
+                raise ValueError("ZIP source must contain exactly one CSV member")
+            member = members[0]
+            if member.file_size > max_uncompressed_bytes:
+                raise ValueError("ZIP CSV exceeds the source-specific uncompressed limit")
+            with archive.open(member) as handle:
+                payload = handle.read(max_uncompressed_bytes + 1)
+    except zipfile.BadZipFile as exc:
+        raise ValueError("Source must be a valid ZIP archive") from exc
+    if len(payload) > max_uncompressed_bytes:
+        raise ValueError("ZIP CSV exceeds the source-specific uncompressed limit")
+    return payload
 
 
 def parse_csv(payload: bytes, required_columns: frozenset[str]) -> list[dict[str, str]]:
@@ -133,10 +204,19 @@ def parse_csv(payload: bytes, required_columns: frozenset[str]) -> list[dict[str
     if missing:
         raise ValueError(f"Missing required columns: {', '.join(missing)}")
     rows: list[dict[str, str]] = []
+    if len(columns) != len(reader.fieldnames or ()):
+        raise ValueError("CSV header contains duplicate columns")
     for row in reader:
+        parsed_row = {
+            key: value if value is not None else ""
+            for key, value in row.items()
+            if key is not None
+        }
         if None in row:
-            raise ValueError("CSV row contains more values than declared columns")
-        rows.append({key: value for key, value in row.items() if key is not None})
+            parsed_row["_ingestion_error"] = "csv:extra_values"
+        elif any(value is None for value in row.values()):
+            parsed_row["_ingestion_error"] = "csv:missing_values"
+        rows.append(parsed_row)
     return rows
 
 
@@ -150,6 +230,21 @@ def reject_forbidden_fields(
     present = sorted(forbidden.intersection(rows[0]))
     if present:
         raise ValueError(f"Forbidden patient-level fields: {', '.join(present)}")
+
+
+def require_release_identity(
+    rows: Sequence[Mapping[str, str]], field: str, expected: str
+) -> None:
+    """Fail before manifest creation when bytes identify a different release."""
+
+    identified = {row[field].strip() for row in rows if row.get(field, "").strip()}
+    if not identified:
+        raise ValueError(f"Source does not identify registered version {expected}")
+    contradictory = sorted(identified - {expected})
+    if contradictory:
+        raise ValueError(
+            f"Source release {contradictory} does not match registered version {expected}"
+        )
 
 
 def duplicate_keys(
@@ -171,6 +266,8 @@ def validate_rows(
     quarantined: list[QuarantineRecord] = []
     for row_number, row in enumerate(rows, start=2):
         typed, reasons = validator(row)
+        if row.get("_ingestion_error"):
+            reasons.append(row["_ingestion_error"])
         if reasons:
             quarantined.append(
                 QuarantineRecord(
@@ -207,6 +304,7 @@ def result_with_manifest(
         record_count=len(valid) + len(quarantine),
         valid_count=len(valid),
         quarantine_count=len(quarantine),
+        requested_source_uri=snapshot.requested_source_uri,
         source_uri=snapshot.source_uri,
         cache_path=snapshot.cache_path,
         coverage_start=coverage[0] if coverage else None,
@@ -227,6 +325,23 @@ def text_value(
     if value.upper() in MISSING_SENTINELS | additional_missing:
         reasons.append(f"{field}:missing_sentinel")
     return value
+
+
+def optional_text_value(row: Mapping[str, str], field: str) -> str | None:
+    """Return null for a documented missing marker without treating optionality as error."""
+
+    value = row[field].strip()
+    return None if value.upper() in MISSING_SENTINELS else value
+
+
+def native_scalar_text(value: object) -> str:
+    """Represent a decoded SAS scalar without raising on malformed row values."""
+
+    if isinstance(value, bytes):
+        return value.decode("utf-8", errors="replace").strip()
+    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
 
 
 def number_value(
@@ -287,17 +402,4 @@ def date_value(row: Mapping[str, str], field: str, reasons: list[str]) -> str:
         date.fromisoformat(value)
     except ValueError:
         reasons.append(f"{field}:invalid_date")
-    return value
-
-
-def datetime_value(value: object, field: str) -> str:
-    """Validate a required ISO 8601 metadata timestamp while preserving text."""
-
-    if not isinstance(value, str) or not value:
-        raise ValueError(f"{field} must be a non-empty ISO 8601 timestamp")
-    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
-    try:
-        datetime.fromisoformat(normalized)
-    except ValueError as exc:
-        raise ValueError(f"{field} must be an ISO 8601 timestamp") from exc
     return value

@@ -68,6 +68,7 @@ class SourceManifest:
     record_count: int
     valid_count: int
     quarantine_count: int
+    requested_source_uri: str
     source_uri: str
     cache_path: str | None
     coverage_start: str | None

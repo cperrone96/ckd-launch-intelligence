@@ -1,128 +1,267 @@
-"""ClinicalTrials.gov API v2 normalized snapshot adapter."""
+"""ClinicalTrials.gov API v2 snapshot adapter."""
 
 from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from collections.abc import Mapping
+from datetime import UTC, date, datetime
 from pathlib import Path
-from typing import cast
+from types import MappingProxyType
+from typing import Any
 
-from ckd_intelligence.ingestion._common import (
-    date_value,
-    datetime_value,
-    duplicate_keys,
-    integer_value,
-    load_source,
-    result_with_manifest,
-    source_record,
-    text_value,
-    validate_rows,
+from ckd_intelligence.ingestion._common import load_source, result_with_manifest, source_record
+from ckd_intelligence.quality.contracts import (
+    ImmutableBatch,
+    IngestionResult,
+    QuarantineRecord,
+    Scalar,
 )
-from ckd_intelligence.quality.contracts import IngestionResult, Scalar
 
-REQUIRED = frozenset(
-    {
-        "nct_id",
-        "brief_title",
-        "overall_status",
-        "phase",
-        "enrollment",
-        "condition",
-        "intervention",
-        "sponsor",
-        "country",
-        "last_update_date",
-        "study_type",
-    }
-)
+CKD_QUERY = 'AREA[ConditionSearch]("Chronic Kidney Disease")'
+MAX_SOURCE_BYTES = 100 * 1024 * 1024
 STATUSES = {
-    "NOT_YET_RECRUITING",
-    "RECRUITING",
-    "ENROLLING_BY_INVITATION",
-    "ACTIVE_NOT_RECRUITING",
-    "SUSPENDED",
-    "TERMINATED",
-    "COMPLETED",
-    "WITHDRAWN",
+    "NOT_YET_RECRUITING", "RECRUITING", "ENROLLING_BY_INVITATION",
+    "ACTIVE_NOT_RECRUITING", "SUSPENDED", "TERMINATED", "COMPLETED", "WITHDRAWN",
     "UNKNOWN",
+    "WITHHELD", "NO_LONGER_AVAILABLE", "TEMPORARILY_NOT_AVAILABLE",
+    "APPROVED_FOR_MARKETING", "AVAILABLE",
 }
 PHASES = {"NA", "EARLY_PHASE1", "PHASE1", "PHASE2", "PHASE3", "PHASE4"}
 STUDY_TYPES = {"INTERVENTIONAL", "OBSERVATIONAL", "EXPANDED_ACCESS"}
 
 
+def _object(value: object, field: str, reasons: list[str]) -> Mapping[str, object] | None:
+    if not isinstance(value, dict):
+        reasons.append(f"{field}:invalid_type")
+        return None
+    return value
+
+
+def _string(container: Mapping[str, object], key: str, field: str, reasons: list[str]) -> str:
+    value = container.get(key)
+    if not isinstance(value, str):
+        reasons.append(f"{field}:invalid_type")
+        return ""
+    if not value.strip():
+        reasons.append(f"{field}:missing_sentinel")
+    return value.strip()
+
+
+def _integer(
+    container: Mapping[str, object], key: str, field: str, reasons: list[str]
+) -> int | None:
+    value = container.get(key)
+    if isinstance(value, bool) or not isinstance(value, int):
+        reasons.append(f"{field}:invalid_type")
+        return None
+    if value < 0:
+        reasons.append(f"{field}:out_of_range")
+    return value
+
+
+def _strings(
+    container: Mapping[str, object], key: str, field: str, reasons: list[str]
+) -> list[str]:
+    value = container.get(key)
+    if not isinstance(value, list) or not value:
+        reasons.append(f"{field}:invalid_type")
+        return []
+    if any(not isinstance(item, str) or not item.strip() for item in value):
+        reasons.append(f"{field}:invalid_type")
+        return []
+    return [item.strip() for item in value]
+
+
+def _nested_names(
+    container: Mapping[str, object], key: str, field: str, reasons: list[str]
+) -> list[str]:
+    value = container.get(key)
+    if not isinstance(value, list) or not value:
+        reasons.append(f"{field}:invalid_type")
+        return []
+    names: list[str] = []
+    for item in value:
+        if not isinstance(item, dict) or not isinstance(item.get("name"), str):
+            reasons.append(f"{field}:invalid_type")
+            return []
+        names.append(item["name"].strip())
+    return names
+
+
+def _nested_countries(container: Mapping[str, object], reasons: list[str]) -> list[str]:
+    value = container.get("locations")
+    if not isinstance(value, list) or not value:
+        reasons.append("country:invalid_type")
+        return []
+    countries: list[str] = []
+    for item in value:
+        if not isinstance(item, dict) or not isinstance(item.get("country"), str):
+            reasons.append("country:invalid_type")
+            return []
+        countries.append(item["country"].strip())
+    return sorted(set(countries))
+
+
+def _normalize_study(study: object) -> tuple[dict[str, Scalar], list[str], str]:
+    raw_json = json.dumps(study, sort_keys=True, separators=(",", ":"))
+    reasons: list[str] = []
+    if not isinstance(study, dict):
+        return {}, ["study:invalid_type"], raw_json
+    protocol = _object(study.get("protocolSection"), "protocolSection", reasons)
+    if protocol is None:
+        return {}, reasons, raw_json
+
+    identification = (
+        _object(protocol.get("identificationModule"), "identificationModule", reasons) or {}
+    )
+    status_module = _object(protocol.get("statusModule"), "statusModule", reasons) or {}
+    design = _object(protocol.get("designModule"), "designModule", reasons) or {}
+    conditions = _object(protocol.get("conditionsModule"), "conditionsModule", reasons) or {}
+    arms = (
+        _object(protocol.get("armsInterventionsModule"), "armsInterventionsModule", reasons) or {}
+    )
+    sponsors = (
+        _object(
+            protocol.get("sponsorCollaboratorsModule"),
+            "sponsorCollaboratorsModule",
+            reasons,
+        )
+        or {}
+    )
+    locations = (
+        _object(protocol.get("contactsLocationsModule"), "contactsLocationsModule", reasons)
+        or {}
+    )
+
+    nct_id = _string(identification, "nctId", "nct_id", reasons)
+    if re.fullmatch(r"NCT\d{8}", nct_id) is None:
+        reasons.append("nct_id:invalid_code")
+    title = _string(identification, "briefTitle", "brief_title", reasons)
+    status = _string(status_module, "overallStatus", "overall_status", reasons)
+    if status not in STATUSES:
+        reasons.append("overall_status:invalid_code")
+    update_struct = _object(
+        status_module.get("lastUpdatePostDateStruct"), "lastUpdatePostDateStruct", reasons
+    ) or {}
+    last_update = _string(update_struct, "date", "last_update_date", reasons)
+    try:
+        date.fromisoformat(last_update)
+    except ValueError:
+        reasons.append("last_update_date:invalid_date")
+
+    study_type = _string(design, "studyType", "study_type", reasons)
+    if study_type not in STUDY_TYPES:
+        reasons.append("study_type:invalid_code")
+    phases_value = design.get("phases", [])
+    if phases_value == [] and study_type in {"OBSERVATIONAL", "EXPANDED_ACCESS"}:
+        phases = ["NA"]
+    else:
+        phases = _strings(design, "phases", "phase", reasons)
+    if any(phase not in PHASES for phase in phases):
+        reasons.append("phase:invalid_code")
+    enrollment_info = _object(design.get("enrollmentInfo"), "enrollmentInfo", reasons) or {}
+    enrollment = _integer(enrollment_info, "count", "enrollment", reasons)
+    condition_values = _strings(conditions, "conditions", "condition", reasons)
+    interventions = _nested_names(arms, "interventions", "intervention", reasons)
+    lead_sponsor = _object(sponsors.get("leadSponsor"), "leadSponsor", reasons) or {}
+    sponsor = _string(lead_sponsor, "name", "sponsor", reasons)
+    countries = _nested_countries(locations, reasons)
+
+    return {
+        "nct_id": nct_id,
+        "brief_title": title,
+        "overall_status": status,
+        "phase": "|".join(phases),
+        "enrollment": enrollment,
+        "condition": " | ".join(condition_values),
+        "intervention": " | ".join(interventions),
+        "sponsor": sponsor,
+        "country": " | ".join(countries),
+        "last_update_date": last_update,
+        "study_type": study_type,
+        "evidence_type": "public_observed",
+    }, reasons, raw_json
+
+
+def _snapshot_timestamp(
+    metadata: Mapping[str, object], registry_date: date
+) -> tuple[str, datetime]:
+    if metadata.get("api_version") != "v2":
+        raise ValueError("ClinicalTrials.gov snapshot must identify API version v2")
+    if metadata.get("query") != CKD_QUERY:
+        raise ValueError("ClinicalTrials.gov snapshot must preserve the exact documented CKD query")
+    value = metadata.get("retrieved_at")
+    if not isinstance(value, str):
+        raise ValueError("retrieved_at must be an ISO 8601 timestamp")
+    normalized = value[:-1] + "+00:00" if value.endswith("Z") else value
+    try:
+        parsed = datetime.fromisoformat(normalized)
+    except ValueError as exc:
+        raise ValueError("retrieved_at must be an ISO 8601 timestamp") from exc
+    if parsed.tzinfo is None:
+        raise ValueError("retrieved_at must include a timezone")
+    parsed_utc = parsed.astimezone(UTC)
+    if parsed_utc.date() > registry_date:
+        raise ValueError("retrieved_at cannot be after the registered retrieval date")
+    return value, parsed_utc
+
+
 def ingest_trials(
     source_path_or_url: str | Path, *, cache_dir: Path | None = Path("data/raw")
 ) -> IngestionResult:
-    """Ingest a bounded normalized ClinicalTrials.gov API snapshot."""
+    """Ingest a dated envelope containing native ClinicalTrials.gov API-v2 studies."""
 
     registry = source_record("clinicaltrials")
-    snapshot = load_source(source_path_or_url, registry=registry, cache_dir=cache_dir)
+    snapshot = load_source(
+        source_path_or_url, registry=registry, cache_dir=cache_dir, max_bytes=MAX_SOURCE_BYTES
+    )
     try:
-        document = json.loads(snapshot.payload)
+        document: Any = json.loads(snapshot.payload)
     except json.JSONDecodeError as exc:
         raise ValueError("Source must be valid ClinicalTrials.gov JSON") from exc
     if not isinstance(document, dict):
         raise ValueError("ClinicalTrials.gov source must be a JSON object")
-    updated_at = datetime_value(document.get("api_updated_at"), "api_updated_at")
+    metadata = document.get("snapshot_metadata")
+    if not isinstance(metadata, dict):
+        raise ValueError("ClinicalTrials.gov snapshot_metadata must be a JSON object")
+    updated_at, retrieved = _snapshot_timestamp(metadata, registry.retrieved_at)
     studies = document.get("studies")
-    if not isinstance(studies, list) or not all(isinstance(row, dict) for row in studies):
-        raise ValueError("ClinicalTrials.gov studies must be a list of JSON objects")
-    rows = cast(list[dict[str, object]], studies)
-    for row in rows:
-        missing = sorted(REQUIRED - row.keys())
-        if missing:
-            raise ValueError(f"Missing required columns: {', '.join(missing)}")
-    string_rows = [
-        {key: str(value) if value is not None else "" for key, value in row.items()}
-        for row in rows
-    ]
-    duplicates = duplicate_keys(string_rows, lambda row: (row["nct_id"].strip(),))
+    if not isinstance(studies, list):
+        raise ValueError("ClinicalTrials.gov studies must be a list")
 
-    def validate(row: Mapping[str, str]) -> tuple[dict[str, Scalar], list[str]]:
-        reasons: list[str] = []
-        nct_id = text_value(row, "nct_id", reasons)
-        if re.fullmatch(r"NCT\d{8}", nct_id) is None:
-            reasons.append("nct_id:invalid_code")
-        title = text_value(row, "brief_title", reasons)
-        status = text_value(row, "overall_status", reasons)
-        if status not in STATUSES:
-            reasons.append("overall_status:invalid_code")
-        phase = text_value(row, "phase", reasons)
-        if phase not in PHASES:
-            reasons.append("phase:invalid_code")
-        enrollment = integer_value(row, "enrollment", reasons, minimum=0)
-        condition = text_value(row, "condition", reasons)
-        intervention = text_value(row, "intervention", reasons)
-        sponsor = text_value(row, "sponsor", reasons)
-        country = text_value(row, "country", reasons)
-        last_update = date_value(row, "last_update_date", reasons)
-        study_type = text_value(row, "study_type", reasons)
-        if study_type not in STUDY_TYPES:
-            reasons.append("study_type:invalid_code")
-        if (nct_id,) in duplicates:
+    normalized = [_normalize_study(study) for study in studies]
+    nct_counts = Counter(str(row.get("nct_id", "")) for row, _, _ in normalized)
+    valid_rows: list[dict[str, Scalar]] = []
+    quarantine: list[QuarantineRecord] = []
+    for index, (row, reasons, raw_json) in enumerate(normalized, start=1):
+        nct_id = str(row.get("nct_id", ""))
+        if nct_id and nct_counts[nct_id] > 1:
             reasons.append("nct_id:duplicate_key")
-        return {
-            "nct_id": nct_id,
-            "brief_title": title,
-            "overall_status": status,
-            "phase": phase,
-            "enrollment": enrollment,
-            "condition": condition,
-            "intervention": intervention,
-            "sponsor": sponsor,
-            "country": country,
-            "last_update_date": last_update,
-            "study_type": study_type,
-            "evidence_type": registry.evidence_type,
-        }, reasons
+        last_update = str(row.get("last_update_date", ""))
+        try:
+            if date.fromisoformat(last_update) > retrieved.date():
+                reasons.append("last_update_date:after_snapshot")
+        except ValueError:
+            pass
+        if reasons:
+            quarantine.append(
+                QuarantineRecord(
+                    row_number=index,
+                    reasons=tuple(sorted(set(reasons))),
+                    raw_record=MappingProxyType({"raw_json": raw_json}),
+                )
+            )
+        else:
+            valid_rows.append(row)
 
-    valid, quarantine = validate_rows(string_rows, validate)
+    valid = ImmutableBatch.from_records(valid_rows)
     return result_with_manifest(
         registry=registry,
         snapshot=snapshot,
         valid=valid,
-        quarantine=quarantine,
+        quarantine=tuple(quarantine),
         coverage_values=(str(row["last_update_date"]) for row in valid),
         source_updated_at=updated_at,
     )

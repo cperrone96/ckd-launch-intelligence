@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import zipfile
 from dataclasses import FrozenInstanceError
+from io import BytesIO
 from pathlib import Path
 
 import pytest
@@ -169,9 +171,9 @@ def test_missing_required_columns_fail_closed(tmp_path: Path) -> None:
 def test_numeric_sentinel_codes_are_field_specific(tmp_path: Path) -> None:
     valid_cost = tmp_path / "partd-cost.csv"
     valid_cost.write_text(
-        "provider_npi,provider_state,drug_name,generic_name,total_claim_count,"
+        "source_release,provider_npi,provider_state,drug_name,generic_name,total_claim_count,"
         "total_30_day_fill_count,total_drug_cost_usd,year\n"
-        "1234567890,PA,Example,example,12,12.5,9999,2024\n",
+        "2024,1234567890,PA,Example,example,12,12.5,9999,2024\n",
         encoding="utf-8",
     )
 
@@ -183,9 +185,10 @@ def test_numeric_sentinel_codes_are_field_specific(tmp_path: Path) -> None:
 def test_non_finite_numeric_values_are_quarantined(tmp_path: Path) -> None:
     invalid = tmp_path / "meps-nan.csv"
     invalid.write_text(
-        "event_id,person_id,year,condition_code,event_type,rx_name,expenditure_usd,"
+        "source_release,event_id,person_id,year,condition_code,event_type,rx_name,"
+        "expenditure_usd,"
         "person_weight,variance_stratum,variance_psu\n"
-        "E1,P1,2021,N18,office_visit,,nan,5021.4,12,1\n",
+        "HC-243-2021,E1,P1,2021,N18,office_visit,,nan,5021.4,12,1\n",
         encoding="utf-8",
     )
 
@@ -210,11 +213,326 @@ def test_only_https_urls_are_accepted(tmp_path: Path) -> None:
 def test_cross_source_person_linkage_field_is_rejected(tmp_path: Path) -> None:
     unsafe = tmp_path / "partd.csv"
     unsafe.write_text(
-        "provider_npi,provider_state,drug_name,generic_name,total_claim_count,"
+        "source_release,provider_npi,provider_state,drug_name,generic_name,total_claim_count,"
         "total_30_day_fill_count,total_drug_cost_usd,year,beneficiary_id\n"
-        "1234567890,PA,Example,example,12,12.5,120.00,2024,BENE1\n",
+        "2024,1234567890,PA,Example,example,12,12.5,120.00,2024,BENE1\n",
         encoding="utf-8",
     )
 
     with pytest.raises(ValueError, match="Forbidden patient-level fields"):
         ingest_partd(unsafe, cache_dir=tmp_path / "cache")
+
+
+@pytest.mark.parametrize(
+    ("source", "fixture", "old", "spoof"),
+    [
+        ("nhanes", "nhanes.csv", "2017-2018", "2015-2016"),
+        ("meps", "meps.csv", "HC-243-2021", "HC-999-2020"),
+        ("partd", "partd.csv", "2024", "2023"),
+        ("synpuf", "synpuf.csv", "2008-2010", "2011-2013"),
+    ],
+)
+def test_spoofed_release_identity_fails_before_manifest_creation(
+    source: str,
+    fixture: str,
+    old: str,
+    spoof: str,
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / fixture
+    path.write_text((FIXTURES / fixture).read_text().replace(old, spoof), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="does not match registered version"):
+        _ingest(source, path, tmp_path / "cache")
+
+
+def test_release_date_coherence_is_enforced(tmp_path: Path) -> None:
+    bad = tmp_path / "synpuf.csv"
+    bad.write_text(
+        (FIXTURES / "synpuf.csv").read_text().replace(
+            "2009-01-02,2009-01-05", "2012-01-02,2012-01-05", 1
+        ),
+        encoding="utf-8",
+    )
+
+    result = ingest_synpuf(bad, cache_dir=tmp_path / "cache")
+    reasons = set(result.quarantine[0].reasons)
+
+    assert "service_from_date:outside_release" in reasons
+    assert "service_through_date:outside_release" in reasons
+    assert "year:date_mismatch" in reasons
+
+
+def test_csv_shape_errors_quarantine_only_the_bad_row(tmp_path: Path) -> None:
+    malformed = tmp_path / "meps.csv"
+    header, first, second = (FIXTURES / "meps.csv").read_text().splitlines()
+    malformed.write_text(f"{header}\n{first},EXTRA\n{second}\n", encoding="utf-8")
+
+    result = ingest_meps(malformed, cache_dir=tmp_path / "cache")
+
+    assert len(result.valid) == 1
+    assert result.quarantine[0].reasons == ("csv:extra_values",)
+
+
+def test_optional_meps_rx_missing_sentinel_is_preserved_as_null(tmp_path: Path) -> None:
+    result = ingest_meps(FIXTURES / "meps_invalid.csv", cache_dir=tmp_path)
+
+    assert all("rx_name:missing_sentinel" not in item.reasons for item in result.quarantine)
+    assert result.quarantine[0].raw_record["rx_name"] == "N/A"
+
+
+def test_documented_code_domains_reject_invalid_values(tmp_path: Path) -> None:
+    nhanes = tmp_path / "nhanes.csv"
+    nhanes.write_text(
+        (FIXTURES / "nhanes.csv").read_text().replace("Non-Hispanic White", "Martian", 1),
+        encoding="utf-8",
+    )
+    partd = tmp_path / "partd.csv"
+    partd.write_text(
+        (FIXTURES / "partd.csv").read_text().replace(",PA,", ",ZZ,", 1),
+        encoding="utf-8",
+    )
+    meps = tmp_path / "meps.csv"
+    meps.write_text(
+        (FIXTURES / "meps.csv").read_text().replace(",N18,", ",NOT ICD,", 1),
+        encoding="utf-8",
+    )
+    synpuf = tmp_path / "synpuf.csv"
+    synpuf.write_text(
+        (FIXTURES / "synpuf.csv")
+        .read_text()
+        .replace(",5853,P100,", ",? ,bad-provider!,", 1),
+        encoding="utf-8",
+    )
+
+    assert "race_ethnicity:invalid_code" in ingest_nhanes(
+        nhanes, cache_dir=tmp_path / "cache1"
+    ).quarantine[0].reasons
+    assert "provider_state:invalid_code" in ingest_partd(
+        partd, cache_dir=tmp_path / "cache2"
+    ).quarantine[0].reasons
+    assert "condition_code:invalid_code" in ingest_meps(
+        meps, cache_dir=tmp_path / "cache3"
+    ).quarantine[0].reasons
+    synpuf_reasons = ingest_synpuf(synpuf, cache_dir=tmp_path / "cache4").quarantine[0].reasons
+    assert "diagnosis_code:invalid_code" in synpuf_reasons
+    assert "provider_id:invalid_code" in synpuf_reasons
+
+
+def test_trials_require_exact_query_and_strict_nested_types(tmp_path: Path) -> None:
+    document = json.loads((FIXTURES / "clinicaltrials.json").read_text())
+    document["snapshot_metadata"]["query"] = "kidney"
+    with (tmp_path / "wrong-query.json").open("w", encoding="utf-8") as handle:
+        json.dump(document, handle)
+    with pytest.raises(ValueError, match="exact documented CKD query"):
+        ingest_trials(tmp_path / "wrong-query.json", cache_dir=tmp_path / "cache1")
+
+    for index, invalid_value in enumerate((True, 12, [], {})):
+        typed_document = json.loads((FIXTURES / "clinicaltrials.json").read_text())
+        typed_document["studies"][0]["protocolSection"]["identificationModule"][
+            "briefTitle"
+        ] = invalid_value
+        path = tmp_path / f"bad-type-{index}.json"
+        with path.open("w", encoding="utf-8") as handle:
+            json.dump(typed_document, handle)
+
+        result = ingest_trials(path, cache_dir=tmp_path / f"cache-{index}")
+
+        assert not result.valid
+        assert "brief_title:invalid_type" in result.quarantine[0].reasons
+
+
+def test_malformed_trial_is_quarantined_without_aborting_valid_study(tmp_path: Path) -> None:
+    document = json.loads((FIXTURES / "clinicaltrials.json").read_text())
+    document["studies"].insert(0, {"protocolSection": []})
+    path = tmp_path / "trials.json"
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(document, handle)
+
+    result = ingest_trials(path, cache_dir=tmp_path / "cache")
+
+    assert len(result.valid) == 1
+    assert result.quarantine[0].reasons == ("protocolSection:invalid_type",)
+
+
+def test_trial_snapshot_cannot_predate_study_update(tmp_path: Path) -> None:
+    document = json.loads((FIXTURES / "clinicaltrials.json").read_text())
+    document["snapshot_metadata"]["retrieved_at"] = "2026-09-01T12:00:00Z"
+    path = tmp_path / "trials.json"
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(document, handle)
+
+    result = ingest_trials(path, cache_dir=tmp_path / "cache")
+
+    assert "last_update_date:after_snapshot" in result.quarantine[0].reasons
+
+
+def _write_zip(path: Path, member: str, content: str) -> None:
+    with zipfile.ZipFile(path, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+        archive.writestr(member, content)
+
+
+def test_native_partd_zip_columns_are_normalized(tmp_path: Path) -> None:
+    path = tmp_path / "Medicare_Part_D_2024.zip"
+    _write_zip(
+        path,
+        "partd_2024.csv",
+        "Prscrbr_NPI,Prscrbr_State_Abrvtn,Brnd_Name,Gnrc_Name,Tot_Clms,"
+        "Tot_30day_Fills,Tot_Drug_Cst\n1234567890,DC,JARDIANCE,empagliflozin,12,13,999.50\n",
+    )
+
+    result = ingest_partd(path, cache_dir=tmp_path / "cache")
+
+    assert result.valid[0]["provider_state"] == "DC"
+    assert result.valid[0]["year"] == 2024
+
+
+def test_extensionless_download_is_detected_from_zip_signature(tmp_path: Path) -> None:
+    path = tmp_path / "Medicare_Part_D_2024.download"
+    _write_zip(
+        path,
+        "partd_2024.csv",
+        "Prscrbr_NPI,Prscrbr_State_Abrvtn,Brnd_Name,Gnrc_Name,Tot_Clms,"
+        "Tot_30day_Fills,Tot_Drug_Cst\n1234567890,DC,JARDIANCE,empagliflozin,12,13,999.50\n",
+    )
+
+    result = ingest_partd(path, cache_dir=tmp_path / "cache")
+
+    assert result.valid[0]["total_claim_count"] == 12
+    assert result.manifest.cache_path is not None
+    assert result.manifest.cache_path.endswith(".zip")
+
+
+def test_nhanes_xpt_boundary_dispatches_native_normalization(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "joined_nhanes_2017_2018.xpt"
+    path.write_bytes(b"representative-xpt-boundary")
+    rows = [dict(row) for row in ingest_nhanes(FIXTURES / "nhanes.csv", cache_dir=None).valid]
+    rows_as_text = [
+        {key: str(value) for key, value in row.items() if key != "evidence_type"}
+        for row in rows
+    ]
+    monkeypatch.setattr(
+        "ckd_intelligence.ingestion.nhanes._xpt_rows", lambda _payload: rows_as_text
+    )
+
+    result = ingest_nhanes(path, cache_dir=tmp_path / "cache")
+
+    assert len(result.valid) == 2
+    assert result.manifest.version == "2017-2018"
+
+
+def test_nhanes_native_xpt_bundle_dispatches_three_component_join(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "nhanes_2017_2018.zip"
+    _write_zip(path, "placeholder.csv", "not used")
+    rows = [dict(row) for row in ingest_nhanes(FIXTURES / "nhanes.csv", cache_dir=None).valid]
+    rows_as_text = [
+        {key: str(value) for key, value in row.items() if key != "evidence_type"}
+        for row in rows
+    ]
+    monkeypatch.setattr(
+        "ckd_intelligence.ingestion.nhanes._xpt_bundle_rows",
+        lambda _payload: rows_as_text,
+    )
+
+    result = ingest_nhanes(path, cache_dir=tmp_path / "cache")
+
+    assert len(result.valid) == 2
+
+
+def test_meps_xpt_boundary_dispatches_hc243_person_year_layout(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "h243.xpt"
+    path.write_bytes(b"representative-xpt-boundary")
+    native = [
+        {
+            "source_release": "HC-243-2021",
+            "person_id": "P1",
+            "year": "2021",
+            "total_expenditure_usd": "120.0",
+            "person_weight": "5000.0",
+            "variance_stratum": "12",
+            "variance_psu": "1",
+        }
+    ]
+    monkeypatch.setattr(
+        "ckd_intelligence.ingestion.meps._native_meps_rows", lambda _payload: native
+    )
+
+    result = ingest_meps(path, cache_dir=tmp_path / "cache")
+
+    assert result.valid[0]["total_expenditure_usd"] == 120.0
+    assert result.manifest.version == "HC-243-2021"
+
+
+def test_native_synpuf_zip_columns_are_normalized(tmp_path: Path) -> None:
+    path = tmp_path / "DE1_0_2008_to_2010_Inpatient_Claims.zip"
+    _write_zip(
+        path,
+        "claims.csv",
+        "DESYNPUF_ID,CLM_ID,CLM_FROM_DT,CLM_THRU_DT,ADMTNG_ICD9_DGNS_CD,"
+        "PRVDR_NUM,CLM_PMT_AMT\nB1,C1,20090102,20090105,5853,P100,1420.50\n",
+    )
+
+    result = ingest_synpuf(path, cache_dir=tmp_path / "cache")
+
+    assert result.valid[0]["claim_type"] == "inpatient"
+    assert result.valid[0]["service_from_date"] == "2009-01-02"
+
+
+class _RedirectResponse:
+    headers = {"Content-Length": "2"}
+
+    def __enter__(self) -> _RedirectResponse:
+        return self
+
+    def __exit__(self, *_args: object) -> None:
+        return None
+
+    def read(self, _size: int = -1) -> bytes:
+        return b"{}"
+
+    def geturl(self) -> str:
+        return "http://unsafe.example/final.json"
+
+
+class _HttpsRedirectResponse(_RedirectResponse):
+    def __init__(self, payload: bytes) -> None:
+        self._stream = BytesIO(payload)
+        self.headers = {"Content-Length": str(len(payload))}
+
+    def read(self, size: int = -1) -> bytes:
+        return self._stream.read(size)
+
+    def geturl(self) -> str:
+        return "https://clinicaltrials.gov/api/intake/snapshot.json"
+
+
+def test_redirect_to_non_https_is_rejected(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    monkeypatch.setattr(
+        "ckd_intelligence.ingestion._common.urlopen",
+        lambda *_a, **_k: _RedirectResponse(),
+    )
+
+    with pytest.raises(ValueError, match="redirected to a non-HTTPS"):
+        ingest_trials("https://clinicaltrials.gov/api/v2/studies", cache_dir=tmp_path)
+
+
+def test_manifest_records_requested_and_final_https_urls(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    payload = (FIXTURES / "clinicaltrials.json").read_bytes()
+    monkeypatch.setattr(
+        "ckd_intelligence.ingestion._common.urlopen",
+        lambda *_a, **_k: _HttpsRedirectResponse(payload),
+    )
+    requested = "https://clinicaltrials.gov/api/v2/studies?query.cond=CKD"
+
+    result = ingest_trials(requested, cache_dir=tmp_path)
+
+    assert result.manifest.requested_source_uri == requested
+    assert result.manifest.source_uri == "https://clinicaltrials.gov/api/intake/snapshot.json"
