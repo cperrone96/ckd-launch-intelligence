@@ -1,0 +1,27 @@
+{
+  "retrieved_at": "2026-09-11",
+  "source": "CDC/NCHS NHANES",
+  "release": "2017-2018",
+  "files": [
+    {
+      "name": "DEMO_J.xpt",
+      "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DEMO_J.xpt",
+      "sha256": "c0b46e0345ea19404928656277c8b0d10b0cca348a9b2fe4fc3c67e8b7ee73ec",
+      "bytes": 3412720
+    },
+    {
+      "name": "BIOPRO_J.xpt",
+      "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BIOPRO_J.xpt",
+      "sha256": "5bcd5722c1892883b96a9d7fed0befadabacae313f800fadc0133cd5dd00c4c6",
+      "bytes": 2106080
+    },
+    {
+      "name": "ALB_CR_J.xpt",
+      "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/ALB_CR_J.xpt",
+      "sha256": "0017a7b8d87d29009923e22300b4ec393b06c9bbf6147eb6b2d777aca605bcbf",
+      "bytes": 509760
+    }
+  ],
+  "cache_policy": "Raw XPT files are gitignored and never downloaded during CI. Reruns use exact HTTPS URLs and must verify these checksums before analysis.",
+  "join_policy": "DEMO_J is left-joined one-to-one to BIOPRO_J and ALB_CR_J on SEQN only; no other source or patient-level linkage is permitted."
+}

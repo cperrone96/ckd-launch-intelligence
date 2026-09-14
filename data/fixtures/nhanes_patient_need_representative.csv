@@ -1,0 +1,9 @@
+respondent_id,age_years,sex,serum_creatinine_mg_dl,urine_albumin_mg_l,urine_creatinine_mg_dl,sample_weight,strata,psu
+1,72,Female,1.60,12.0,100.0,2.0,1,1
+2,55,Male,0.90,45.0,100.0,1.0,1,1
+3,46,Female,0.70,8.0,100.0,3.0,1,2
+4,29,Male,0.80,4.0,100.0,2.0,1,2
+5,63,Female,1.10,35.0,100.0,2.5,2,1
+6,51,Male,1.00,10.0,100.0,1.5,2,1
+7,38,Female,0.75,6.0,100.0,2.0,2,2
+8,67,Male,1.40,20.0,100.0,2.0,2,2

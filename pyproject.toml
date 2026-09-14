@@ -12,13 +12,19 @@ dependencies = [
   "pandas>=2.2,<3",
   "pydantic>=2.9,<3",
   "pydantic-settings>=2.5,<3",
+  "numpy>=1.26,<3",
+  "scipy>=1.11,<2",
 ]
 
 [project.optional-dependencies]
 dev = [
+  "ipykernel>=6.29,<8",
+  "nbconvert>=7.16,<8",
   "mypy>=1.11,<2",
+  "pandas-stubs>=2.2,<3",
   "pytest>=8.3,<10",
   "ruff>=0.7,<1",
+  "scipy-stubs>=1.11,<2",
 ]
 postgres = ["psycopg[binary]>=3.2,<4"]
 
