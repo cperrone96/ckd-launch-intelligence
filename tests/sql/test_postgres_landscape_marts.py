@@ -88,10 +88,32 @@ def test_landscape_marts_execute_on_postgresql() -> None:
             cursor.execute((ROOT / script).read_text(encoding="utf-8"))
         cursor.execute("SELECT COUNT(*) FROM analytics_observed.mart_meps_utilization")
         assert cursor.fetchone()[0] == 1
+        cursor.execute(
+            "SELECT COUNT(*), COUNT(DISTINCT (source_release, year, kidney_proxy_status, "
+            "evidence_type, source_retrieved_at, source_manifest_checksum)), "
+            "COUNT(DISTINCT evidence_type) "
+            "FROM analytics_observed.mart_meps_utilization"
+        )
+        assert cursor.fetchone() == (1, 1, 1)
         cursor.execute("SELECT COUNT(*) FROM analytics_observed.mart_partd_prescribing")
         assert cursor.fetchone()[0] == 1
+        cursor.execute(
+            "SELECT COUNT(*), COUNT(DISTINCT (source_release, year, provider_npi, "
+            "provider_state, generic_name, drug_name, evidence_type, source_retrieved_at, "
+            "source_manifest_checksum)), COUNT(DISTINCT evidence_type), "
+            "SUM(total_claim_count) "
+            "FROM analytics_observed.mart_partd_prescribing"
+        )
+        assert cursor.fetchone() == (1, 1, 1, 11)
         cursor.execute("SELECT COUNT(*) FROM analytics_observed.mart_trial_status")
         assert cursor.fetchone()[0] == 1
+        cursor.execute(
+            "SELECT SUM(study_count), COUNT(DISTINCT overall_status), "
+            "COUNT(DISTINCT evidence_type), COUNT(DISTINCT source_retrieved_at), "
+            "COUNT(DISTINCT source_manifest_checksum) "
+            "FROM analytics_observed.mart_trial_status"
+        )
+        assert cursor.fetchone() == (1, 1, 1, 1, 1)
         cursor.execute(
             "SELECT total_reported_enrollment, studies_with_reported_enrollment, "
             "evidence_type, source_retrieved_at, source_manifest_checksum "
