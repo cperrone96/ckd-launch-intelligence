@@ -1,0 +1,30 @@
+name: ckd-launch-intelligence
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${CKD_POSTGRES_DB:-ckd_intelligence}
+      POSTGRES_USER: ${CKD_POSTGRES_USER:-ckd_app}
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    ports:
+      - "127.0.0.1:${CKD_POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    secrets:
+      - postgres_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres_data:
+
+secrets:
+  postgres_password:
+    environment: CKD_POSTGRES_PASSWORD
+
