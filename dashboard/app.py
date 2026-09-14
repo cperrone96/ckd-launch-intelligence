@@ -47,37 +47,46 @@ def nav() -> Any:
     )
 
 
-def _load_data(api: DashboardAPI) -> dict[str, Any]:
-    sources = api.get("/api/v1/sources").get("sources", [])
-    cohort = api.get("/api/v1/cohorts", {"page_size": 100})
-    estimates = api.get("/api/v1/population-estimates", {"page_size": 100})
-    performance = api.get("/api/v1/patient-finding/performance")
-    utilization = api.get("/api/v1/utilization", {"page_size": 100})
-    prescribing = api.get("/api/v1/prescribing", {"page_size": 100})
-    opportunity_data = api.get("/api/v1/geography/opportunity")
-    trial_sections = {
-        dimension: api.get("/api/v1/trials", {"dimension": dimension, "page_size": 100})
-        for dimension in ("status", "phase_or_type", "geography")
-    }
-    journey = api.get("/api/v1/journeys/synthetic")
-    return {
-        "sources": sources,
-        "need": cohort,
-        "cohort": cohort,
-        "estimates": estimates,
-        "performance": performance,
-        "utilization": utilization,
-        "prescribing": prescribing,
-        "opportunity": opportunity_data,
-        "sections": trial_sections,
-        "evidence": estimates.get("evidence", {}),
-        "journey": journey,
-    }
+def _load_data(api: DashboardAPI, pathname: str) -> dict[str, Any]:
+    if pathname == "/":
+        estimates = api.get("/api/v1/population-estimates", {"page_size": 100})
+        return {
+            "sources": api.get("/api/v1/sources").get("sources", []),
+            "estimates": estimates,
+            "performance": api.get("/api/v1/patient-finding/performance"),
+            "evidence": estimates.get("evidence", {}),
+        }
+    if pathname == "/patient-need":
+        estimates = api.get("/api/v1/population-estimates", {"page_size": 100})
+        return {
+            "cohort": api.get("/api/v1/cohorts", {"page_size": 100}),
+            "estimates": estimates,
+            "evidence": estimates.get("evidence", {}),
+        }
+    if pathname == "/patient-finding":
+        return {"performance": api.get("/api/v1/patient-finding/performance")}
+    if pathname == "/care-and-prescribing":
+        return {
+            "utilization": api.get("/api/v1/utilization", {"page_size": 100}),
+            "prescribing": api.get("/api/v1/prescribing", {"page_size": 100}),
+        }
+    if pathname == "/trials":
+        return {
+            "sections": {
+                dimension: api.get("/api/v1/trials", {"dimension": dimension, "page_size": 100})
+                for dimension in ("status", "phase_or_type", "geography")
+            }
+        }
+    if pathname == "/opportunity":
+        return {"opportunity": api.get("/api/v1/geography/opportunity")}
+    if pathname == "/synthetic-journeys":
+        return {"journey": api.get("/api/v1/journeys/synthetic")}
+    return {}
 
 
 def _page(pathname: str, api: DashboardAPI) -> Any:
     try:
-        data = _load_data(api)
+        data = _load_data(api, pathname)
         if pathname == "/patient-need":
             return patient_need.render(data)
         if pathname == "/patient-finding":
@@ -102,7 +111,11 @@ def _page(pathname: str, api: DashboardAPI) -> Any:
 def create_dashboard(*, api: DashboardAPI | None = None) -> Dash:
     client = api or DashboardAPI()
     app = Dash(__name__, title="CKD Launch Intelligence", update_title="Loading evidence…")
-    app.index_string = """<!DOCTYPE html><html lang="en"><head>{%metas%}<title>{%title%}</title>{%favicon%}{%css%}</head><body><div id="evidence-boot" aria-live="polite"><strong>CKD Launch Intelligence</strong><span>What can this evidence support?</span><span>Source boundary · verified public artifacts</span><span>Source population · denominator · uncertainty</span><span>MEPS · Part D · Provider-state</span><span>ClinicalTrials.gov · Registered study</span><span>Scenario-only · No composite</span><span>not a clinical diagnostic tool</span><span>CMS synthetic data · not representative of Medicare beneficiaries</span></div>{%app_entry%}<footer>{%config%}{%scripts%}{%renderer%}</footer></body></html>"""  # noqa: E501
+    app.index_string = (
+        "<!DOCTYPE html><html lang=\"en\"><head>{%metas%}<title>{%title%}</title>"
+        "{%favicon%}{%css%}</head><body>{%app_entry%}<footer>{%config%}{%scripts%}"
+        "{%renderer%}</footer></body></html>"
+    )
     app.layout = html.Div(
         [
             dcc.Location(id="url"),

@@ -4,12 +4,20 @@ from typing import Any
 
 from dash import html
 
-from .common import accessible_table, chart_with_table, evidence_header, limitation, page_shell
+from .common import (
+    accessible_table,
+    chart_with_table,
+    coverage_note,
+    empty_state,
+    evidence_header,
+    limitation,
+    page_shell,
+)
 
 
 def render(data: dict[str, Any]) -> html.Main:
     sections = data.get("sections", {})
-    evidence = data.get("evidence", {})
+    evidence = sections.get("status", {}).get("evidence", {})
     status_rows = sections.get("status", {}).get("items", [])
     status_figure = {
         "data": [
@@ -27,6 +35,11 @@ def render(data: dict[str, Any]) -> html.Main:
             "margin": {"l": 60, "r": 20, "t": 50, "b": 90},
         },
     }
+    status_content = (
+        chart_with_table(status_figure, status_rows, "Registered status")
+        if status_rows
+        else empty_state("No ClinicalTrials.gov status aggregates are available.")
+    )
     return page_shell(
         "Registered trial landscape",
         (
@@ -42,12 +55,13 @@ def render(data: dict[str, Any]) -> html.Main:
                 tone="strong",
             ),
             evidence_header(evidence),
-            chart_with_table(status_figure, status_rows, "Registered status"),
+            status_content,
             html.Div(
                 [
                     html.Section(
                         [
                             html.H2(title.replace("_", " ").title()),
+                            coverage_note(payload),
                             accessible_table(
                                 payload.get("items", []),
                                 title="Registered study aggregates",

@@ -4,7 +4,7 @@ from typing import Any
 
 from dash import html
 
-from .common import accessible_table, evidence_header, limitation, page_shell
+from .common import accessible_table, coverage_note, evidence_header, limitation, page_shell
 
 
 def render(data: dict[str, Any]) -> html.Main:
@@ -27,6 +27,7 @@ def render(data: dict[str, Any]) -> html.Main:
             html.Section(
                 [
                     html.H2("MEPS utilization"),
+                    coverage_note(utilization),
                     evidence_header(utilization.get("evidence", {})),
                     accessible_table(
                         utilization.get("items", []), title="HC-243 person-year estimates", limit=8
@@ -37,6 +38,7 @@ def render(data: dict[str, Any]) -> html.Main:
             html.Section(
                 [
                     html.H2("Part D prescribing"),
+                    coverage_note(prescribing),
                     evidence_header(prescribing.get("evidence", {})),
                     accessible_table(
                         prescribing.get("items", []), title="Provider-state aggregates", limit=12

@@ -2,16 +2,41 @@ from __future__ import annotations
 
 from typing import Any
 
-from dash import html
+from dash import dcc, html
 
-from .common import accessible_table, evidence_header, limitation, metric, page_shell
+from .common import accessible_table, empty_state, evidence_header, limitation, metric, page_shell
 
 
 def render(data: dict[str, Any]) -> html.Main:
     sources = data.get("sources", [])
-    need = data.get("need", {})
+    estimates = data.get("estimates", {})
     performance = data.get("performance", {}).get("comparison", {})
-    evidence = data.get("evidence", {})
+    evidence = estimates.get("evidence", data.get("evidence", {}))
+    estimate_rows = estimates.get("items", [])
+    primary = next(
+        (row for row in estimate_rows if row.get("key") == "primary_egfr_or_albuminuria"),
+        None,
+    )
+    if primary:
+        signal_cards = [
+            metric(
+                "Population signal", f"{primary['point'] * 100:.1f}%", "NHANES primary indicator"
+            ),
+            metric("Complete-case n", f"{primary['denominator']:,}", "Defining labs available"),
+            metric(
+                "95% confidence interval",
+                f"{primary['ci_low'] * 100:.1f}–{primary['ci_high'] * 100:.1f}%",
+                "Survey-weighted uncertainty",
+            ),
+        ]
+    else:
+        signal_cards = [empty_state("The primary population estimate is unavailable.")]
+    selected_model = performance.get("selected_model")
+    model_step = (
+        html.P(f"{selected_model} model comparison and threshold capacity.")
+        if selected_model
+        else empty_state("The model comparison is unavailable.")
+    )
     return page_shell(
         "What can this evidence support?",
         (
@@ -21,9 +46,7 @@ def render(data: dict[str, Any]) -> html.Main:
         [
             html.Div(
                 [
-                    metric(
-                        "Population signal", "13.9%", "NHANES primary eGFR or albuminuria estimate"
-                    ),
+                    *signal_cards,
                     metric("Model use", "Educational", "Screening-opportunity demonstration only"),
                     metric("Geography", "Separated", "Provider-state and study-country panels"),
                 ],
@@ -57,10 +80,7 @@ def render(data: dict[str, Any]) -> html.Main:
                                 [
                                     html.Span("02", className="step-number"),
                                     html.H3("Find"),
-                                    html.P(
-                                        f"{performance.get('selected_model', 'Reviewed')} model "
-                                        "comparison and threshold capacity."
-                                    ),
+                                    model_step,
                                 ],
                                 className="review-step",
                             ),
@@ -82,9 +102,12 @@ def render(data: dict[str, Any]) -> html.Main:
                 className="section",
             ),
             accessible_table(sources, title="Verified sources on hand", limit=8),
-            html.P(
-                f"Waterfall stages available · {len(need.get('items', []))}",
-                className="source-count",
+            html.Div(
+                [
+                    dcc.Link("Open patient-need evidence →", href="/patient-need"),
+                    dcc.Link("Open patient-finding review →", href="/patient-finding"),
+                ],
+                className="summary-links",
             ),
         ],
     )

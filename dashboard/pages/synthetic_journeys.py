@@ -7,8 +7,27 @@ from dash import html
 from .common import accessible_table, evidence_header, limitation, page_shell
 
 
+def _summary_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    fields = (
+        "index_date",
+        "target_date",
+        "persistence_date",
+        "duration_days",
+        "event_observed",
+        "censoring_reason",
+    )
+    return [{field: row.get(field) for field in fields} for row in rows]
+
+
+def _survival_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    fields = ("time", "at_risk", "events", "censored", "survival", "ci_low", "ci_high")
+    return [{field: row.get(field) for field in fields} for row in rows]
+
+
 def render(data: dict[str, Any]) -> html.Main:
     journey = data.get("journey", {})
+    summaries = _summary_rows(journey.get("summaries", []))
+    survival = _survival_rows(journey.get("survival", []))
     return page_shell(
         "Synthetic claims journeys",
         "CMS synthetic data used to demonstrate claims-engineering and time-to-event methods.",
@@ -28,7 +47,7 @@ def render(data: dict[str, Any]) -> html.Main:
                 [
                     html.H2("Journey summaries"),
                     accessible_table(
-                        journey.get("summaries", []), title="Synthetic journey summary", limit=10
+                        summaries, title="Synthetic journey summary", limit=10
                     ),
                 ],
                 className="section",
@@ -37,7 +56,7 @@ def render(data: dict[str, Any]) -> html.Main:
                 [
                     html.H2("Survival method output"),
                     accessible_table(
-                        journey.get("survival", []), title="Synthetic time-to-event table", limit=12
+                        survival, title="Synthetic time-to-event table", limit=12
                     ),
                 ],
                 className="section",

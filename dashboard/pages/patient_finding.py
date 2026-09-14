@@ -7,6 +7,53 @@ from dash import html
 from .common import accessible_table, evidence_header, limitation, metric, page_shell
 
 
+def _model_rows(models: dict[str, Any]) -> list[dict[str, Any]]:
+    fields = (
+        "roc_auc",
+        "pr_auc",
+        "brier_score",
+        "precision",
+        "recall",
+        "selected_share",
+        "threshold",
+    )
+    return [
+        {
+            "model": name.replace("_", " ").title(),
+            **{
+                field: (
+                    f"{float(metrics[field]):.4f}"
+                    if isinstance(metrics.get(field), (int, float))
+                    else metrics.get(field)
+                )
+                for field in fields
+            },
+        }
+        for name, metrics in models.items()
+        if isinstance(metrics, dict)
+    ]
+
+
+def _subgroup_rows(subgroups: dict[str, Any]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for dimension, groups in subgroups.items():
+        if isinstance(groups, list):
+            rows.extend(
+                {
+                    "dimension": dimension,
+                    "group": group.get("value"),
+                    "n": group.get("n"),
+                    "prevalence": group.get("prevalence"),
+                    "precision": group.get("precision"),
+                    "recall": group.get("recall"),
+                    "caveat": group.get("caveat"),
+                }
+                for group in groups
+                if isinstance(group, dict)
+            )
+    return rows
+
+
 def render(data: dict[str, Any]) -> html.Main:
     performance = data.get("performance", {})
     comparison = performance.get("comparison", performance)
@@ -42,7 +89,11 @@ def render(data: dict[str, Any]) -> html.Main:
                     ),
                     metric(
                         "Threshold",
-                        str(comparison.get("selected_threshold", "Not stated")),
+                        (
+                            f"{float(comparison['selected_threshold']):.4f}"
+                            if comparison.get("selected_threshold") is not None
+                            else "Not stated"
+                        ),
                         "Holdout threshold",
                     ),
                     metric(
@@ -57,7 +108,7 @@ def render(data: dict[str, Any]) -> html.Main:
                 [
                     html.H2("Performance and calibration"),
                     accessible_table(
-                        [{"model": key, **value} for key, value in models.items()],
+                        _model_rows(models),
                         title="Model comparison",
                         limit=8,
                     ),
@@ -68,10 +119,7 @@ def render(data: dict[str, Any]) -> html.Main:
                 [
                     html.H2("Subgroup and cohort sensitivity"),
                     accessible_table(
-                        [
-                            {"dimension": key, "groups": str(value)}
-                            for key, value in comparison.get("subgroups", {}).items()
-                        ],
+                        _subgroup_rows(comparison.get("subgroups", {})),
                         title="Subgroup summaries",
                         limit=8,
                     ),

@@ -66,10 +66,17 @@ def metric(label: str, value: str, detail: str) -> html.Div:
 
 
 def accessible_table(rows: list[dict[str, Any]], *, title: str, limit: int = 12) -> html.Div:
+    if not rows:
+        return empty_state(f"No {title.lower()} are available in this evidence release.")
     columns = sorted({str(key) for row in rows[:limit] for key in row})
     return html.Div(
         [
             html.H3(title),
+            html.P(
+                "Table scrolls horizontally on narrow screens; the text alternative below "
+                "contains the same displayed rows.",
+                className="table-scroll-note",
+            ),
             dash_table.DataTable(  # type: ignore[attr-defined]
                 data=rows[:limit],
                 columns=[
@@ -78,7 +85,14 @@ def accessible_table(rows: list[dict[str, Any]], *, title: str, limit: int = 12)
                 page_size=min(limit, 12),
                 sort_action="native",
                 style_table={"overflowX": "auto"},
-                style_cell={"textAlign": "left", "padding": "10px", "fontFamily": "inherit"},
+                style_cell={
+                    "textAlign": "left",
+                    "padding": "10px",
+                    "fontFamily": "inherit",
+                    "minWidth": "120px",
+                    "maxWidth": "260px",
+                    "whiteSpace": "normal",
+                },
                 style_header={"fontWeight": "700", "backgroundColor": "#e8edf5"},
             ),
             html.Details(
@@ -108,16 +122,40 @@ def chart_with_table(figure: dict[str, Any], rows: list[dict[str, Any]], title: 
     )
 
 
-def loading_state() -> dict[str, str]:
-    return {"state": "loading", "message": "Loading verified evidence…"}
+def _state_component(kind: str, message: str) -> html.Div:
+    return html.Div(
+        [html.Strong(kind.title()), html.P(message)],
+        className=f"state state-{kind}",
+        role="status",
+    )
 
 
-def empty_state(message: str) -> dict[str, str]:
-    return {"state": "empty", "message": message}
+def loading_state() -> html.Div:
+    return _state_component("loading", "Loading verified evidence…")
 
 
-def error_state(message: str) -> dict[str, str]:
-    return {"state": "error", "message": message}
+def empty_state(message: str) -> html.Div:
+    return _state_component("empty", message)
+
+
+def error_state(message: str) -> html.Div:
+    return _state_component("error", message)
+
+
+def coverage_note(payload: dict[str, Any]) -> html.P:
+    pagination = payload.get("pagination", {})
+    shown = len(payload.get("items", []))
+    total = pagination.get("total", shown)
+    complete = shown >= total
+    status = (
+        "complete panel"
+        if complete
+        else "partial page window; use API pagination for the remainder."
+    )
+    return html.P(
+        f"Showing {shown} of {total} rows · {status}",
+        className="table-note",
+    )
 
 
 def page_shell(title: str, intro: str, children: list[Any]) -> html.Main:
