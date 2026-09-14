@@ -1,7 +1,8 @@
 # UAT and release gate
 
 Release review date: 2026-09-11. The review covers the API and dashboard commits
-through `6dd0f98` (`fix: refine CKD dashboard evidence review`).
+through the reviewed current HEAD `df2a964` (`fix(dashboard): restore disclosure
+affordances`).
 
 ## Automated gate
 
@@ -13,7 +14,7 @@ The offline gate is:
 .venv/bin/pytest -q
 ```
 
-The current result is **242 passed, 2 skipped**. The two skips are explicit
+The current result is **257 passed, 2 skipped**. The two skips are explicit
 PostgreSQL integration contracts because no PostgreSQL URL is configured. Ruff is
 clean and strict mypy reports no issues across 72 source files. The test suite uses
 committed fixtures and artifacts; it does not call source websites.
