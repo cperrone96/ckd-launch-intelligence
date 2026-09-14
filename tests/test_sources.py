@@ -1,4 +1,5 @@
 import hashlib
+import json
 import re
 from pathlib import Path
 
@@ -36,6 +37,28 @@ def test_only_synpuf_is_public_synthetic() -> None:
         "synpuf": "public_synthetic",
     }
 
+
+def test_partd_registry_identifies_latest_verified_cms_release() -> None:
+    partd = next(source for source in get_source_registry() if source.name == "partd")
+    metadata = json.loads((FIXTURE_DIRECTORY / "partd.json").read_text())
+
+    assert partd.version == "2024"
+    assert metadata == {
+        "family": "partd",
+        "manifest_kind": "registry_metadata",
+        "dataset_title": "Medicare Part D Prescribers - by Provider and Drug",
+        "source_url": (
+            "https://data.cms.gov/provider-summary-by-type-of-service/"
+            "medicare-part-d-prescribers/"
+            "medicare-part-d-prescribers-by-provider-and-drug"
+        ),
+        "version": "2024",
+        "update_frequency": "annually",
+        "latest_available_verified_on": "2026-09-11",
+        "snapshot_scope": (
+            "No source rows; metadata identifies the CMS public-use dataset release."
+        ),
+    }
 
 def test_registry_is_an_immutable_tuple_of_frozen_records() -> None:
     registry = get_source_registry()

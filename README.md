@@ -14,8 +14,26 @@ treatment recommendations, or patient targeting.
   `analytics_observed`; CMS DE-SynPUF demonstrations belong in
   `analytics_synthetic`.
 
-Install the development environment with `make install`, then run the full local
-quality gate with `make check`. Before starting PostgreSQL, provide a local secret:
+Create the project environment with exactly Python 3.12, then install its bounded
+dependency ranges:
+
+```bash
+make install
+```
+
+If `python3.12` is not on `PATH`, provide its exact location without changing the
+project interpreter contract:
+
+```bash
+make install BOOTSTRAP_PYTHON=/path/to/python3.12
+```
+
+Every Python Make target runs `.venv/bin/python` and stops with setup guidance if
+that environment is absent or not Python 3.12. Run `make test`, `make lint`, and
+`make typecheck` independently, or `make check` with Docker installed for the
+additional Compose validation.
+
+Before starting PostgreSQL, provide a local secret:
 
 ```bash
 export CKD_POSTGRES_PASSWORD='choose-a-local-password'

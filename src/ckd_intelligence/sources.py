@@ -55,12 +55,12 @@ _SOURCE_REGISTRY: tuple[SourceRecord, ...] = (
     ),
     SourceRecord(
         name="partd",
-        version="2023",
+        version="2024",
         retrieved_at=date(2026, 9, 11),
         population="Medicare Part D prescriptions represented in CMS aggregate public-use data",
         grain="Aggregated prescriber, drug, and geography records",
         evidence_type="public_observed",
-        checksum="8282e4711f8f38d26fdde725d314d8213d5a9321df130b464141dc6c6f43cda7",
+        checksum="f92772168e307682c70f9036d965fd1149d1dd41b7a13f739b77cd6f352b69c0",
         limitations=(
             "Aggregate records do not support beneficiary-level utilization or "
             "patient journeys."
