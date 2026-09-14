@@ -1,8 +1,10 @@
 # CMS DE-SynPUF synthetic journey method
 
-This is a software and statistical-method demonstration using the CMS DE-SynPUF
-2008–2010 public synthetic sample. It is not a Medicare utilization estimate and
-must not be generalized to Medicare beneficiaries.
+This is a software and statistical-method demonstration using a handcrafted,
+schema-compatible `fixture_only` file labeled `public_synthetic` under the CMS
+DE-SynPUF 2008–2010 contract. The fixture is not an extract of actual CMS source
+rows. It is not a Medicare utilization estimate and must not be generalized to
+Medicare beneficiaries.
 
 ## Journey contract
 
@@ -14,6 +16,9 @@ must not be generalized to Medicare beneficiaries.
   token normalization), not a clinical diagnosis.
 - **Chronology:** sort by synthetic beneficiary, event date, through date, then
   claim ID. Claim IDs are the deterministic tie-breaker for same-day events.
+- **First-claim target:** when the index claim is itself the first target, the row
+  remains `event_kind=index` and is additionally marked `is_target_event=true`; this
+  preserves both facts without inventing a duplicate claim event.
 - **Follow-up end:** the earlier of 2010-12-31 and index date plus 365 days.
 - **Persistence event:** a second target signal at least 90 days after the first;
   exactly 90 days is included. Same-day duplicate signals cannot establish this

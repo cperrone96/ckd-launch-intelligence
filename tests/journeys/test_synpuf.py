@@ -40,6 +40,20 @@ def test_journey_is_synthetic_only_and_no_observed_values_are_allowed(
     assert set(output.summaries["evidence_type"]) == {"public_synthetic"}
     with pytest.raises(ValueError, match="public_synthetic"):
         build_journey_output(claims.assign(evidence_type="public_observed"))
+    with pytest.raises(ValueError, match="evidence_type"):
+        build_journey_output(claims.drop(columns="evidence_type"))
+    with pytest.raises(ValueError, match="public_synthetic"):
+        build_journey_output(claims.assign(evidence_type=pd.NA))
+
+
+def test_schema_valid_empty_input_returns_typed_empty_outputs(
+    claims: pd.DataFrame,
+) -> None:
+    output = build_journey_output(claims.iloc[0:0].copy())
+    assert output.events.empty
+    assert output.summaries.empty
+    assert output.survival.empty
+    assert "evidence_type" in output.events
 
 
 def test_persistence_gap_is_inclusive_and_no_target_is_retained_as_censored(
@@ -96,6 +110,60 @@ def test_deterministic_tie_break_uses_claim_id(claims: pd.DataFrame) -> None:
     assert list(rows.loc[rows["synthetic_id"] == "SYN004", "claim_id"]) == ["A", "B"]
 
 
+def test_post_follow_up_claims_never_define_target_or_persistence(
+    claims: pd.DataFrame,
+) -> None:
+    post_follow_up = pd.DataFrame(
+        [
+            {
+                "source_release": "2008-2010",
+                "beneficiary_id": "SYN005",
+                "claim_id": "L1",
+                "claim_type": "outpatient",
+                "service_from_date": "2009-01-01",
+                "service_through_date": "2009-01-01",
+                "diagnosis_code": "4019",
+                "evidence_type": "public_synthetic",
+            },
+            {
+                "source_release": "2008-2010",
+                "beneficiary_id": "SYN005",
+                "claim_id": "L2",
+                "claim_type": "outpatient",
+                "service_from_date": "2009-02-01",
+                "service_through_date": "2009-02-01",
+                "diagnosis_code": "5853",
+                "evidence_type": "public_synthetic",
+            },
+        ]
+    )
+    output = build_journey_output(post_follow_up, rules=JourneyRules(follow_up_days=30))
+    assert list(output.events["claim_id"]) == ["L1"]
+    summary = output.summaries.iloc[0]
+    assert bool(summary["event_observed"]) is False
+    assert bool(summary["has_target"]) is False
+
+
+def test_out_of_release_through_date_is_rejected(claims: pd.DataFrame) -> None:
+    invalid = claims.copy()
+    invalid.loc[0, "service_through_date"] = "2011-01-01"
+    with pytest.raises(ValueError, match="observation window"):
+        build_journey_output(invalid)
+
+
+def test_python_outputs_include_reconciliable_summary_and_survival_tables(
+    claims: pd.DataFrame,
+) -> None:
+    output = build_journey_output(claims)
+    assert len(output.events) == len(claims)
+    assert len(output.summaries) == claims["beneficiary_id"].nunique()
+    assert set(output.survival["evidence_type"]) == {"public_synthetic"}
+    assert output.survival[["at_risk", "events", "censored"]].to_dict("records") == [
+        {"at_risk": 3, "events": 1, "censored": 0},
+        {"at_risk": 2, "events": 0, "censored": 2},
+    ]
+
+
 def test_kaplan_meier_matches_hand_calculation_and_is_monotone() -> None:
     result = kaplan_meier([1, 2, 2, 4], [True, False, True, True])
     assert list(result.table["at_risk"]) == [4, 3, 1]
@@ -113,4 +181,3 @@ def test_kaplan_meier_matches_hand_calculation_and_is_monotone() -> None:
 def test_kaplan_meier_validates_inputs(durations: list[float], events: list[bool]) -> None:
     with pytest.raises(ValueError):
         kaplan_meier(durations, events)
-

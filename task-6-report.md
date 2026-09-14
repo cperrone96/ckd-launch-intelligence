@@ -29,14 +29,36 @@ on branch `feature/ckd-task6`, based on approved Task 4 commit `8d68c0e`.
   - chronology, tie-break, synthetic-only namespace, boundary persistence, censoring,
     and hand-calculated Kaplan–Meier tests.
 
+## Fix round 1 corrections
+
+- Follow-up is bounded before target/persistence detection; post-censor claims are
+  excluded from journey facts and service-through dates are validated against both
+  the release and the follow-up boundary.
+- Evidence and source release are fail-closed: missing, null, observed, or mixed
+  labels are rejected rather than invented, dropped, or relabeled. Schema-valid
+  empty input returns typed empty event, summary, and survival outputs.
+- SQL now persists event-grain journeys, beneficiary summaries, Kaplan–Meier
+  survival/risk tables, and median-survival metadata under `analytics_synthetic`,
+  with Python/SQL reconciliation contracts.
+- Python and SQL use the same first-target tie-break and event chronology.
+- The handcrafted fixture is explicitly `fixture_only` and schema-compatible; it is
+  not represented as an official CMS row extract. CMS documentation is listed as
+  provenance for the release contract only.
+- Notebook cells have stable IDs and repeat the synthetic/non-representative boundary.
+
 ## Verification
 
+- Targeted tests: **23 passed** using the available Anaconda environment.
+- Full tests excluding the pre-existing DuckDB-dependent SQL test: **142 passed**;
+  the complete suite is blocked only by missing `duckdb` in the available runtime.
+- Notebook code executed twice manually with deterministic outputs. `nbconvert`
+  kernel execution was blocked by the sandbox's local socket restriction.
 - Python 3.12 bytecode compilation passed for `src` and `tests`.
 - Notebook JSON validation passed.
 - `git diff --check` passed.
-- Full pytest/Ruff/mypy/notebook execution could not run in this isolated worktree
-  because the environment has no cached dependencies and sandbox DNS blocked package
-  installation. No source or primary worktree changes were made.
+- Ruff, strict mypy, and live DuckDB/PostgreSQL execution require the project's
+  dependency-complete Python 3.12 environment, which was not available in this
+  isolated shell; no source or primary worktree changes were made.
 
 ## Commit
 

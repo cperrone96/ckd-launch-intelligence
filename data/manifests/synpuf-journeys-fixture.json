@@ -5,7 +5,11 @@
   "source_url": "https://www.cms.gov/data-research/statistics-trends-and-reports/medicare-claims-synthetic-public-use-files",
   "fixture_path": "data/fixtures/synpuf_journeys.csv",
   "fixture_sha256": "b5113203989dc8c78e5669cdce7fcc6505acbae4317b0e5542267028f8011fe4",
-  "purpose": "Deterministic offline demonstration of synthetic claims journey and time-to-event methods",
+  "fixture_kind": "fixture_only",
+  "source_rows_are_official": false,
+  "purpose": "Schema-compatible handcrafted public-synthetic demonstration of claims journey and time-to-event methods",
+  "authored_at": "2026-09-11",
+  "official_documentation": "The CMS source URL authenticates the release documentation; this small fixture is not an official CMS row extract.",
   "limitations": "Not representative of Medicare beneficiaries; no Medicare inference or clinical conclusion is supported.",
   "observation_window": ["2008-01-01", "2010-12-31"],
   "no_cross_source_join": true

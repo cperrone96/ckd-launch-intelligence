@@ -13,10 +13,13 @@ from typing import Any, Final
 
 import pandas as pd
 
+from ckd_intelligence.statistics.time_to_event import kaplan_meier
+
 EvidenceType: Final[str] = "public_synthetic"
 CKD_ICD9_PREFIXES: Final[tuple[str, ...]] = ("585", "586", "588")
 REQUIRED_COLUMNS: Final[frozenset[str]] = frozenset(
     {
+        "source_release",
         "beneficiary_id",
         "claim_id",
         "claim_type",
@@ -70,7 +73,15 @@ class JourneyOutput:
 
     events: pd.DataFrame
     summaries: pd.DataFrame
+    survival: pd.DataFrame
     rules: JourneyRules = field(default_factory=JourneyRules)
+
+    @property
+    def median_survival(self) -> float | None:
+        """Return the first KM time at or below 0.5, if one exists."""
+
+        eligible = self.survival.loc[self.survival["survival"] <= 0.5, "time"]
+        return float(eligible.iloc[0]) if not eligible.empty else None
 
 
 def _is_ckd_code(value: object, prefixes: tuple[str, ...]) -> bool:
@@ -79,24 +90,31 @@ def _is_ckd_code(value: object, prefixes: tuple[str, ...]) -> bool:
 
 
 def _as_date(value: object, field_name: str) -> date:
-    parsed = pd.to_datetime(value, errors="coerce")
+    parsed: Any = pd.to_datetime(value, errors="coerce")
     if pd.isna(parsed):
         raise ValueError(f"{field_name} contains an invalid date")
     return parsed.date()
 
 
-def _validate_input(claims: pd.DataFrame) -> pd.DataFrame:
+def _validate_input(claims: pd.DataFrame, rules: JourneyRules) -> pd.DataFrame:
     missing = REQUIRED_COLUMNS.difference(claims.columns)
     if missing:
         raise ValueError(f"claims missing required columns: {sorted(missing)}")
     frame = claims.copy()
     if "evidence_type" not in frame:
-        frame["evidence_type"] = EvidenceType
-    evidence_values = set(frame["evidence_type"].dropna().astype(str))
-    if evidence_values != {EvidenceType}:
+        raise ValueError("journey input must include an evidence_type column")
+    if frame["evidence_type"].isna().any() or (
+        not frame.empty and set(frame["evidence_type"].astype(str)) != {EvidenceType}
+    ):
         raise ValueError("journey input must contain evidence_type=public_synthetic only")
+    if frame["source_release"].isna().any() or (
+        not frame.empty and set(frame["source_release"].astype(str)) != {"2008-2010"}
+    ):
+        raise ValueError("journey input must contain source_release=2008-2010 only")
     if frame["beneficiary_id"].isna().any() or frame["claim_id"].isna().any():
         raise ValueError("beneficiary_id and claim_id must not be missing")
+    if frame["claim_type"].isna().any():
+        raise ValueError("claim_type must not be missing")
     if frame["claim_id"].duplicated().any():
         raise ValueError("claim_id must be unique in the journey input")
     frame["beneficiary_id"] = frame["beneficiary_id"].astype(str)
@@ -109,7 +127,70 @@ def _validate_input(claims: pd.DataFrame) -> pd.DataFrame:
     )
     if (frame["event_through_date"] < frame["event_date"]).any():
         raise ValueError("service_through_date must not precede service_from_date")
+    if (
+        (frame["event_date"] < rules.observation_start)
+        | (frame["event_date"] > rules.observation_end)
+        | (frame["event_through_date"] < rules.observation_start)
+        | (frame["event_through_date"] > rules.observation_end)
+    ).any():
+        raise ValueError("service dates must be within the 2008-2010 observation window")
     return frame
+
+
+def _empty_events() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "synthetic_id": pd.Series(dtype="string"),
+            "claim_id": pd.Series(dtype="string"),
+            "source_release": pd.Series(dtype="string"),
+            "event_date": pd.Series(dtype="object"),
+            "event_through_date": pd.Series(dtype="object"),
+            "claim_type": pd.Series(dtype="string"),
+            "diagnosis_code": pd.Series(dtype="string"),
+            "event_kind": pd.Series(dtype="string"),
+            "event_order": pd.Series(dtype="int64"),
+            "is_ckd_signal": pd.Series(dtype="bool"),
+            "is_target_event": pd.Series(dtype="bool"),
+            "is_persistence_event": pd.Series(dtype="bool"),
+            "index_date": pd.Series(dtype="object"),
+            "target_date": pd.Series(dtype="object"),
+            "follow_up_end": pd.Series(dtype="object"),
+            "evidence_type": pd.Series(dtype="string"),
+        }
+    )
+
+
+def _empty_summaries() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "synthetic_id": pd.Series(dtype="string"),
+            "index_date": pd.Series(dtype="object"),
+            "target_date": pd.Series(dtype="object"),
+            "persistence_date": pd.Series(dtype="object"),
+            "observation_end": pd.Series(dtype="object"),
+            "duration_days": pd.Series(dtype="int64"),
+            "event_observed": pd.Series(dtype="bool"),
+            "censoring_reason": pd.Series(dtype="string"),
+            "has_target": pd.Series(dtype="bool"),
+            "evidence_type": pd.Series(dtype="string"),
+        }
+    )
+
+
+def _empty_survival() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "time": pd.Series(dtype="float64"),
+            "at_risk": pd.Series(dtype="int64"),
+            "events": pd.Series(dtype="int64"),
+            "censored": pd.Series(dtype="int64"),
+            "survival": pd.Series(dtype="float64"),
+            "greenwood_variance": pd.Series(dtype="float64"),
+            "ci_low": pd.Series(dtype="float64"),
+            "ci_high": pd.Series(dtype="float64"),
+            "evidence_type": pd.Series(dtype="string"),
+        }
+    )
 
 
 def build_journey_output(
@@ -124,37 +205,23 @@ def build_journey_output(
     """
 
     journey_rules = rules or JourneyRules()
-    frame = _validate_input(claims)
-    in_window = frame["event_date"].map(
-        lambda value: journey_rules.observation_start
-        <= value
-        <= journey_rules.observation_end
-    )
-    frame = frame.loc[in_window].copy()
+    if set(journey_rules.allowed_event_order) != {
+        "index",
+        "pre_target",
+        "target",
+        "follow_up",
+    } or len(journey_rules.allowed_event_order) != 4:
+        raise ValueError("allowed_event_order must contain each documented event kind exactly once")
+    event_order = {
+        kind: position for position, kind in enumerate(journey_rules.allowed_event_order)
+    }
+    frame = _validate_input(claims, journey_rules)
     frame = frame.sort_values(
         ["beneficiary_id", "event_date", "event_through_date", "claim_id"],
         kind="mergesort",
     ).reset_index(drop=True)
     if frame.empty:
-        empty_events = pd.DataFrame(
-            columns=[
-                "synthetic_id",
-                "claim_id",
-                "event_date",
-                "event_through_date",
-                "claim_type",
-                "diagnosis_code",
-                "event_kind",
-                "event_order",
-                "is_ckd_signal",
-                "is_persistence_event",
-                "index_date",
-                "target_date",
-                "follow_up_end",
-                "evidence_type",
-            ]
-        )
-        return JourneyOutput(empty_events, empty_events.copy(), journey_rules)
+        return JourneyOutput(_empty_events(), _empty_summaries(), _empty_survival(), journey_rules)
 
     event_rows: list[dict[str, Any]] = []
     summaries: list[dict[str, Any]] = []
@@ -165,12 +232,24 @@ def build_journey_output(
             journey_rules.observation_end,
             index_date + timedelta(days=journey_rules.follow_up_days),
         )
+        # Claims after follow-up are not journey facts.  Their claim dates remain
+        # in the source input, but they cannot define target or persistence.
+        group = group.loc[
+            (group["event_date"] <= follow_up_end)
+            & (group["event_through_date"] <= follow_up_end)
+        ].reset_index(drop=True)
+        if group.empty:
+            # A beneficiary whose first source claim cannot be represented inside
+            # the follow-up window has no valid journey grain and is excluded.
+            continue
         is_target = group["diagnosis_code"].map(
             lambda value: _is_ckd_code(value, journey_rules.target_prefixes)
         )
         target_positions = list(group.index[is_target])
         target_position = target_positions[0] if target_positions else None
-        target_date = group.loc[target_position, "event_date"] if target_position is not None else None
+        target_date = (
+            group.loc[target_position, "event_date"] if target_position is not None else None
+        )
         persistence_position: int | None = None
         if target_position is not None and target_date is not None:
             for position in target_positions[1:]:
@@ -188,27 +267,29 @@ def build_journey_output(
             signal = bool(is_target.iloc[position])
             if position == 0:
                 event_kind = "index"
-                event_order = 0
+                event_order_value = event_order["index"]
             elif target_position is not None and position == target_position:
                 event_kind = "target"
-                event_order = 2
+                event_order_value = event_order["target"]
             elif target_position is None or position < target_position:
                 event_kind = "pre_target"
-                event_order = 1
+                event_order_value = event_order["pre_target"]
             else:
                 event_kind = "follow_up"
-                event_order = 3
+                event_order_value = event_order["follow_up"]
             event_rows.append(
                 {
                     "synthetic_id": str(synthetic_id),
                     "claim_id": str(row["claim_id"]),
+                    "source_release": "2008-2010",
                     "event_date": row["event_date"],
                     "event_through_date": row["event_through_date"],
                     "claim_type": str(row["claim_type"]),
                     "diagnosis_code": str(row["diagnosis_code"]),
                     "event_kind": event_kind,
-                    "event_order": event_order,
+                    "event_order": event_order_value,
                     "is_ckd_signal": signal,
+                    "is_target_event": target_position == position,
                     "is_persistence_event": persistence_position == position,
                     "index_date": index_date,
                     "target_date": target_date,
@@ -238,7 +319,17 @@ def build_journey_output(
         kind="mergesort",
     ).reset_index(drop=True)
     summary_frame = pd.DataFrame(summaries).sort_values("synthetic_id").reset_index(drop=True)
-    return JourneyOutput(events=events, summaries=summary_frame, rules=journey_rules)
+    km = kaplan_meier(
+        summary_frame["duration_days"].to_numpy(dtype=float),
+        summary_frame["event_observed"].to_numpy(dtype=bool),
+    ).table
+    km.insert(0, "evidence_type", EvidenceType)
+    return JourneyOutput(
+        events=events,
+        summaries=summary_frame,
+        survival=km,
+        rules=journey_rules,
+    )
 
 
 def build_synthetic_journeys(
@@ -262,11 +353,11 @@ def validate_journey_order(journeys: pd.DataFrame) -> None:
 
     required = {"synthetic_id", "event_date", "event_through_date", "claim_id"}
     if not required.issubset(journeys.columns):
-        raise ValueError(f"journeys missing columns: {sorted(required.difference(journeys.columns))}")
+        missing = sorted(required.difference(journeys.columns))
+        raise ValueError(f"journeys missing columns: {missing}")
     expected = journeys.sort_values(
         ["synthetic_id", "event_date", "event_through_date", "claim_id"],
         kind="mergesort",
     ).index
     if not expected.equals(journeys.index):
         raise ValueError("journey events are not chronological with deterministic tie-breaks")
-
