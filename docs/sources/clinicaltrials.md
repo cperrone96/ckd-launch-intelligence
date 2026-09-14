@@ -1,24 +1,22 @@
-# ClinicalTrials.gov ingestion contract
+# ClinicalTrials.gov CKD landscape contract
 
-- Interface: dated envelope containing native ClinicalTrials.gov API v2 study JSON
-- Population: registered studies matching the documented CKD query
-- Grain: one registered study
+- Interface: [ClinicalTrials.gov API v2](https://clinicaltrials.gov/api/v2/studies)
+- Population: registered studies matching `AREA[ConditionSearch]("Chronic Kidney Disease")`
+- Grain: one registered study, summarized without study identifiers
 - Evidence: public observed
-- Coverage field: study `last_update_date`
 
-The JSON snapshot must include `snapshot_metadata.api_version = "v2"`, an ISO-8601
-timezone-aware `retrieved_at`, and the exact query
-`AREA[ConditionSearch]("Chronic Kidney Disease")`. Its `studies` array preserves the
-native API-v2 `protocolSection` module structure. Input is capped at 100 MiB.
+The dated snapshot records the exact query, endpoint, page size, request URLs,
+page count, total count, retrieval timestamp, and raw SHA-256. All API pages are
+retrieved before validation. The current snapshot reconciles the API total to
+valid plus quarantined records and deduplicates NCT IDs during ingestion.
 
-The adapter extracts study update date, NCT ID, title, recruitment status, phase,
-enrollment, conditions, interventions, sponsor, countries, and study type. It accepts
-only documented JSON types: booleans, numbers, arrays, and objects are never silently
-stringified into text fields. Malformed individual studies are quarantined without
-discarding valid studies. Multi-value API arrays are deterministically joined with a
-visible separator in this scalar batch contract.
+The aggregate reports status, phase/type, lead sponsor, study-country mentions,
+and update-year change over time. Missing enrollment is preserved as null and
+reported separately; it is never recoded to zero. Registered status, sponsor,
+geography, and enrollment are submitted metadata, not patient outcomes or
+treatment effectiveness. Malformed modules are quarantined with reasons rather
+than silently coerced.
 
-The snapshot timestamp is retained in the manifest and cannot predate a study's last
-update or exceed the registry retrieval date. Submitted records may be incomplete,
-delayed, or revised. A bare API response without query/retrieval metadata is rejected
-because it cannot prove which search produced the studies.
+The safe output is `data/processed/clinicaltrials_ckd_landscape.json`; its dated
+manifest and checksum are committed alongside it. No NCT IDs or raw study rows
+are committed in the aggregate.

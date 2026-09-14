@@ -1,22 +1,26 @@
-# MEPS ingestion contract
+# MEPS HC-243 2022 ingestion and landscape contract
 
-- Release: HC-243 (2021) public-use release
+- Release: [HC-243 2022 Full-Year Consolidated](https://meps.ahrq.gov/mepsweb/data_files/pufs/h243/h243dat.zip)
 - Population: U.S. civilian, noninstitutionalized population represented by MEPS
-- Grain: one normalized condition, event, prescription, or expenditure record
+- Native grain: one consolidated person-year record (`DUPERSID`)
 - Evidence: public observed
-- Coverage field: `year`
+- Coverage: 2022 (`DATAYEAR`)
 
-Supported layouts are (1) the repository's normalized event exchange CSV, with an
-explicit `HC-243-2021` release field, and (2) the native HC-243 full-year person-level
-XPT (`h243` in the locator) using `DUPERSID`, `TOTEXP21`, `PERWT21F`, `VARSTR`, and
-`VARPSU`. The native XPT path intentionally returns person-year expenditure records;
-it does not pretend HC-243 contains condition, event, or prescription-detail rows.
-Those other MEPS file families require their own future registered releases.
+The adapter parses the official fixed-width `H243.DAT` release (or a native
+transport layout in tests) and retains documented fields: `DCSELIG`, `DSDIA53`,
+`DSKIDN53`, `TOTEXP22`, utilization fields (`OBTOTV22`, `OPTOTV22`, `ERTOT22`,
+`IPDIS22`, `RXTOT22`), `PERWT22F`, `DIABW22F`, `VARSTR`, and `VARPSU`. Zero
+person weights remain in the exact record denominator but are excluded from
+survey-weighted estimates. Survey missing codes remain missing rather than zero.
 
-Input is capped at 750 MiB. The normalized event layout requires a valid ICD-10 code,
-event type, expenditure in U.S. dollars, person weight, variance stratum, and variance
-PSU. Prescription name is retained when applicable; documented missing markers in
-this optional field remain null and are never manufactured from another event type.
+HC-243 does not provide a confirmed CKD diagnosis for this analysis. The public
+landscape uses `DSKIDN53` as a precise, documented proxy for a diabetes-related
+kidney problem among `DCSELIG=1` and `DSDIA53=1` respondents, with `DIABW22F`
+and Taylor linearization over `VARSTR`/`VARPSU`. The resulting estimates are
+descriptive DCS-domain person-year utilization and expenditure estimates; they
+are not provider prescribing, claims, causal, or confirmed-CKD estimates.
 
-National inference requires the MEPS weights and variance-design fields. Public-use
-condition detail is limited, and MEPS people are never linked to another source.
+The reproducible aggregate is
+`data/processed/meps_hc243_2022_landscape.json`; its dated manifest and checksum
+are under `data/manifests/` and `data/processed/`. No person identifiers are
+committed in the aggregate.

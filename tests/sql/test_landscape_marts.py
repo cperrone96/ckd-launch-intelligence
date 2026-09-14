@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Generator
 from pathlib import Path
 
 import duckdb
@@ -15,7 +16,7 @@ FIXTURE_DIR = ROOT / "tests" / "fixtures" / "ingestion"
 
 
 @pytest.fixture()
-def landscape_db(tmp_path: Path) -> duckdb.DuckDBPyConnection:
+def landscape_db(tmp_path: Path) -> Generator[duckdb.DuckDBPyConnection, None, None]:
     db = duckdb.connect()
     db.execute("CREATE SCHEMA raw_meps")
     db.execute("CREATE SCHEMA raw_partd")
@@ -25,21 +26,52 @@ def landscape_db(tmp_path: Path) -> duckdb.DuckDBPyConnection:
     meps = ingest_meps(FIXTURE_DIR / "meps.csv", cache_dir=tmp_path / "meps")
     db.execute(
         """
-        CREATE TABLE raw_meps.events (
-          source_release VARCHAR, event_id VARCHAR, person_id VARCHAR, year INTEGER,
-          condition_code VARCHAR, event_type VARCHAR, rx_name VARCHAR,
-          expenditure_usd DOUBLE, person_weight DOUBLE, variance_stratum INTEGER,
-          variance_psu INTEGER, evidence_type VARCHAR
+        CREATE TABLE raw_meps.people (
+          source_release VARCHAR, person_id VARCHAR, year INTEGER, dcs_eligible INTEGER,
+          diabetes_reported INTEGER, kidney_problem_proxy INTEGER,
+          total_expenditure_usd DOUBLE, office_visits INTEGER, outpatient_visits INTEGER,
+          emergency_visits INTEGER, inpatient_stays INTEGER, prescription_medicines INTEGER,
+          person_weight DOUBLE, proxy_weight DOUBLE, variance_stratum INTEGER,
+          variance_psu INTEGER, evidence_type VARCHAR, source_retrieved_at VARCHAR,
+          source_manifest_checksum VARCHAR
         )
         """
     )
     db.executemany(
-        "INSERT INTO raw_meps.events VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [tuple(row.get(column) for column in (
-            "source_release", "event_id", "person_id", "year", "condition_code",
-            "event_type", "rx_name", "expenditure_usd", "person_weight",
-            "variance_stratum", "variance_psu", "evidence_type"
-        )) for row in meps.valid],
+        (
+            "INSERT INTO raw_meps.people VALUES "
+            "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+        ),
+        [
+            tuple(
+                row.get(column)
+                for column in (
+                    "source_release",
+                    "person_id",
+                    "year",
+                    "dcs_eligible",
+                    "diabetes_reported",
+                    "kidney_problem_proxy",
+                    "total_expenditure_usd",
+                    "office_visits",
+                    "outpatient_visits",
+                    "emergency_visits",
+                    "inpatient_stays",
+                    "prescription_medicines",
+                    "person_weight",
+                    "proxy_weight",
+                    "variance_stratum",
+                    "variance_psu",
+                    "evidence_type",
+                )
+            )
+            + (None, None)
+            for row in meps.valid
+        ],
+    )
+    db.execute(
+        "UPDATE raw_meps.people SET source_retrieved_at='2026-09-11T21:20:41Z', "
+        "source_manifest_checksum='fixture-meps'"
     )
 
     partd = ingest_partd(FIXTURE_DIR / "partd.csv", cache_dir=tmp_path / "partd")
@@ -49,17 +81,35 @@ def landscape_db(tmp_path: Path) -> duckdb.DuckDBPyConnection:
           source_release VARCHAR, provider_npi VARCHAR, provider_state VARCHAR,
           drug_name VARCHAR, generic_name VARCHAR, total_claim_count BIGINT,
           total_30_day_fill_count DOUBLE, total_drug_cost_usd DOUBLE, year INTEGER,
-          evidence_type VARCHAR
+          evidence_type VARCHAR, source_retrieved_at VARCHAR, source_manifest_checksum VARCHAR
         )
         """
     )
     db.executemany(
-        "INSERT INTO raw_partd.records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [tuple(row.get(column) for column in (
-            "source_release", "provider_npi", "provider_state", "drug_name",
-            "generic_name", "total_claim_count", "total_30_day_fill_count",
-            "total_drug_cost_usd", "year", "evidence_type"
-        )) for row in partd.valid],
+        "INSERT INTO raw_partd.records VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            tuple(
+                row.get(column)
+                for column in (
+                    "source_release",
+                    "provider_npi",
+                    "provider_state",
+                    "drug_name",
+                    "generic_name",
+                    "total_claim_count",
+                    "total_30_day_fill_count",
+                    "total_drug_cost_usd",
+                    "year",
+                    "evidence_type",
+                )
+            )
+            + (None, None)
+            for row in partd.valid
+        ],
+    )
+    db.execute(
+        "UPDATE raw_partd.records SET source_retrieved_at='2026-09-11T21:20:41Z', "
+        "source_manifest_checksum='fixture-partd'"
     )
 
     trials = ingest_trials(FIXTURE_DIR / "clinicaltrials.json", cache_dir=tmp_path / "trials")
@@ -68,17 +118,38 @@ def landscape_db(tmp_path: Path) -> duckdb.DuckDBPyConnection:
         CREATE TABLE raw_trials.studies (
           nct_id VARCHAR, brief_title VARCHAR, overall_status VARCHAR, phase VARCHAR,
           enrollment BIGINT, condition VARCHAR, intervention VARCHAR, sponsor VARCHAR,
-          country VARCHAR, last_update_date DATE, study_type VARCHAR, evidence_type VARCHAR
+          country VARCHAR, last_update_date DATE, study_type VARCHAR, evidence_type VARCHAR,
+          source_retrieved_at VARCHAR, source_manifest_checksum VARCHAR
         )
         """
     )
     db.executemany(
-        "INSERT INTO raw_trials.studies VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        [tuple(row.get(column) for column in (
-            "nct_id", "brief_title", "overall_status", "phase", "enrollment",
-            "condition", "intervention", "sponsor", "country", "last_update_date",
-            "study_type", "evidence_type"
-        )) for row in trials.valid],
+        "INSERT INTO raw_trials.studies VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        [
+            tuple(
+                row.get(column)
+                for column in (
+                    "nct_id",
+                    "brief_title",
+                    "overall_status",
+                    "phase",
+                    "enrollment",
+                    "condition",
+                    "intervention",
+                    "sponsor",
+                    "country",
+                    "last_update_date",
+                    "study_type",
+                    "evidence_type",
+                )
+            )
+            + (None, None)
+            for row in trials.valid
+        ],
+    )
+    db.execute(
+        "UPDATE raw_trials.studies SET source_retrieved_at='2026-09-09T14:30:00Z', "
+        "source_manifest_checksum='fixture-trials'"
     )
     db.execute("SET TimeZone='UTC'")
     for script in (
@@ -92,18 +163,23 @@ def landscape_db(tmp_path: Path) -> duckdb.DuckDBPyConnection:
 
 
 def test_partd_mart_has_no_beneficiary_identifier(landscape_db: duckdb.DuckDBPyConnection) -> None:
-    columns = landscape_db.sql(
-        "describe analytics_observed.mart_partd_prescribing"
-    ).df()["column_name"].tolist()
+    columns = (
+        landscape_db.sql("describe analytics_observed.mart_partd_prescribing")
+        .df()["column_name"]
+        .tolist()
+    )
     assert not any("beneficiary_id" in name.lower() for name in columns)
     assert not any("person_id" in name.lower() for name in columns)
 
 
 def test_trial_status_totals_reconcile(landscape_db: duckdb.DuckDBPyConnection) -> None:
-    raw = landscape_db.sql("select count(*) from raw_trials.studies").fetchone()[0]
-    mart = landscape_db.sql(
+    raw_result = landscape_db.sql("select count(*) from raw_trials.studies").fetchone()
+    mart_result = landscape_db.sql(
         "select sum(study_count) from analytics_observed.mart_trial_status"
-    ).fetchone()[0]
+    ).fetchone()
+    assert raw_result is not None and mart_result is not None
+    raw = raw_result[0]
+    mart = mart_result[0]
     assert raw == mart
 
 
@@ -112,17 +188,18 @@ def test_meps_mart_preserves_weighted_utilization_and_source_scope(
 ) -> None:
     rows = landscape_db.sql(
         """
-        SELECT year, condition_code, event_type, weighted_event_count,
+        SELECT year, kidney_proxy_status, weighted_population,
                weighted_expenditure_usd, source_population, source_grain
         FROM analytics_observed.mart_meps_utilization
-        WHERE event_type = 'prescription'
+        WHERE kidney_proxy_status = 'proxy_positive'
         """
     ).fetchall()
-    assert rows[0][0:3] == (2021, "I10", "prescription")
-    assert rows[0][3] == pytest.approx(4788.1)
-    assert rows[0][4] == pytest.approx(32.10 * 4788.1)
-    assert "MEPS" in rows[0][5]
-    assert "event" in rows[0][6].lower()
+    assert rows
+    row = rows[0]
+    assert row[0:3] == (2022, "proxy_positive", pytest.approx(5000.0))
+    assert row[3] == pytest.approx(145.25 * 5000.0)
+    assert "MEPS" in row[4]
+    assert "person-year" in row[5].lower()
 
 
 def test_partd_grain_is_provider_drug_year_and_cost_is_reconciled(
@@ -137,9 +214,11 @@ def test_partd_grain_is_provider_drug_year_and_cost_is_reconciled(
         """
     ).fetchall()
     assert duplicate_grains == []
-    total = landscape_db.sql(
+    total_result = landscape_db.sql(
         "SELECT sum(total_drug_cost_usd) FROM analytics_observed.mart_partd_prescribing"
-    ).fetchone()[0]
+    ).fetchone()
+    assert total_result is not None
+    total = total_result[0]
     assert total == pytest.approx(84628.90)
 
 
@@ -147,6 +226,7 @@ def test_trial_analysis_returns_reconciled_status_and_composition(tmp_path: Path
     result = summarize_trial_status(
         ingest_trials(FIXTURE_DIR / "clinicaltrials.json", cache_dir=tmp_path / "trials").valid
     )
+    assert result
     assert result[0]["overall_status"] == "RECRUITING"
     assert result[0]["study_count"] == 1
     assert result[0]["total_reported_enrollment"] == 120

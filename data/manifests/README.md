@@ -17,6 +17,13 @@ snapshot. Tests use temporary cache roots and committed, small fixtures.
 Manifests describe one source at a time. They do not authorize patient-level joins
 between NHANES, MEPS, Part D, ClinicalTrials.gov, or DE-SynPUF.
 
+The committed `*_landscape.json` manifests document safe public-observed
+aggregates for MEPS HC-243 2022, the bounded CMS Part D therapy dictionary, and
+the fully paginated ClinicalTrials.gov CKD query. Raw source pages remain under
+the ignored `data/raw/` directory; aggregate outputs retain source, population,
+time, grain, retrieval, and checksum metadata and do not contain person,
+beneficiary, NPI, or trial identifiers.
+
 Dataset-level release identity is checked before a manifest is returned. Bytes that
 identify a contradictory release remain safely cached for audit, but cannot receive a
 manifest carrying the configured registry version.

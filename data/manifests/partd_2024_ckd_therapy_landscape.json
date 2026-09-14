@@ -1,0 +1,13 @@
+{
+  "artifact_path": "data/processed/partd_2024_ckd_therapy_landscape.json",
+  "artifact_sha256": "db515de9d3e3ec347e4045e09f573bae6b19bc39fcc69ef339c2f0b6b81616fe",
+  "dataset_uuid": "9552739e-3d05-4c1b-8eff-ecabf391e2e5",
+  "grain": "provider-drug-state aggregate; provider identifiers removed from committed output",
+  "pagination_complete": true,
+  "release": "2024",
+  "retrieval_manifest_sha256": "b3d07376dbfdb2d8013d22f1ce1125e0e406b8a19bdc1e0785664baf0b57f180",
+  "retrieved_at": "2026-09-11T21:38:23.635394Z",
+  "rows_retrieved": 325586,
+  "source": "CMS Medicare Part D Prescribers by Provider and Drug",
+  "source_url": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/medicare-part-d-prescribers-by-provider-and-drug"
+}

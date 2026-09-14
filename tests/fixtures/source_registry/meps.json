@@ -1,1 +1,1 @@
-{"family":"meps","manifest_kind":"registry_metadata","snapshot_scope":"No source rows; fixture identifies the planned public-use release.","source_url":"https://meps.ahrq.gov/mepsweb/data_stats/download_data_files.jsp","version":"HC-243-2021"}
+{"family":"meps","manifest_kind":"registry_metadata","snapshot_scope":"No source rows; fixture identifies the official 2022 public-use release.","source_url":"https://meps.ahrq.gov/mepsweb/data_files/pufs/h243/h243dat.zip","version":"HC-243-2022"}

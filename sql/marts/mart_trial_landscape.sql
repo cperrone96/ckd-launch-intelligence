@@ -7,12 +7,13 @@ SELECT
     'clinicaltrials' AS source,
     overall_status,
     COUNT(*) AS study_count,
-    SUM(CASE WHEN enrollment IS NOT NULL THEN enrollment ELSE 0 END)
+    CASE WHEN COUNT(enrollment) > 0 THEN SUM(enrollment) ELSE NULL END
         AS total_reported_enrollment,
     SUM(CASE WHEN enrollment IS NOT NULL THEN 1 ELSE 0 END)
         AS studies_with_reported_enrollment,
     MAX(last_update_date) AS latest_study_update_date,
-    DATE '2026-09-11' AS registry_as_of_date,
+    MAX(source_retrieved_at) AS source_retrieved_at,
+    MAX(source_manifest_checksum) AS source_manifest_checksum,
     MAX(evidence_type) AS evidence_type,
     'registered study grouped by recruitment status' AS source_grain,
     'Registry status is submitted study metadata, not an active-site or outcome measure.'
@@ -26,12 +27,13 @@ SELECT
     study_type,
     phase,
     COUNT(*) AS study_count,
-    SUM(CASE WHEN enrollment IS NOT NULL THEN enrollment ELSE 0 END)
+    CASE WHEN COUNT(enrollment) > 0 THEN SUM(enrollment) ELSE NULL END
         AS total_reported_enrollment,
     SUM(CASE WHEN enrollment IS NOT NULL THEN 1 ELSE 0 END)
         AS studies_with_reported_enrollment,
     MAX(last_update_date) AS latest_study_update_date,
-    DATE '2026-09-11' AS registry_as_of_date,
+    MAX(source_retrieved_at) AS source_retrieved_at,
+    MAX(source_manifest_checksum) AS source_manifest_checksum,
     MAX(evidence_type) AS evidence_type,
     'registered study grouped by study type and submitted phase' AS source_grain,
     'Phase and enrollment are registry fields and do not establish efficacy or market share.'
@@ -45,7 +47,8 @@ SELECT
     sponsor,
     COUNT(*) AS study_count,
     MAX(last_update_date) AS latest_study_update_date,
-    DATE '2026-09-11' AS registry_as_of_date,
+    MAX(source_retrieved_at) AS source_retrieved_at,
+    MAX(source_manifest_checksum) AS source_manifest_checksum,
     MAX(evidence_type) AS evidence_type,
     'registered study grouped by submitted lead sponsor' AS source_grain,
     'Sponsor counts describe registry records and are not investment, trial success, or access claims.'

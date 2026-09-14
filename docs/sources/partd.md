@@ -1,21 +1,26 @@
-# Medicare Part D ingestion contract
+# Medicare Part D 2024 ingestion and landscape contract
 
-- Release: 2024 Medicare Part D Prescribers by Provider and Drug
-- Population: prescriptions represented by the CMS aggregate public-use dataset
-- Grain: one provider, drug, and year aggregate
+- Release: [2024 Medicare Part D Prescribers by Provider and Drug](https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/medicare-part-d-prescribers-by-provider-and-drug)
+- API dataset UUID: `9552739e-3d05-4c1b-8eff-ecabf391e2e5` <!-- gitleaks:allow; public CMS dataset identifier -->
+- Population: prescriptions represented by CMS aggregate public-use data
+- Native grain: provider, drug, and geography aggregate
 - Evidence: public observed
-- Coverage field: `year` (restricted to the registered 2024 release)
 
-Supported layouts are the repository's normalized CSV and the CMS downloadable CSV
-or single-CSV ZIP using `Prscrbr_NPI`, `Prscrbr_State_Abrvtn`, `Brnd_Name`,
-`Gnrc_Name`, `Tot_Clms`, `Tot_30day_Fills`, and `Tot_Drug_Cst`. Because the native
-annual table does not repeat year on every row, its requested/final locator must name
-2024. Compressed input is capped at 256 MiB and its sole CSV member at 1 GiB.
+The public landscape retrieves complete paginated rows for the versioned,
+non-exhaustive dictionary `ckd-therapy-dictionary-v1`: Empagliflozin and
+Dapagliflozin Propanediol (SGLT2 inhibitors), and Finerenone (a nonsteroidal
+mineralocorticoid receptor antagonist). The class rationale is a descriptive
+selection rule, not an indication or treatment-outcome claim. Generic names are
+matched exactly to CMS values and brands remain separate rows.
 
-The adapter preserves NPI as a ten-character code, a documented U.S./DC/territory
-postal code, brand and generic names, claim count, standardized 30-day fills, and drug
-cost in U.S. dollars. It checks the provider/drug/year aggregate key and rejects
-negative count or cost values. `ZZ` and other placeholder states are not accepted.
+Each API page, offset, row count, URL, and SHA-256 is recorded in the ignored raw
+retrieval manifest. The committed artifact aggregates by generic, brand, and
+state, removes NPIs, and proves that the selected generic pages ended with a
+short page. It does not claim national all-activity coverage beyond those
+selected generics.
 
-Patient/person/beneficiary fields are forbidden at this boundary. These aggregates
-cannot support beneficiary-level utilization, journeys, or cross-source linkage.
+CMS detailed provider-drug rows exclude providers with fewer than 11 total
+claims. An absent provider-drug row is therefore not zero, and beneficiary
+fields are not used. The artifact cannot establish CKD indication, adherence,
+outcomes, or patient journeys. See
+`data/processed/partd_2024_ckd_therapy_landscape.json` and its dated manifest.

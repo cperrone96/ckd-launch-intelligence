@@ -42,15 +42,16 @@ _SOURCE_REGISTRY: tuple[SourceRecord, ...] = (
     ),
     SourceRecord(
         name="meps",
-        version="HC-243-2021",
+        version="HC-243-2022",
         retrieved_at=date(2026, 9, 11),
         population="U.S. civilian, noninstitutionalized population represented by MEPS",
-        grain="Person-year, condition, event, prescription, and expenditure public-use records",
+        grain="MEPS HC-243 person-year consolidated record with utilization and expenditure fields",
         evidence_type="public_observed",
-        checksum="307fad5705b29ca173d1a84a54c011d96568c302e32e0df9aa15f5e11ba199d0",
+        checksum="0bcedf41ca415a1b56f94590c10ef957cfa8fe9fe0f657fa10bcf5b451ef62dc",
         limitations=(
-            "National estimates require survey weights and design variables; "
-            "condition detail is public-use limited."
+            "HC-243 does not contain a confirmed CKD diagnosis; this release uses the "
+            "documented DSKIDN53 diabetes-related kidney-problem proxy among DCS-eligible "
+            "respondents, with DIABW22F and VARSTR/VARPSU."
         ),
     ),
     SourceRecord(

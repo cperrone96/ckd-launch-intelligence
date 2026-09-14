@@ -167,8 +167,18 @@ def _normalize_study(study: object) -> tuple[dict[str, Scalar], list[str], str]:
         phases = _strings(design, "phases", "phase", reasons)
     if any(phase not in PHASES for phase in phases):
         reasons.append("phase:invalid_code")
-    enrollment_info = _object(design.get("enrollmentInfo"), "enrollmentInfo", reasons) or {}
-    enrollment = _integer(enrollment_info, "count", "enrollment", reasons)
+    raw_enrollment_info = design.get("enrollmentInfo")
+    if raw_enrollment_info is None:
+        # ClinicalTrials.gov permits studies to omit enrollment.  Preserve that
+        # source omission as null instead of turning it into an invalid record.
+        enrollment_info: Mapping[str, object] = {}
+    else:
+        enrollment_info = _object(raw_enrollment_info, "enrollmentInfo", reasons) or {}
+    enrollment = (
+        None
+        if "count" not in enrollment_info or enrollment_info.get("count") is None
+        else _integer(enrollment_info, "count", "enrollment", reasons)
+    )
     condition_values = _strings(conditions, "conditions", "condition", reasons)
     interventions = _nested_names(arms, "interventions", "intervention", reasons)
     lead_sponsor = _object(sponsors.get("leadSponsor"), "leadSponsor", reasons) or {}

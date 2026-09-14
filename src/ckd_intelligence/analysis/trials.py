@@ -50,6 +50,17 @@ def _rows(studies: Iterable[Mapping[str, Any]]) -> list[Mapping[str, Any]]:
     return rows
 
 
+def _evidence_type(rows: list[Mapping[str, Any]]) -> str:
+    """Require source provenance to survive every derived summary."""
+
+    values = {row.get("evidence_type") for row in rows}
+    if values - {"public_observed", "fixture_only"} or len(values) != 1:
+        raise ValueError("trial rows require one explicit evidence_type")
+    value = values.pop()
+    assert isinstance(value, str)
+    return value
+
+
 def _aggregate(
     rows: list[Mapping[str, Any]], key_field: str
 ) -> list[dict[str, object]]:
@@ -57,6 +68,7 @@ def _aggregate(
     for row in rows:
         grouped[_text(row, key_field)].append(row)
     total = len(rows)
+    evidence_type = _evidence_type(rows)
     result: list[dict[str, object]] = []
     for key in sorted(grouped):
         group = grouped[key]
@@ -67,10 +79,12 @@ def _aggregate(
                 key_field: key,
                 "study_count": len(group),
                 "study_share": len(group) / total if total else 0.0,
-                "total_reported_enrollment": sum(observed_enrollment),
+                "total_reported_enrollment": (
+                    sum(observed_enrollment) if observed_enrollment else None
+                ),
                 "studies_with_reported_enrollment": len(observed_enrollment),
                 "source": "ClinicalTrials.gov",
-                "evidence_type": "public_observed",
+                "evidence_type": evidence_type,
                 "grain": "registered clinical study grouped by " + key_field,
             }
         )
@@ -103,6 +117,7 @@ def summarize_trial_geography(
     """Count study-country mentions; multi-country studies contribute once/country."""
 
     rows = _rows(studies)
+    evidence_type = _evidence_type(rows)
     grouped: dict[str, set[str]] = defaultdict(set)
     for row in rows:
         nct_id = _text(row, "nct_id")
@@ -117,7 +132,7 @@ def summarize_trial_geography(
             "study_count": len(nct_ids),
             "share_of_registered_studies": len(nct_ids) / total if total else 0.0,
             "source": "ClinicalTrials.gov",
-            "evidence_type": "public_observed",
+            "evidence_type": evidence_type,
             "grain": "registered study-country mention",
         }
         for country, nct_ids in sorted(grouped.items())
@@ -130,6 +145,7 @@ def summarize_trial_updates(
     """Summarize registry activity by update year, not enrollment or outcomes."""
 
     rows = _rows(studies)
+    evidence_type = _evidence_type(rows)
     grouped: dict[int, list[Mapping[str, Any]]] = defaultdict(list)
     for row in rows:
         grouped[date.fromisoformat(_text(row, "last_update_date")).year].append(row)
@@ -138,7 +154,7 @@ def summarize_trial_updates(
             "update_year": year,
             "study_count": len(group),
             "source": "ClinicalTrials.gov",
-            "evidence_type": "public_observed",
+            "evidence_type": evidence_type,
             "grain": "registered study grouped by last update year",
         }
         for year, group in sorted(grouped.items())

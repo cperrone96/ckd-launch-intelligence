@@ -5,7 +5,7 @@ import math
 import pandas as pd
 import pytest
 
-from ckd_intelligence.statistics.survey import weighted_prevalence
+from ckd_intelligence.statistics.survey import weighted_mean, weighted_prevalence
 
 
 def test_weighted_estimate_differs_from_unweighted_when_weights_differ() -> None:
@@ -16,6 +16,33 @@ def test_weighted_estimate_differs_from_unweighted_when_weights_differ() -> None
     assert estimate.sum_weights == pytest.approx(10.0)
     assert estimate.strata == 1
     assert estimate.psus == 2
+
+
+def test_weighted_mean_preserves_units_and_design_metadata() -> None:
+    estimate = weighted_mean(
+        [10.0, 20.0, 30.0, 40.0],
+        [1.0, 2.0, 3.0, 4.0],
+        [1, 1, 2, 2],
+        [1, 2, 1, 2],
+        source_population="MEPS proxy domain",
+    )
+    assert estimate.point == pytest.approx(30.0)
+    assert estimate.denominator == 4
+    assert estimate.source_population == "MEPS proxy domain"
+    assert estimate.variance_method.startswith("Taylor")
+
+
+def test_weighted_mean_excludes_missing_outcome_without_recoding_to_zero() -> None:
+    estimate = weighted_mean(
+        [10.0, None, 30.0, 40.0],
+        [1.0, 2.0, 3.0, 4.0],
+        [1, 1, 2, 2],
+        [1, 2, 1, 2],
+        lonely_psu="certainty",
+    )
+    assert estimate.point == pytest.approx(32.5)
+    assert estimate.denominator == 3
+    assert estimate.excluded_missing == 1
 
 
 def test_taylor_standard_error_uses_stratified_cluster_design() -> None:

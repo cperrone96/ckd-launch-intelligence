@@ -1,0 +1,18 @@
+{
+  "api_total_count": 3706,
+  "artifact_path": "data/processed/clinicaltrials_ckd_landscape.json",
+  "artifact_sha256": "e2b68a846224c6cd085c73ff585a79be1591fd984e99e727f8161603afecd70f",
+  "endpoint": "https://clinicaltrials.gov/api/v2/studies",
+  "grain": "registered study aggregate; no study IDs committed",
+  "page_count": 4,
+  "page_size": 1000,
+  "pagination_complete": true,
+  "quarantine_count": 830,
+  "query": "AREA[ConditionSearch](\"Chronic Kidney Disease\")",
+  "raw_snapshot_bytes": 79171832,
+  "raw_snapshot_sha256": "58ab9a4889f3dafd9819608287c1f86bfee5414c144f42889175e27b0c66c805",
+  "release": "api-v2",
+  "retrieved_at": "2026-09-11T21:21:31.853765Z",
+  "source": "ClinicalTrials.gov",
+  "valid_count": 2876
+}

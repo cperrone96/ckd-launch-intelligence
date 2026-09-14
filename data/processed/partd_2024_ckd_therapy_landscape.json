@@ -1,0 +1,2575 @@
+{
+  "aggregates": [
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 9,
+      "provider_state": "AK",
+      "total_30day_fills": 361.0,
+      "total_claims": 175,
+      "total_drug_cost_usd": 175931.23
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 140,
+      "provider_state": "AL",
+      "total_30day_fills": 3545.4,
+      "total_claims": 3454,
+      "total_drug_cost_usd": 1205183.16
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 56,
+      "provider_state": "AR",
+      "total_30day_fills": 1172.0,
+      "total_claims": 1138,
+      "total_drug_cost_usd": 433127.17
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 74,
+      "provider_state": "AZ",
+      "total_30day_fills": 1641.0,
+      "total_claims": 1279,
+      "total_drug_cost_usd": 758427.19
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1422,
+      "provider_state": "CA",
+      "total_30day_fills": 52172.4,
+      "total_claims": 44475,
+      "total_drug_cost_usd": 24034423.15
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 67,
+      "provider_state": "CO",
+      "total_30day_fills": 1466.9,
+      "total_claims": 1423,
+      "total_drug_cost_usd": 618579.05
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 98,
+      "provider_state": "CT",
+      "total_30day_fills": 2205.8,
+      "total_claims": 1857,
+      "total_drug_cost_usd": 836448.64
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2,
+      "provider_state": "DC",
+      "total_30day_fills": 26.0,
+      "total_claims": 26,
+      "total_drug_cost_usd": 13595.98
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 15,
+      "provider_state": "DE",
+      "total_30day_fills": 345.0,
+      "total_claims": 307,
+      "total_drug_cost_usd": 152875.5
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 438,
+      "provider_state": "FL",
+      "total_30day_fills": 19826.9,
+      "total_claims": 16825,
+      "total_drug_cost_usd": 7291057.05
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 183,
+      "provider_state": "GA",
+      "total_30day_fills": 4092.3,
+      "total_claims": 3840,
+      "total_drug_cost_usd": 1451424.14
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 9,
+      "provider_state": "HI",
+      "total_30day_fills": 144.0,
+      "total_claims": 123,
+      "total_drug_cost_usd": 66049.19
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 21,
+      "provider_state": "IA",
+      "total_30day_fills": 535.2,
+      "total_claims": 524,
+      "total_drug_cost_usd": 209491.14
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 25,
+      "provider_state": "ID",
+      "total_30day_fills": 508.2,
+      "total_claims": 474,
+      "total_drug_cost_usd": 204423.72
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 209,
+      "provider_state": "IL",
+      "total_30day_fills": 5074.8,
+      "total_claims": 4120,
+      "total_drug_cost_usd": 2139108.22
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 171,
+      "provider_state": "IN",
+      "total_30day_fills": 3797.5,
+      "total_claims": 3539,
+      "total_drug_cost_usd": 1378197.25
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 40,
+      "provider_state": "KS",
+      "total_30day_fills": 715.2,
+      "total_claims": 696,
+      "total_drug_cost_usd": 306043.82
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 171,
+      "provider_state": "KY",
+      "total_30day_fills": 3589.6,
+      "total_claims": 3305,
+      "total_drug_cost_usd": 1460632.05
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 164,
+      "provider_state": "LA",
+      "total_30day_fills": 3211.4,
+      "total_claims": 3033,
+      "total_drug_cost_usd": 1361088.17
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 94,
+      "provider_state": "MA",
+      "total_30day_fills": 2337.7,
+      "total_claims": 2214,
+      "total_drug_cost_usd": 981190.08
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 58,
+      "provider_state": "MD",
+      "total_30day_fills": 1087.1,
+      "total_claims": 871,
+      "total_drug_cost_usd": 471541.71
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 14,
+      "provider_state": "ME",
+      "total_30day_fills": 279.0,
+      "total_claims": 249,
+      "total_drug_cost_usd": 123756.28
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 222,
+      "provider_state": "MI",
+      "total_30day_fills": 6030.9,
+      "total_claims": 5680,
+      "total_drug_cost_usd": 2411040.31
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 19,
+      "provider_state": "MN",
+      "total_30day_fills": 310.7,
+      "total_claims": 299,
+      "total_drug_cost_usd": 129269.22
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 125,
+      "provider_state": "MO",
+      "total_30day_fills": 2732.5,
+      "total_claims": 2620,
+      "total_drug_cost_usd": 1041484.95
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 86,
+      "provider_state": "MS",
+      "total_30day_fills": 1782.0,
+      "total_claims": 1732,
+      "total_drug_cost_usd": 616078.43
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 9,
+      "provider_state": "MT",
+      "total_30day_fills": 155.2,
+      "total_claims": 128,
+      "total_drug_cost_usd": 70462.42
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 163,
+      "provider_state": "NC",
+      "total_30day_fills": 3164.6,
+      "total_claims": 3017,
+      "total_drug_cost_usd": 1327193.41
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2,
+      "provider_state": "ND",
+      "total_30day_fills": 27.0,
+      "total_claims": 27,
+      "total_drug_cost_usd": 10154.5
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 17,
+      "provider_state": "NE",
+      "total_30day_fills": 326.5,
+      "total_claims": 314,
+      "total_drug_cost_usd": 142520.86
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 9,
+      "provider_state": "NH",
+      "total_30day_fills": 164.0,
+      "total_claims": 132,
+      "total_drug_cost_usd": 71924.71
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 243,
+      "provider_state": "NJ",
+      "total_30day_fills": 5414.4,
+      "total_claims": 4722,
+      "total_drug_cost_usd": 2365837.62
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 20,
+      "provider_state": "NM",
+      "total_30day_fills": 485.0,
+      "total_claims": 474,
+      "total_drug_cost_usd": 160024.53
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 67,
+      "provider_state": "NV",
+      "total_30day_fills": 3362.0,
+      "total_claims": 1679,
+      "total_drug_cost_usd": 1512259.37
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 705,
+      "provider_state": "NY",
+      "total_30day_fills": 19735.2,
+      "total_claims": 16592,
+      "total_drug_cost_usd": 8938817.69
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 213,
+      "provider_state": "OH",
+      "total_30day_fills": 4776.2,
+      "total_claims": 4486,
+      "total_drug_cost_usd": 1642669.39
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 48,
+      "provider_state": "OK",
+      "total_30day_fills": 1303.8,
+      "total_claims": 1273,
+      "total_drug_cost_usd": 394691.55
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 82,
+      "provider_state": "OR",
+      "total_30day_fills": 1958.5,
+      "total_claims": 1529,
+      "total_drug_cost_usd": 919545.95
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 262,
+      "provider_state": "PA",
+      "total_30day_fills": 7176.5,
+      "total_claims": 6756,
+      "total_drug_cost_usd": 2905224.52
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 12,
+      "provider_state": "PR",
+      "total_30day_fills": 359.0,
+      "total_claims": 348,
+      "total_drug_cost_usd": 112430.75
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 10,
+      "provider_state": "RI",
+      "total_30day_fills": 170.2,
+      "total_claims": 170,
+      "total_drug_cost_usd": 69888.35
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 89,
+      "provider_state": "SC",
+      "total_30day_fills": 1804.7,
+      "total_claims": 1680,
+      "total_drug_cost_usd": 706999.98
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 5,
+      "provider_state": "SD",
+      "total_30day_fills": 152.9,
+      "total_claims": 138,
+      "total_drug_cost_usd": 75362.29
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 111,
+      "provider_state": "TN",
+      "total_30day_fills": 2399.3,
+      "total_claims": 2324,
+      "total_drug_cost_usd": 755751.04
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 463,
+      "provider_state": "TX",
+      "total_30day_fills": 9295.9,
+      "total_claims": 8680,
+      "total_drug_cost_usd": 3862920.04
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 19,
+      "provider_state": "UT",
+      "total_30day_fills": 316.0,
+      "total_claims": 288,
+      "total_drug_cost_usd": 120583.83
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 114,
+      "provider_state": "VA",
+      "total_30day_fills": 2274.1,
+      "total_claims": 2117,
+      "total_drug_cost_usd": 922659.55
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 5,
+      "provider_state": "VT",
+      "total_30day_fills": 88.0,
+      "total_claims": 74,
+      "total_drug_cost_usd": 34370.84
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 69,
+      "provider_state": "WA",
+      "total_30day_fills": 1410.6,
+      "total_claims": 1340,
+      "total_drug_cost_usd": 461921.99
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 20,
+      "provider_state": "WI",
+      "total_30day_fills": 474.1,
+      "total_claims": 434,
+      "total_drug_cost_usd": 179680.29
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 45,
+      "provider_state": "WV",
+      "total_30day_fills": 958.0,
+      "total_claims": 911,
+      "total_drug_cost_usd": 313375.46
+    },
+    {
+      "brand_name": "Dapagliflozin",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 4,
+      "provider_state": "WY",
+      "total_30day_fills": 88.0,
+      "total_claims": 58,
+      "total_drug_cost_usd": 34624.71
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 117,
+      "provider_state": "AK",
+      "total_30day_fills": 8348.3,
+      "total_claims": 4103,
+      "total_drug_cost_usd": 4305026.59
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2280,
+      "provider_state": "AL",
+      "total_30day_fills": 214397.0,
+      "total_claims": 135207,
+      "total_drug_cost_usd": 115698988.7
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2,
+      "provider_state": "AP",
+      "total_30day_fills": 82.0,
+      "total_claims": 48,
+      "total_drug_cost_usd": 39881.38
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1408,
+      "provider_state": "AR",
+      "total_30day_fills": 95615.7,
+      "total_claims": 66569,
+      "total_drug_cost_usd": 51529007.5
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2132,
+      "provider_state": "AZ",
+      "total_30day_fills": 165691.3,
+      "total_claims": 84818,
+      "total_drug_cost_usd": 89729092.65
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 8359,
+      "provider_state": "CA",
+      "total_30day_fills": 749597.7,
+      "total_claims": 435644,
+      "total_drug_cost_usd": 398562024.65
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1085,
+      "provider_state": "CO",
+      "total_30day_fills": 57453.5,
+      "total_claims": 30757,
+      "total_drug_cost_usd": 31004497.87
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1422,
+      "provider_state": "CT",
+      "total_30day_fills": 111271.3,
+      "total_claims": 59301,
+      "total_drug_cost_usd": 60060665.78
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 127,
+      "provider_state": "DC",
+      "total_30day_fills": 7427.5,
+      "total_claims": 4078,
+      "total_drug_cost_usd": 3935296.97
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 371,
+      "provider_state": "DE",
+      "total_30day_fills": 31648.0,
+      "total_claims": 15260,
+      "total_drug_cost_usd": 16758737.91
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 8662,
+      "provider_state": "FL",
+      "total_30day_fills": 691640.8,
+      "total_claims": 381193,
+      "total_drug_cost_usd": 375736317.07
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 4232,
+      "provider_state": "GA",
+      "total_30day_fills": 380296.1,
+      "total_claims": 220733,
+      "total_drug_cost_usd": 205250764.54
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2,
+      "provider_state": "GU",
+      "total_30day_fills": 81.0,
+      "total_claims": 63,
+      "total_drug_cost_usd": 48263.36
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 314,
+      "provider_state": "HI",
+      "total_30day_fills": 36986.4,
+      "total_claims": 17246,
+      "total_drug_cost_usd": 20624827.51
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 984,
+      "provider_state": "IA",
+      "total_30day_fills": 56987.5,
+      "total_claims": 37893,
+      "total_drug_cost_usd": 29911799.16
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 668,
+      "provider_state": "ID",
+      "total_30day_fills": 47402.0,
+      "total_claims": 27933,
+      "total_drug_cost_usd": 25450665.45
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 3484,
+      "provider_state": "IL",
+      "total_30day_fills": 247515.8,
+      "total_claims": 143535,
+      "total_drug_cost_usd": 131923120.33
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2601,
+      "provider_state": "IN",
+      "total_30day_fills": 191438.8,
+      "total_claims": 111735,
+      "total_drug_cost_usd": 102314760.68
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1095,
+      "provider_state": "KS",
+      "total_30day_fills": 63514.5,
+      "total_claims": 41962,
+      "total_drug_cost_usd": 33841666.4
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2523,
+      "provider_state": "KY",
+      "total_30day_fills": 196897.5,
+      "total_claims": 121185,
+      "total_drug_cost_usd": 105851043.24
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1975,
+      "provider_state": "LA",
+      "total_30day_fills": 143220.9,
+      "total_claims": 94725,
+      "total_drug_cost_usd": 77011184.61
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1868,
+      "provider_state": "MA",
+      "total_30day_fills": 120589.6,
+      "total_claims": 70991,
+      "total_drug_cost_usd": 64461073.16
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1427,
+      "provider_state": "MD",
+      "total_30day_fills": 97534.8,
+      "total_claims": 49875,
+      "total_drug_cost_usd": 50914389.81
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 308,
+      "provider_state": "ME",
+      "total_30day_fills": 16713.7,
+      "total_claims": 8839,
+      "total_drug_cost_usd": 8875814.09
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 4032,
+      "provider_state": "MI",
+      "total_30day_fills": 287092.3,
+      "total_claims": 162112,
+      "total_drug_cost_usd": 152424264.99
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 967,
+      "provider_state": "MN",
+      "total_30day_fills": 44136.2,
+      "total_claims": 25826,
+      "total_drug_cost_usd": 23706064.19
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2535,
+      "provider_state": "MO",
+      "total_30day_fills": 187398.1,
+      "total_claims": 120270,
+      "total_drug_cost_usd": 101143687.26
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1608,
+      "provider_state": "MS",
+      "total_30day_fills": 146322.8,
+      "total_claims": 90827,
+      "total_drug_cost_usd": 77606165.35
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 269,
+      "provider_state": "MT",
+      "total_30day_fills": 13154.4,
+      "total_claims": 7945,
+      "total_drug_cost_usd": 6856338.52
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 4123,
+      "provider_state": "NC",
+      "total_30day_fills": 290277.9,
+      "total_claims": 176114,
+      "total_drug_cost_usd": 158199795.63
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 253,
+      "provider_state": "ND",
+      "total_30day_fills": 11347.6,
+      "total_claims": 7842,
+      "total_drug_cost_usd": 5972142.93
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 857,
+      "provider_state": "NE",
+      "total_30day_fills": 50279.7,
+      "total_claims": 34036,
+      "total_drug_cost_usd": 26495496.7
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 278,
+      "provider_state": "NH",
+      "total_30day_fills": 14226.8,
+      "total_claims": 7905,
+      "total_drug_cost_usd": 7563862.16
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 3525,
+      "provider_state": "NJ",
+      "total_30day_fills": 321354.5,
+      "total_claims": 172395,
+      "total_drug_cost_usd": 172455707.14
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 651,
+      "provider_state": "NM",
+      "total_30day_fills": 41108.3,
+      "total_claims": 23116,
+      "total_drug_cost_usd": 22307258.16
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 859,
+      "provider_state": "NV",
+      "total_30day_fills": 64400.9,
+      "total_claims": 32681,
+      "total_drug_cost_usd": 34991821.74
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 7805,
+      "provider_state": "NY",
+      "total_30day_fills": 680868.0,
+      "total_claims": 378133,
+      "total_drug_cost_usd": 368522554.14
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 4896,
+      "provider_state": "OH",
+      "total_30day_fills": 350795.2,
+      "total_claims": 204948,
+      "total_drug_cost_usd": 187282821.04
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1376,
+      "provider_state": "OK",
+      "total_30day_fills": 103857.8,
+      "total_claims": 61491,
+      "total_drug_cost_usd": 55852957.3
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 845,
+      "provider_state": "OR",
+      "total_30day_fills": 46557.4,
+      "total_claims": 26619,
+      "total_drug_cost_usd": 24889868.04
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 4511,
+      "provider_state": "PA",
+      "total_30day_fills": 304379.9,
+      "total_claims": 183748,
+      "total_drug_cost_usd": 161291264.7
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2067,
+      "provider_state": "PR",
+      "total_30day_fills": 247073.9,
+      "total_claims": 183444,
+      "total_drug_cost_usd": 143518467.47
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 255,
+      "provider_state": "RI",
+      "total_30day_fills": 12938.9,
+      "total_claims": 8597,
+      "total_drug_cost_usd": 6975215.47
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2422,
+      "provider_state": "SC",
+      "total_30day_fills": 192196.6,
+      "total_claims": 112095,
+      "total_drug_cost_usd": 103875669.08
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 297,
+      "provider_state": "SD",
+      "total_30day_fills": 15115.8,
+      "total_claims": 9910,
+      "total_drug_cost_usd": 7851278.96
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 3370,
+      "provider_state": "TN",
+      "total_30day_fills": 242242.5,
+      "total_claims": 144300,
+      "total_drug_cost_usd": 129362823.67
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 9350,
+      "provider_state": "TX",
+      "total_30day_fills": 791239.1,
+      "total_claims": 430340,
+      "total_drug_cost_usd": 423930548.16
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 902,
+      "provider_state": "UT",
+      "total_30day_fills": 57743.3,
+      "total_claims": 32622,
+      "total_drug_cost_usd": 31323142.84
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2641,
+      "provider_state": "VA",
+      "total_30day_fills": 186525.1,
+      "total_claims": 105711,
+      "total_drug_cost_usd": 100005551.1
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 11,
+      "provider_state": "VI",
+      "total_30day_fills": 580.3,
+      "total_claims": 445,
+      "total_drug_cost_usd": 374294.14
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 146,
+      "provider_state": "VT",
+      "total_30day_fills": 7018.4,
+      "total_claims": 4152,
+      "total_drug_cost_usd": 3680756.42
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1346,
+      "provider_state": "WA",
+      "total_30day_fills": 78133.9,
+      "total_claims": 43097,
+      "total_drug_cost_usd": 42305196.76
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 1396,
+      "provider_state": "WI",
+      "total_30day_fills": 74009.0,
+      "total_claims": 42761,
+      "total_drug_cost_usd": 40165233.42
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 886,
+      "provider_state": "WV",
+      "total_30day_fills": 61686.2,
+      "total_claims": 34727,
+      "total_drug_cost_usd": 32788958.58
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 166,
+      "provider_state": "WY",
+      "total_30day_fills": 7869.8,
+      "total_claims": 4622,
+      "total_drug_cost_usd": 4171074.47
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 6,
+      "provider_state": "XX",
+      "total_30day_fills": 256.3,
+      "total_claims": 155,
+      "total_drug_cost_usd": 136353.78
+    },
+    {
+      "brand_name": "Farxiga",
+      "generic_name": "Dapagliflozin Propanediol",
+      "provider_count": 2,
+      "provider_state": "ZZ",
+      "total_30day_fills": 51.0,
+      "total_claims": 39,
+      "total_drug_cost_usd": 24248.67
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 4,
+      "provider_state": "AE",
+      "total_30day_fills": 420.3,
+      "total_claims": 184,
+      "total_drug_cost_usd": 142569.72
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 369,
+      "provider_state": "AK",
+      "total_30day_fills": 26954.3,
+      "total_claims": 13605,
+      "total_drug_cost_usd": 14387902.45
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 2891,
+      "provider_state": "AL",
+      "total_30day_fills": 314209.9,
+      "total_claims": 185309,
+      "total_drug_cost_usd": 176128766.83
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 5,
+      "provider_state": "AP",
+      "total_30day_fills": 489.6,
+      "total_claims": 248,
+      "total_drug_cost_usd": 268039.69
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 2011,
+      "provider_state": "AR",
+      "total_30day_fills": 165707.6,
+      "total_claims": 111604,
+      "total_drug_cost_usd": 92839595.73
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 3557,
+      "provider_state": "AZ",
+      "total_30day_fills": 295937.7,
+      "total_claims": 145691,
+      "total_drug_cost_usd": 166422054.54
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 21104,
+      "provider_state": "CA",
+      "total_30day_fills": 2488283.3,
+      "total_claims": 1214710,
+      "total_drug_cost_usd": 1134351658.18
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 2922,
+      "provider_state": "CO",
+      "total_30day_fills": 235451.8,
+      "total_claims": 111517,
+      "total_drug_cost_usd": 112690707.54
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 2466,
+      "provider_state": "CT",
+      "total_30day_fills": 266078.5,
+      "total_claims": 132179,
+      "total_drug_cost_usd": 151232959.61
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 482,
+      "provider_state": "DC",
+      "total_30day_fills": 42833.5,
+      "total_claims": 20965,
+      "total_drug_cost_usd": 21252884.13
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 715,
+      "provider_state": "DE",
+      "total_30day_fills": 77098.0,
+      "total_claims": 36641,
+      "total_drug_cost_usd": 42727083.81
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 12532,
+      "provider_state": "FL",
+      "total_30day_fills": 1183419.5,
+      "total_claims": 608874,
+      "total_drug_cost_usd": 670465869.58
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 5183,
+      "provider_state": "GA",
+      "total_30day_fills": 559326.0,
+      "total_claims": 306466,
+      "total_drug_cost_usd": 305621082.38
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 29,
+      "provider_state": "GU",
+      "total_30day_fills": 1455.8,
+      "total_claims": 1167,
+      "total_drug_cost_usd": 826291.86
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 804,
+      "provider_state": "HI",
+      "total_30day_fills": 106437.0,
+      "total_claims": 45371,
+      "total_drug_cost_usd": 51689914.22
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 2040,
+      "provider_state": "IA",
+      "total_30day_fills": 190088.5,
+      "total_claims": 116504,
+      "total_drug_cost_usd": 103935479.16
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 949,
+      "provider_state": "ID",
+      "total_30day_fills": 77155.3,
+      "total_claims": 41059,
+      "total_drug_cost_usd": 43130136.4
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 7422,
+      "provider_state": "IL",
+      "total_30day_fills": 790881.3,
+      "total_claims": 418801,
+      "total_drug_cost_usd": 435454969.51
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 4345,
+      "provider_state": "IN",
+      "total_30day_fills": 456346.3,
+      "total_claims": 249923,
+      "total_drug_cost_usd": 254307421.53
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 1755,
+      "provider_state": "KS",
+      "total_30day_fills": 147986.0,
+      "total_claims": 91814,
+      "total_drug_cost_usd": 80656738.83
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 3322,
+      "provider_state": "KY",
+      "total_30day_fills": 323688.0,
+      "total_claims": 188663,
+      "total_drug_cost_usd": 181107269.51
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 3153,
+      "provider_state": "LA",
+      "total_30day_fills": 339394.5,
+      "total_claims": 207957,
+      "total_drug_cost_usd": 191759651.41
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 4978,
+      "provider_state": "MA",
+      "total_30day_fills": 449766.5,
+      "total_claims": 245593,
+      "total_drug_cost_usd": 248175961.19
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 3232,
+      "provider_state": "MD",
+      "total_30day_fills": 299791.1,
+      "total_claims": 147858,
+      "total_drug_cost_usd": 152038147.5
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 1251,
+      "provider_state": "ME",
+      "total_30day_fills": 107606.1,
+      "total_claims": 52944,
+      "total_drug_cost_usd": 60270266.06
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 7126,
+      "provider_state": "MI",
+      "total_30day_fills": 726719.1,
+      "total_claims": 379990,
+      "total_drug_cost_usd": 400185136.6
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 3682,
+      "provider_state": "MN",
+      "total_30day_fills": 285995.5,
+      "total_claims": 152803,
+      "total_drug_cost_usd": 158933264.4
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 3979,
+      "provider_state": "MO",
+      "total_30day_fills": 403466.5,
+      "total_claims": 242331,
+      "total_drug_cost_usd": 224320867.21
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 6,
+      "provider_state": "MP",
+      "total_30day_fills": 287.0,
+      "total_claims": 274,
+      "total_drug_cost_usd": 169104.18
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 1917,
+      "provider_state": "MS",
+      "total_30day_fills": 214658.7,
+      "total_claims": 127460,
+      "total_drug_cost_usd": 118172707.57
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 683,
+      "provider_state": "MT",
+      "total_30day_fills": 49151.0,
+      "total_claims": 27914,
+      "total_drug_cost_usd": 26770673.91
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 7238,
+      "provider_state": "NC",
+      "total_30day_fills": 694335.5,
+      "total_claims": 403816,
+      "total_drug_cost_usd": 392905735.7
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 524,
+      "provider_state": "ND",
+      "total_30day_fills": 43056.2,
+      "total_claims": 27977,
+      "total_drug_cost_usd": 23655808.15
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 1297,
+      "provider_state": "NE",
+      "total_30day_fills": 102504.5,
+      "total_claims": 66285,
+      "total_drug_cost_usd": 56246298.74
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 883,
+      "provider_state": "NH",
+      "total_30day_fills": 65174.6,
+      "total_claims": 33548,
+      "total_drug_cost_usd": 36300536.88
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 4425,
+      "provider_state": "NJ",
+      "total_30day_fills": 454326.0,
+      "total_claims": 239087,
+      "total_drug_cost_usd": 252712489.52
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 989,
+      "provider_state": "NM",
+      "total_30day_fills": 73940.5,
+      "total_claims": 40264,
+      "total_drug_cost_usd": 41182556.4
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 1489,
+      "provider_state": "NV",
+      "total_30day_fills": 147108.9,
+      "total_claims": 68912,
+      "total_drug_cost_usd": 82882492.75
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 13407,
+      "provider_state": "NY",
+      "total_30day_fills": 1479238.7,
+      "total_claims": 811421,
+      "total_drug_cost_usd": 820854107.07
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 7733,
+      "provider_state": "OH",
+      "total_30day_fills": 753705.0,
+      "total_claims": 423837,
+      "total_drug_cost_usd": 420063397.11
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 2302,
+      "provider_state": "OK",
+      "total_30day_fills": 215867.6,
+      "total_claims": 132923,
+      "total_drug_cost_usd": 122169916.48
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 2705,
+      "provider_state": "OR",
+      "total_30day_fills": 231593.8,
+      "total_claims": 116935,
+      "total_drug_cost_usd": 116834034.71
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 9795,
+      "provider_state": "PA",
+      "total_30day_fills": 1038721.8,
+      "total_claims": 595860,
+      "total_drug_cost_usd": 567567271.56
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 1841,
+      "provider_state": "PR",
+      "total_30day_fills": 161898.7,
+      "total_claims": 115921,
+      "total_drug_cost_usd": 98208211.99
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 889,
+      "provider_state": "RI",
+      "total_30day_fills": 75449.4,
+      "total_claims": 49686,
+      "total_drug_cost_usd": 41275073.68
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 3463,
+      "provider_state": "SC",
+      "total_30day_fills": 339633.7,
+      "total_claims": 189469,
+      "total_drug_cost_usd": 191473713.8
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 573,
+      "provider_state": "SD",
+      "total_30day_fills": 43147.3,
+      "total_claims": 26964,
+      "total_drug_cost_usd": 23476378.8
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 4354,
+      "provider_state": "TN",
+      "total_30day_fills": 407314.5,
+      "total_claims": 230347,
+      "total_drug_cost_usd": 224290261.04
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 12920,
+      "provider_state": "TX",
+      "total_30day_fills": 1314149.4,
+      "total_claims": 671729,
+      "total_drug_cost_usd": 733526532.11
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 1261,
+      "provider_state": "UT",
+      "total_30day_fills": 98689.2,
+      "total_claims": 52778,
+      "total_drug_cost_usd": 55543697.56
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 4446,
+      "provider_state": "VA",
+      "total_30day_fills": 405890.0,
+      "total_claims": 213104,
+      "total_drug_cost_usd": 220119548.97
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 26,
+      "provider_state": "VI",
+      "total_30day_fills": 1439.0,
+      "total_claims": 1098,
+      "total_drug_cost_usd": 935947.49
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 449,
+      "provider_state": "VT",
+      "total_30day_fills": 34204.9,
+      "total_claims": 17294,
+      "total_drug_cost_usd": 18888351.18
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 4835,
+      "provider_state": "WA",
+      "total_30day_fills": 429094.8,
+      "total_claims": 213434,
+      "total_drug_cost_usd": 222250490.82
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 3877,
+      "provider_state": "WI",
+      "total_30day_fills": 367761.5,
+      "total_claims": 201485,
+      "total_drug_cost_usd": 207696811.25
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 1365,
+      "provider_state": "WV",
+      "total_30day_fills": 141730.7,
+      "total_claims": 74291,
+      "total_drug_cost_usd": 78350719.11
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 259,
+      "provider_state": "WY",
+      "total_30day_fills": 15727.4,
+      "total_claims": 9251,
+      "total_drug_cost_usd": 8713353.26
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 7,
+      "provider_state": "XX",
+      "total_30day_fills": 363.8,
+      "total_claims": 187,
+      "total_drug_cost_usd": 178399.58
+    },
+    {
+      "brand_name": "Jardiance",
+      "generic_name": "Empagliflozin",
+      "provider_count": 9,
+      "provider_state": "ZZ",
+      "total_30day_fills": 625.7,
+      "total_claims": 277,
+      "total_drug_cost_usd": 220060.77
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 6,
+      "provider_state": "AK",
+      "total_30day_fills": 462.0,
+      "total_claims": 264,
+      "total_drug_cost_usd": 290100.01
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 215,
+      "provider_state": "AL",
+      "total_30day_fills": 9089.0,
+      "total_claims": 6355,
+      "total_drug_cost_usd": 5769634.18
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 1,
+      "provider_state": "AP",
+      "total_30day_fills": 26.0,
+      "total_claims": 16,
+      "total_drug_cost_usd": 15539.85
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 74,
+      "provider_state": "AR",
+      "total_30day_fills": 2834.9,
+      "total_claims": 2186,
+      "total_drug_cost_usd": 1784153.58
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 105,
+      "provider_state": "AZ",
+      "total_30day_fills": 6870.9,
+      "total_claims": 4003,
+      "total_drug_cost_usd": 4340498.06
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 1402,
+      "provider_state": "CA",
+      "total_30day_fills": 105682.2,
+      "total_claims": 74461,
+      "total_drug_cost_usd": 65542940.16
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 39,
+      "provider_state": "CO",
+      "total_30day_fills": 1531.6,
+      "total_claims": 1017,
+      "total_drug_cost_usd": 974855.52
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 50,
+      "provider_state": "CT",
+      "total_30day_fills": 2833.2,
+      "total_claims": 1645,
+      "total_drug_cost_usd": 1785035.68
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 17,
+      "provider_state": "DC",
+      "total_30day_fills": 626.0,
+      "total_claims": 373,
+      "total_drug_cost_usd": 400346.85
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 33,
+      "provider_state": "DE",
+      "total_30day_fills": 1933.7,
+      "total_claims": 890,
+      "total_drug_cost_usd": 1212788.53
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 568,
+      "provider_state": "FL",
+      "total_30day_fills": 34980.1,
+      "total_claims": 21153,
+      "total_drug_cost_usd": 21984581.78
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 402,
+      "provider_state": "GA",
+      "total_30day_fills": 23362.5,
+      "total_claims": 15166,
+      "total_drug_cost_usd": 14739554.7
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 97,
+      "provider_state": "HI",
+      "total_30day_fills": 9671.3,
+      "total_claims": 4533,
+      "total_drug_cost_usd": 6081565.89
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 50,
+      "provider_state": "IA",
+      "total_30day_fills": 2346.0,
+      "total_claims": 1775,
+      "total_drug_cost_usd": 1463012.62
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 14,
+      "provider_state": "ID",
+      "total_30day_fills": 825.5,
+      "total_claims": 500,
+      "total_drug_cost_usd": 516044.57
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 163,
+      "provider_state": "IL",
+      "total_30day_fills": 6723.3,
+      "total_claims": 4246,
+      "total_drug_cost_usd": 4216164.54
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 154,
+      "provider_state": "IN",
+      "total_30day_fills": 8770.5,
+      "total_claims": 5545,
+      "total_drug_cost_usd": 5484732.7
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 61,
+      "provider_state": "KS",
+      "total_30day_fills": 1986.4,
+      "total_claims": 1510,
+      "total_drug_cost_usd": 1206080.9
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 192,
+      "provider_state": "KY",
+      "total_30day_fills": 10436.8,
+      "total_claims": 7104,
+      "total_drug_cost_usd": 6512227.52
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 269,
+      "provider_state": "LA",
+      "total_30day_fills": 12514.1,
+      "total_claims": 9161,
+      "total_drug_cost_usd": 7805600.74
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 66,
+      "provider_state": "MA",
+      "total_30day_fills": 3489.5,
+      "total_claims": 2086,
+      "total_drug_cost_usd": 2175967.11
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 133,
+      "provider_state": "MD",
+      "total_30day_fills": 7064.8,
+      "total_claims": 3723,
+      "total_drug_cost_usd": 4335484.08
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 13,
+      "provider_state": "ME",
+      "total_30day_fills": 634.0,
+      "total_claims": 366,
+      "total_drug_cost_usd": 402541.67
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 184,
+      "provider_state": "MI",
+      "total_30day_fills": 8187.6,
+      "total_claims": 4979,
+      "total_drug_cost_usd": 5036724.54
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 22,
+      "provider_state": "MN",
+      "total_30day_fills": 850.3,
+      "total_claims": 626,
+      "total_drug_cost_usd": 530852.34
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 116,
+      "provider_state": "MO",
+      "total_30day_fills": 4247.2,
+      "total_claims": 3087,
+      "total_drug_cost_usd": 2645311.74
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 127,
+      "provider_state": "MS",
+      "total_30day_fills": 4996.7,
+      "total_claims": 3441,
+      "total_drug_cost_usd": 3137350.71
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 5,
+      "provider_state": "MT",
+      "total_30day_fills": 249.0,
+      "total_claims": 209,
+      "total_drug_cost_usd": 143639.61
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 297,
+      "provider_state": "NC",
+      "total_30day_fills": 14750.2,
+      "total_claims": 10324,
+      "total_drug_cost_usd": 9362226.16
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 12,
+      "provider_state": "ND",
+      "total_30day_fills": 507.0,
+      "total_claims": 385,
+      "total_drug_cost_usd": 302248.13
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 77,
+      "provider_state": "NE",
+      "total_30day_fills": 3444.1,
+      "total_claims": 2557,
+      "total_drug_cost_usd": 2162746.17
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 6,
+      "provider_state": "NH",
+      "total_30day_fills": 215.0,
+      "total_claims": 134,
+      "total_drug_cost_usd": 126005.11
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 292,
+      "provider_state": "NJ",
+      "total_30day_fills": 20174.6,
+      "total_claims": 12071,
+      "total_drug_cost_usd": 12521235.63
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 43,
+      "provider_state": "NM",
+      "total_30day_fills": 2158.6,
+      "total_claims": 1343,
+      "total_drug_cost_usd": 1357314.99
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 65,
+      "provider_state": "NV",
+      "total_30day_fills": 3989.6,
+      "total_claims": 2171,
+      "total_drug_cost_usd": 2493407.39
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 734,
+      "provider_state": "NY",
+      "total_30day_fills": 57697.9,
+      "total_claims": 38898,
+      "total_drug_cost_usd": 35984074.07
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 328,
+      "provider_state": "OH",
+      "total_30day_fills": 16466.9,
+      "total_claims": 11172,
+      "total_drug_cost_usd": 10192829.15
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 100,
+      "provider_state": "OK",
+      "total_30day_fills": 3902.3,
+      "total_claims": 2531,
+      "total_drug_cost_usd": 2449567.91
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 26,
+      "provider_state": "OR",
+      "total_30day_fills": 1004.8,
+      "total_claims": 687,
+      "total_drug_cost_usd": 609897.98
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 270,
+      "provider_state": "PA",
+      "total_30day_fills": 13229.4,
+      "total_claims": 8809,
+      "total_drug_cost_usd": 8019160.97
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 102,
+      "provider_state": "PR",
+      "total_30day_fills": 6690.0,
+      "total_claims": 5863,
+      "total_drug_cost_usd": 4396500.49
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 17,
+      "provider_state": "RI",
+      "total_30day_fills": 511.0,
+      "total_claims": 368,
+      "total_drug_cost_usd": 323334.05
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 172,
+      "provider_state": "SC",
+      "total_30day_fills": 8263.3,
+      "total_claims": 5714,
+      "total_drug_cost_usd": 5215605.54
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 14,
+      "provider_state": "SD",
+      "total_30day_fills": 505.5,
+      "total_claims": 395,
+      "total_drug_cost_usd": 301871.15
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 274,
+      "provider_state": "TN",
+      "total_30day_fills": 11503.3,
+      "total_claims": 7839,
+      "total_drug_cost_usd": 7218845.2
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 785,
+      "provider_state": "TX",
+      "total_30day_fills": 47659.9,
+      "total_claims": 29339,
+      "total_drug_cost_usd": 29835909.34
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 30,
+      "provider_state": "UT",
+      "total_30day_fills": 1004.9,
+      "total_claims": 717,
+      "total_drug_cost_usd": 627206.77
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 116,
+      "provider_state": "VA",
+      "total_30day_fills": 5456.2,
+      "total_claims": 3550,
+      "total_drug_cost_usd": 3466176.04
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 50,
+      "provider_state": "WA",
+      "total_30day_fills": 2453.3,
+      "total_claims": 1479,
+      "total_drug_cost_usd": 1571363.48
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 34,
+      "provider_state": "WI",
+      "total_30day_fills": 1295.2,
+      "total_claims": 817,
+      "total_drug_cost_usd": 822994.57
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 49,
+      "provider_state": "WV",
+      "total_30day_fills": 2323.5,
+      "total_claims": 1411,
+      "total_drug_cost_usd": 1447276.05
+    },
+    {
+      "brand_name": "Kerendia",
+      "generic_name": "Finerenone",
+      "provider_count": 3,
+      "provider_state": "WY",
+      "total_30day_fills": 78.7,
+      "total_claims": 46,
+      "total_drug_cost_usd": 49051.32
+    }
+  ],
+  "artifact": "CMS Medicare Part D 2024 selected CKD-therapy landscape",
+  "dataset_uuid": "9552739e-3d05-4c1b-8eff-ecabf391e2e5",
+  "dictionary": [
+    {
+      "class": "SGLT2 inhibitor",
+      "generic_name": "Dapagliflozin Propanediol",
+      "rationale": "CKD risk-reduction and kidney-care therapy class; inclusion is a descriptive drug dictionary, not an indication claim."
+    },
+    {
+      "class": "SGLT2 inhibitor",
+      "generic_name": "Empagliflozin",
+      "rationale": "CKD risk-reduction and kidney-care therapy class; inclusion is a descriptive drug dictionary, not an indication claim."
+    },
+    {
+      "class": "nonsteroidal mineralocorticoid receptor antagonist",
+      "generic_name": "Finerenone",
+      "rationale": "Kidney and cardiovascular risk-reduction therapy class; inclusion is a descriptive drug dictionary, not an indication claim."
+    }
+  ],
+  "dictionary_version": "ckd-therapy-dictionary-v1",
+  "evidence_type": "public_observed",
+  "limitations": {
+    "interpretation": "Provider-drug aggregates describe reported Medicare Part D activity for the selected generic dictionary; they do not establish CKD indication, adherence, outcomes, or patient journeys.",
+    "privacy_suppression": "CMS detailed provider-drug data exclude providers with fewer than 11 total claims; absent rows are not zero and beneficiary fields are not used."
+  },
+  "pagination": {
+    "complete_for_selected_generics": true,
+    "generic_pages": [
+      {
+        "generic": "Empagliflozin",
+        "offsets": [
+          0,
+          5000,
+          10000,
+          15000,
+          20000,
+          25000,
+          30000,
+          35000,
+          40000,
+          45000,
+          50000,
+          55000,
+          60000,
+          65000,
+          70000,
+          75000,
+          80000,
+          85000,
+          90000,
+          95000,
+          100000,
+          105000,
+          110000,
+          115000,
+          120000,
+          125000,
+          130000,
+          135000,
+          140000,
+          145000,
+          150000,
+          155000,
+          160000,
+          165000,
+          170000,
+          175000,
+          180000,
+          185000,
+          190000,
+          195000
+        ],
+        "page_checksums": [
+          {
+            "bytes": 2859550,
+            "offset": 0,
+            "rows": 5000,
+            "sha256": "b40d38c6d5dbef4c834c89ad34b47b87d44f0b8db029b587b2478cecd87cab7a",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=0&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857886,
+            "offset": 5000,
+            "rows": 5000,
+            "sha256": "f3a03d4f7f677a3c144c375394a1e464407e7a1715c7d6ff4ee95533a43d868a",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=5000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2859393,
+            "offset": 10000,
+            "rows": 5000,
+            "sha256": "21721229ecd9da9de563020132f09c4c2355451eeb3c3566eb68d3a185a00043",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=10000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858250,
+            "offset": 15000,
+            "rows": 5000,
+            "sha256": "61850c21baffb6ece339b68eeb427b6dd31140e02c1067b7f5fe42a55cd82e04",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=15000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2859071,
+            "offset": 20000,
+            "rows": 5000,
+            "sha256": "02fb83bbd3a636418a754e1e97e2c0257467e4e11be0383c3a3656f988a92901",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=20000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2859887,
+            "offset": 25000,
+            "rows": 5000,
+            "sha256": "5cfdc7edd225990707ccacf8c05f387fc4a3ece9f945cac604b38435264a7062",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=25000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2855877,
+            "offset": 30000,
+            "rows": 5000,
+            "sha256": "6da823a8459caf4313c49efb5ae34f67d9c462fcd7649cef1b0f1f1c68e8922c",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=30000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858985,
+            "offset": 35000,
+            "rows": 5000,
+            "sha256": "bb62675f5880ebed3a755f9b1cbc74f1f8f93ffa65bd06a7af62914508766f51",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=35000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858784,
+            "offset": 40000,
+            "rows": 5000,
+            "sha256": "5554d685d504d3e774d29103c9f4e2730e4e0a4f88f826e892bc25bae13d6ef6",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=40000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858931,
+            "offset": 45000,
+            "rows": 5000,
+            "sha256": "24522df3f0b563faa3a4f6c9dc228abd57eff4e16d31720a63068bf1fdbcddce",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=45000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858344,
+            "offset": 50000,
+            "rows": 5000,
+            "sha256": "2921485d6e16100b08eec7952ac62cbc5231e171da98beb372d157df4f15902d",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=50000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2859580,
+            "offset": 55000,
+            "rows": 5000,
+            "sha256": "0afb7bc91853d50f485bb45766972bc3a092b1225376c0e7d9f0383840734e2f",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=55000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858015,
+            "offset": 60000,
+            "rows": 5000,
+            "sha256": "ca618efa8a875027a4737b6bc8c0977eeda01db94dcf4bee9e7f68c4b2fc6101",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=60000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857608,
+            "offset": 65000,
+            "rows": 5000,
+            "sha256": "8d5a2e947c6ca1cd7f929841f18790238914f1d5428a8e969f8384ce18ac780e",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=65000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2859570,
+            "offset": 70000,
+            "rows": 5000,
+            "sha256": "1da7fc7dc3f789a51963b919f2cd5c36996b9e0021ad8d2dd7c3e35ce4bfdd75",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=70000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2859199,
+            "offset": 75000,
+            "rows": 5000,
+            "sha256": "723866eb0670f36e019e8ca4b981b2112d2b4bd796a3f121e5e50b9578d212cf",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=75000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2856723,
+            "offset": 80000,
+            "rows": 5000,
+            "sha256": "508b008ed2b88ed424af182aaca82304f6fdb48f1894ee48f4b084d7ed110d44",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=80000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858634,
+            "offset": 85000,
+            "rows": 5000,
+            "sha256": "facfb5e8690a61a7e74d66574b56472cb583ee83305ef1faa6cd7661de12fd9a",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=85000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858004,
+            "offset": 90000,
+            "rows": 5000,
+            "sha256": "4e5d1ca3ed48ff0d2c61585fddc7972e54a171bf99bb16fdb1dacd51466ddcdd",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=90000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857604,
+            "offset": 95000,
+            "rows": 5000,
+            "sha256": "981eca80f860599f6441036640f213b59976965a7d95caed9bab56afb6bce568",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=95000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857609,
+            "offset": 100000,
+            "rows": 5000,
+            "sha256": "7cd1d3f68237b1578c2b44d13e92bf3ecc9d31372b7bcfa45ab491ee891a9c6c",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=100000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2860016,
+            "offset": 105000,
+            "rows": 5000,
+            "sha256": "598ba0fd14f40be22cfcab30eff929e45706b3de1270b84234c822a583844079",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=105000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858451,
+            "offset": 110000,
+            "rows": 5000,
+            "sha256": "1b5a774b6e81ce6d880e5b9f922e30042c97645251f82ee634ba8084ed95c1fd",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=110000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858506,
+            "offset": 115000,
+            "rows": 5000,
+            "sha256": "07a8eff24bb92b4a20a6d0ad86364b925110cc08f82e3604322bd6337c3e68e7",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=115000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857948,
+            "offset": 120000,
+            "rows": 5000,
+            "sha256": "708a80641037e14f5e900c5c8cfd0738caa42355873a3fb729bed1bcc14ed88a",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=120000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857816,
+            "offset": 125000,
+            "rows": 5000,
+            "sha256": "c4a7a41e0909fa8fa30ef22957c794f31a7df743621e226eee1021bc2f1f324f",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=125000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2860099,
+            "offset": 130000,
+            "rows": 5000,
+            "sha256": "207b6450ec2eef12955320b969de211b89a22251d6860925390f0f89511a1b0a",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=130000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2859088,
+            "offset": 135000,
+            "rows": 5000,
+            "sha256": "4c14613ecd5440ae94922c337f5c22d64c66e4d974682dabc50a9a1836841e97",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=135000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857669,
+            "offset": 140000,
+            "rows": 5000,
+            "sha256": "fe9447c3fd6a4cbbf7f441d8b9ba48e96249dbbfcf4c0a0b72f1258960d96d7b",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=140000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858419,
+            "offset": 145000,
+            "rows": 5000,
+            "sha256": "2ba4d2aa33c92b4384432cdffe07f3c77d92148bb5cb736ba14d22f0a384be26",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=145000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858237,
+            "offset": 150000,
+            "rows": 5000,
+            "sha256": "d4fcdcbc37ae8013b7d2480a96e52d9c1c99b6b5b9e926278eaa3ace0cebdd70",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=150000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857113,
+            "offset": 155000,
+            "rows": 5000,
+            "sha256": "d8fc765203f8ed4b05fdc618c5c0c1a4be334cb4696dafb032b7f89c6e25af22",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=155000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857990,
+            "offset": 160000,
+            "rows": 5000,
+            "sha256": "c0ba1dc533ff2306ace185911dbe011869a0cf1e1b5e7ff7ecb02b9557e43604",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=160000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857493,
+            "offset": 165000,
+            "rows": 5000,
+            "sha256": "60d8c54d23a262f5d8c6ed6869fe1f8e1f3aeba1d5f6d07907f17fbd72c4dfb6",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=165000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857144,
+            "offset": 170000,
+            "rows": 5000,
+            "sha256": "51c738d4e5620d04fafd7981e4849a589f5a0955e0783d55eb8ba05a015a30e3",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=170000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858845,
+            "offset": 175000,
+            "rows": 5000,
+            "sha256": "ca506420bbbf2dc65ff4dd06d2aa3304336660bb1cc2e1446a13a39491f8a199",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=175000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857456,
+            "offset": 180000,
+            "rows": 5000,
+            "sha256": "035fb825d774c7de589862e7d01e8a5fae860e52d7311f7ade9815bd21b506e3",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=180000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2858704,
+            "offset": 185000,
+            "rows": 5000,
+            "sha256": "c110747d98ce446b03c96ea69d12574ed0f873fc44de347b3f9e0f58fd675062",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=185000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 2857744,
+            "offset": 190000,
+            "rows": 5000,
+            "sha256": "8823effbf897a1c5480ac6d9e5a8081352b458550c6b08c55a0bdc9f89d1ae33",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=190000&filter%5BGnrc_Name%5D=Empagliflozin"
+          },
+          {
+            "bytes": 1872257,
+            "offset": 195000,
+            "rows": 3275,
+            "sha256": "fd4d294258b08c48959ce4301ab8699c64d5fae4952caee54e8e0e48f7db6d95",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=195000&filter%5BGnrc_Name%5D=Empagliflozin"
+          }
+        ],
+        "pages": 40,
+        "rows_retrieved": 198275
+      },
+      {
+        "generic": "Dapagliflozin Propanediol",
+        "offsets": [
+          0,
+          5000,
+          10000,
+          15000,
+          20000,
+          25000,
+          30000,
+          35000,
+          40000,
+          45000,
+          50000,
+          55000,
+          60000,
+          65000,
+          70000,
+          75000,
+          80000,
+          85000,
+          90000,
+          95000,
+          100000,
+          105000,
+          110000,
+          115000
+        ],
+        "page_checksums": [
+          {
+            "bytes": 2904117,
+            "offset": 0,
+            "rows": 5000,
+            "sha256": "03fff5bac63288be9a2045e03f313cbe93b7ea838b29df2794cc74a3f738a1ba",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=0&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903549,
+            "offset": 5000,
+            "rows": 5000,
+            "sha256": "e9169b788d76e1efd861c5ef56e64348b5a6585513d67bba61db2b50829e814c",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=5000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2904135,
+            "offset": 10000,
+            "rows": 5000,
+            "sha256": "b62d741af13deb9a0212eef6fa1e9bb4e7f2c86308d8386615efae808eb96aaa",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=10000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903350,
+            "offset": 15000,
+            "rows": 5000,
+            "sha256": "93bd5d569f1e3149f792d63685f598c8f9e3a06ccf64768d25a1dd125a9fa1d0",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=15000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2904551,
+            "offset": 20000,
+            "rows": 5000,
+            "sha256": "121d7bb91bdcfd172cd2ec83300c0063ecbda3136302a1936685860aea6459f1",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=20000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2902890,
+            "offset": 25000,
+            "rows": 5000,
+            "sha256": "dbbf7719c68dae9107f26783a03b09df89479bae9483dbc84709dfe3a8256e68",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=25000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2902876,
+            "offset": 30000,
+            "rows": 5000,
+            "sha256": "268ef37c4ec903d5a0592cc5bde77bbaa47e7e43c82425ecf32aaaf305e6d5c1",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=30000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2904048,
+            "offset": 35000,
+            "rows": 5000,
+            "sha256": "ff76e07be56b3cd773d3b52c769cee47fc1842a221dce12351b1671d9fa44a03",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=35000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903567,
+            "offset": 40000,
+            "rows": 5000,
+            "sha256": "f904f51938ebaccb174a4e7982dea0172458cc3583eee4f20c79be6cef9384cf",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=40000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2902593,
+            "offset": 45000,
+            "rows": 5000,
+            "sha256": "1a05697adcc1b5fc4568856e9a6addf20e0c32cd4982c0e291410c75c354488a",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=45000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903622,
+            "offset": 50000,
+            "rows": 5000,
+            "sha256": "238db43c4a9292f78bd15e25a02130506fd6230c5dc87099392dd6b2c7d99196",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=50000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2904755,
+            "offset": 55000,
+            "rows": 5000,
+            "sha256": "68f45421cbf015f47739197b3fea4973edff4ef4692c8c3a1882f84bae995e8e",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=55000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903396,
+            "offset": 60000,
+            "rows": 5000,
+            "sha256": "b1cde0c4d816c6c14711e5f81909f5187184c1a3ea5e6b151f59ffa2730735b9",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=60000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903289,
+            "offset": 65000,
+            "rows": 5000,
+            "sha256": "c3ac04e46b44098a20b463c9e31b2d2f1fb3fc6e579597f03471d43b88b7c168",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=65000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2902550,
+            "offset": 70000,
+            "rows": 5000,
+            "sha256": "7394701a49832d44b1132766c51ba3926a8bf34d21b9d8b15b37126cf67a59c0",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=70000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903266,
+            "offset": 75000,
+            "rows": 5000,
+            "sha256": "3e691007eabf844a5d286dc96b608614c664b2f6d3c8db2b2aae498197175741",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=75000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2904742,
+            "offset": 80000,
+            "rows": 5000,
+            "sha256": "05472d009e1b9321e53d98f84a6d944f98e526db58aea2b733fe5ca2716590bb",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=80000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2904388,
+            "offset": 85000,
+            "rows": 5000,
+            "sha256": "20d121797784885c37ad8c936ce9284bd476b3b092fbfad9104b6870f746b17e",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=85000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2905192,
+            "offset": 90000,
+            "rows": 5000,
+            "sha256": "e5d3c6236335f7660652ea9b6a2db8f76352d66ce126c8b80793cdd64dbb81f0",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=90000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903266,
+            "offset": 95000,
+            "rows": 5000,
+            "sha256": "d4ca71ebe351ce1158408dab81587c8a52b9f897078c506b30870560b92803d4",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=95000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903079,
+            "offset": 100000,
+            "rows": 5000,
+            "sha256": "07f09f5f78559799013bb7935cc9afac1527d77858ae2cef8c35f94d68a07e64",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=100000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903342,
+            "offset": 105000,
+            "rows": 5000,
+            "sha256": "fc53e212c1f05a8aaf3a3f7950d7ec340728721154e9e4bfcc95172a35dd3895",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=105000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2903430,
+            "offset": 110000,
+            "rows": 5000,
+            "sha256": "b532a6b411665492da0848543960c1796bb47026def5dd0b2f61be484403971c",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=110000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          },
+          {
+            "bytes": 2228115,
+            "offset": 115000,
+            "rows": 3837,
+            "sha256": "269cac2c3f10e106616e036a354bfdb7a0e934079182476a505b5d0eef1660cd",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=115000&filter%5BGnrc_Name%5D=Dapagliflozin+Propanediol"
+          }
+        ],
+        "pages": 24,
+        "rows_retrieved": 118837
+      },
+      {
+        "generic": "Finerenone",
+        "offsets": [
+          0,
+          5000
+        ],
+        "page_checksums": [
+          {
+            "bytes": 2823853,
+            "offset": 0,
+            "rows": 5000,
+            "sha256": "20612a3af63eca7c6ec7786b506a5ec3e2168bd46ba234e85c207e8e2d66b83b",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=0&filter%5BGnrc_Name%5D=Finerenone"
+          },
+          {
+            "bytes": 1962034,
+            "offset": 5000,
+            "rows": 3474,
+            "sha256": "c8ce0e41ea7bea421a2c0a8b13338eff8cb5175d706a397e85b67f960fadfa7c",
+            "url": "https://data.cms.gov/data-api/v1/dataset/9552739e-3d05-4c1b-8eff-ecabf391e2e5/data?size=5000&offset=5000&filter%5BGnrc_Name%5D=Finerenone"
+          }
+        ],
+        "pages": 2,
+        "rows_retrieved": 8474
+      }
+    ],
+    "page_size": 5000,
+    "rows_retrieved": 325586
+  },
+  "release": "2024",
+  "retrieved_at": "2026-09-11T21:38:23.635394Z",
+  "source": "CMS Medicare Part D Prescribers by Provider and Drug",
+  "source_url": "https://data.cms.gov/provider-summary-by-type-of-service/medicare-part-d-prescribers/medicare-part-d-prescribers-by-provider-and-drug"
+}

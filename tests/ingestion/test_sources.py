@@ -111,7 +111,7 @@ def test_trial_ingestion_preserves_api_update_date(tmp_path: Path) -> None:
         (
             "meps",
             "meps_invalid.csv",
-            {"expenditure_usd:invalid_number", "event_id:duplicate_key", "event_type:invalid_code"},
+            {"total_expenditure_usd:invalid_number", "person_id:duplicate_key"},
         ),
         (
             "partd",
@@ -186,16 +186,16 @@ def test_numeric_sentinel_codes_are_field_specific(tmp_path: Path) -> None:
 def test_non_finite_numeric_values_are_quarantined(tmp_path: Path) -> None:
     invalid = tmp_path / "meps-nan.csv"
     invalid.write_text(
-        "source_release,event_id,person_id,year,condition_code,event_type,rx_name,"
-        "expenditure_usd,"
-        "person_weight,variance_stratum,variance_psu\n"
-        "HC-243-2021,E1,P1,2021,N18,office_visit,,nan,5021.4,12,1\n",
+        "source_release,person_id,year,dcs_eligible,diabetes_reported,kidney_problem_proxy,"
+        "total_expenditure_usd,office_visits,outpatient_visits,emergency_visits,inpatient_stays,"
+        "prescription_medicines,person_weight,proxy_weight,variance_stratum,variance_psu\n"
+        "HC-243-2022,P1,2022,1,1,1,nan,2,0,1,0,3,5021.4,5000.0,12,1\n",
         encoding="utf-8",
     )
 
     result = ingest_meps(invalid, cache_dir=tmp_path / "cache")
 
-    assert result.quarantine[0].reasons == ("expenditure_usd:invalid_number",)
+    assert result.quarantine[0].reasons == ("total_expenditure_usd:invalid_number",)
 
 
 def test_wrong_top_level_trials_shape_fails_closed(tmp_path: Path) -> None:
@@ -228,7 +228,7 @@ def test_cross_source_person_linkage_field_is_rejected(tmp_path: Path) -> None:
     ("source", "fixture", "old", "spoof"),
     [
         ("nhanes", "nhanes.csv", "2017-2018", "2015-2016"),
-        ("meps", "meps.csv", "HC-243-2021", "HC-999-2020"),
+        ("meps", "meps.csv", "HC-243-2022", "HC-999-2020"),
         ("partd", "partd.csv", "2024", "2023"),
         ("synpuf", "synpuf.csv", "2008-2010", "2011-2013"),
     ],
@@ -275,11 +275,16 @@ def test_csv_shape_errors_quarantine_only_the_bad_row(tmp_path: Path) -> None:
     assert result.quarantine[0].reasons == ("csv:extra_values",)
 
 
-def test_optional_meps_rx_missing_sentinel_is_preserved_as_null(tmp_path: Path) -> None:
-    result = ingest_meps(FIXTURES / "meps_invalid.csv", cache_dir=tmp_path)
-
-    assert all("rx_name:missing_sentinel" not in item.reasons for item in result.quarantine)
-    assert result.quarantine[0].raw_record["rx_name"] == "N/A"
+def test_meps_survey_sentinel_is_preserved_as_a_nonpositive_proxy_code(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "meps-sentinel.csv"
+    path.write_text(
+        (FIXTURES / "meps.csv").read_text().replace(",1,145.25,", ",-1,145.25,", 1),
+        encoding="utf-8",
+    )
+    result = ingest_meps(path, cache_dir=tmp_path / "cache")
+    assert result.valid[0]["kidney_problem_proxy"] == -1
 
 
 def test_documented_code_domains_reject_invalid_values(tmp_path: Path) -> None:
@@ -291,11 +296,6 @@ def test_documented_code_domains_reject_invalid_values(tmp_path: Path) -> None:
     partd = tmp_path / "partd.csv"
     partd.write_text(
         (FIXTURES / "partd.csv").read_text().replace(",PA,", ",ZZ,", 1),
-        encoding="utf-8",
-    )
-    meps = tmp_path / "meps.csv"
-    meps.write_text(
-        (FIXTURES / "meps.csv").read_text().replace(",N18,", ",NOT ICD,", 1),
         encoding="utf-8",
     )
     synpuf = tmp_path / "synpuf.csv"
@@ -311,9 +311,6 @@ def test_documented_code_domains_reject_invalid_values(tmp_path: Path) -> None:
     ).quarantine[0].reasons
     assert "provider_state:invalid_code" in ingest_partd(
         partd, cache_dir=tmp_path / "cache2"
-    ).quarantine[0].reasons
-    assert "condition_code:invalid_code" in ingest_meps(
-        meps, cache_dir=tmp_path / "cache3"
     ).quarantine[0].reasons
     synpuf_reasons = ingest_synpuf(synpuf, cache_dir=tmp_path / "cache4").quarantine[0].reasons
     assert "diagnosis_code:invalid_code" in synpuf_reasons
@@ -527,11 +524,20 @@ def test_meps_xpt_boundary_dispatches_hc243_person_year_layout(
     path.write_bytes(b"representative-xpt-boundary")
     native = [
         {
-            "source_release": "HC-243-2021",
+            "source_release": "HC-243-2022",
             "person_id": "P1",
-            "year": "2021",
+            "year": "2022",
+            "dcs_eligible": "1",
+            "diabetes_reported": "1",
+            "kidney_problem_proxy": "1",
             "total_expenditure_usd": "120.0",
+            "office_visits": "1",
+            "outpatient_visits": "0",
+            "emergency_visits": "0",
+            "inpatient_stays": "0",
+            "prescription_medicines": "2",
             "person_weight": "5000.0",
+            "proxy_weight": "5000.0",
             "variance_stratum": "12",
             "variance_psu": "1",
         }
@@ -543,7 +549,7 @@ def test_meps_xpt_boundary_dispatches_hc243_person_year_layout(
     result = ingest_meps(path, cache_dir=tmp_path / "cache")
 
     assert result.valid[0]["total_expenditure_usd"] == 120.0
-    assert result.manifest.version == "HC-243-2021"
+    assert result.manifest.version == "HC-243-2022"
 
 
 def test_native_synpuf_zip_columns_are_normalized(tmp_path: Path) -> None:
