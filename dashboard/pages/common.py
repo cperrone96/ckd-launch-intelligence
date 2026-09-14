@@ -4,52 +4,85 @@ from typing import Any
 
 from dash import dash_table, dcc, html
 
+_EVIDENCE_FIELDS = (
+    "evidence_type",
+    "source_population",
+    "grain",
+    "source_date_or_window",
+    "join_policy",
+)
+_PROVENANCE_FIELDS = ("artifact", "sha256", "manifest")
+_MODEL_LABELS = {"logistic_regression": "Logistic Regression"}
+
+
+def has_structured_evidence(evidence: object) -> bool:
+    """Return whether an API payload can support a complete evidence disclosure."""
+    if not isinstance(evidence, dict):
+        return False
+    provenance = evidence.get("provenance")
+    return (
+        isinstance(provenance, dict)
+        and all(
+            isinstance(evidence.get(field), str) and evidence[field].strip()
+            for field in _EVIDENCE_FIELDS
+        )
+        and all(
+            isinstance(provenance.get(field), str) and provenance[field].strip()
+            for field in _PROVENANCE_FIELDS
+        )
+    )
+
+
+def model_label(value: object) -> str:
+    """Present model identifiers as human-readable labels, never API identifiers."""
+    identifier = str(value)
+    return _MODEL_LABELS.get(identifier, identifier.replace("_", " ").title())
+
+
+def has_nonempty_list(payload: object, key: str) -> bool:
+    """Return whether a response has a non-empty collection at ``key``."""
+    return isinstance(payload, dict) and isinstance(payload.get(key), list) and bool(payload[key])
+
 
 def evidence_header(evidence: dict[str, Any], *, extra: str | None = None) -> html.Div:
-    provenance = evidence.get("provenance", {})
+    """Render only a complete evidence disclosure; callers gate incomplete payloads."""
+    provenance = evidence["provenance"]
+    source_manifest = provenance.get("source_manifest")
+    provenance_details: list[Any] = [
+        html.Summary("Method and provenance"),
+        html.P(str(evidence["join_policy"])),
+        html.P(f"Artifact · {provenance['artifact']}"),
+        html.P(f"SHA-256 · {provenance['sha256']}"),
+        html.P(f"Manifest · {provenance['manifest']}"),
+    ]
+    if isinstance(source_manifest, str) and source_manifest.strip():
+        provenance_details.append(html.P(f"Source manifest · {source_manifest}"))
     return html.Div(
         [
             html.Div(
                 [
                     html.Span(
-                        str(evidence.get("evidence_type", "unknown")).replace("_", " "),
+                        str(evidence["evidence_type"]).replace("_", " "),
                         className="evidence-chip",
                     ),
                     html.Span(
-                        f"Source population · {evidence.get('source_population', 'Not stated')}",
+                        f"Source population · {evidence['source_population']}",
                         className="evidence-meta",
                     ),
+                    html.Span(f"Grain · {evidence['grain']}", className="evidence-meta"),
                     html.Span(
-                        f"Grain · {evidence.get('grain', 'Not stated')}", className="evidence-meta"
-                    ),
-                    html.Span(
-                        f"Window · {evidence.get('source_date_or_window', 'Not stated')}",
+                        f"Window · {evidence['source_date_or_window']}",
                         className="evidence-meta",
                     ),
                 ],
                 className="evidence-row",
             ),
             html.P(
-                f"Evidence strength: {evidence.get('evidence_type', 'not stated')}. "
+                f"Evidence strength: {evidence['evidence_type']}. "
                 f"Denominator and uncertainty remain source-specific. {extra or ''}",
                 className="evidence-note",
             ),
-            html.Details(
-                [
-                    html.Summary("Method and provenance"),
-                    html.P(evidence.get("join_policy", "No join policy supplied.")),
-                    html.P(f"Artifact · {provenance.get('artifact', 'Not stated')}"),
-                    html.P(f"SHA-256 · {provenance.get('sha256', 'Not stated')}"),
-                    html.P(f"Manifest · {provenance.get('manifest', 'Not stated')}"),
-                    html.P(
-                        "Source manifest · "
-                        f"{provenance.get('source_manifest', 'Not separately supplied')}"
-                    )
-                    if provenance.get("source_manifest")
-                    else html.P("Source manifest · Not separately supplied"),
-                ],
-                className="method-details",
-            ),
+            html.Details(provenance_details, className="method-details"),
         ],
         className="evidence-panel",
     )

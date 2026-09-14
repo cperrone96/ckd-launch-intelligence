@@ -1,12 +1,22 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
 import pytest
 from flask.testing import FlaskClient
 
 from dashboard.api_client import DashboardAPI
 from dashboard.app import _page, create_dashboard
+from dashboard.pages import (
+    care_and_prescribing,
+    opportunity,
+    patient_finding,
+    patient_need,
+    summary,
+    synthetic_journeys,
+    trials,
+)
 
 
 @pytest.fixture()
@@ -23,6 +33,21 @@ def rendered_json(path: str) -> str:
 
 def component_json(component: object) -> str:
     return json.dumps(component.to_plotly_json(), default=str)  # type: ignore[attr-defined]
+
+
+def _evidence() -> dict[str, object]:
+    return {
+        "evidence_type": "public_observed",
+        "source_population": "Public aggregate test population",
+        "grain": "Source-specific aggregate",
+        "source_date_or_window": "2024",
+        "join_policy": "No cross-source join",
+        "provenance": {
+            "artifact": "data/processed/test.json",
+            "sha256": "a" * 64,
+            "manifest": "data/manifests/test.json",
+        },
+    }
 
 
 def test_summary_route_has_decision_first_content(dash_client: FlaskClient) -> None:
@@ -52,7 +77,104 @@ def test_patient_finding_page_has_non_diagnostic_label(dash_client: FlaskClient)
     body = rendered_json("/patient-finding")
     assert "not a clinical diagnostic tool" in body
     assert "Not stated" not in body
-    assert "logistic_regression" in body
+    assert "Logistic Regression" in body
+    assert "logistic_regression" not in body
+    assert "subgroup-metric-grid" in body
+    assert "Subgroup note" in body
+    assert body.index("Cohort n") < body.index("Subgroup note")
+    assert "5.2%" in body
+    assert "None" not in body
+
+
+@pytest.mark.parametrize(
+    ("renderer", "message"),
+    [
+        (summary.render, "Summary evidence is unavailable"),
+        (patient_need.render, "Patient-need evidence is unavailable"),
+        (patient_finding.render, "Patient-finding evidence is unavailable"),
+        (care_and_prescribing.render, "Care and prescribing evidence is unavailable"),
+        (trials.render, "Trial evidence is unavailable"),
+        (opportunity.render, "Opportunity evidence is unavailable"),
+        (synthetic_journeys.render, "Synthetic-journey evidence is unavailable"),
+    ],
+)
+def test_empty_api_stubs_render_page_level_empty_states(renderer: object, message: str) -> None:
+    body = component_json(renderer({}))  # type: ignore[operator]
+    assert message in body
+    assert "evidence-panel" not in body
+    assert "Not stated" not in body
+    assert "unknown" not in body.casefold()
+
+
+@pytest.mark.parametrize(
+    ("renderer", "payload", "message"),
+    [
+        (
+            summary.render,
+            {"sources": [], "estimates": {"items": [], "evidence": _evidence()}},
+            "Summary evidence is unavailable",
+        ),
+        (
+            patient_need.render,
+            {
+                "cohort": {"items": []},
+                "estimates": {"items": []},
+                "evidence": _evidence(),
+            },
+            "Patient-need evidence is unavailable",
+        ),
+        (
+            patient_finding.render,
+            {"performance": {"evidence": _evidence(), "comparison": {"models": {}}}},
+            "Patient-finding evidence is unavailable",
+        ),
+        (
+            care_and_prescribing.render,
+            {
+                "utilization": {"evidence": _evidence(), "items": []},
+                "prescribing": {"evidence": _evidence(), "items": []},
+            },
+            "Care and prescribing evidence is unavailable",
+        ),
+        (
+            trials.render,
+            {"sections": {"status": {"evidence": _evidence(), "items": []}}},
+            "Trial evidence is unavailable",
+        ),
+        (
+            opportunity.render,
+            {
+                "opportunity": {
+                    "evidence": [_evidence()],
+                    "source_panels": {"national": {"items": []}},
+                }
+            },
+            "Opportunity evidence is unavailable",
+        ),
+        (
+            synthetic_journeys.render,
+            {"journey": {"evidence": _evidence(), "summaries": [], "survival": []}},
+            "Synthetic-journey evidence is unavailable",
+        ),
+    ],
+)
+def test_valid_empty_payloads_render_page_level_empty_states(
+    renderer: object, payload: dict[str, object], message: str
+) -> None:
+    body = component_json(renderer(payload))  # type: ignore[operator]
+    assert message in body
+    assert "evidence-panel" not in body
+    assert "Not stated" not in body
+
+
+def test_mobile_disclosures_and_summary_actions_have_touch_targets() -> None:
+    styles = (
+        Path(__file__).resolve().parents[2] / "dashboard" / "assets" / "styles.css"
+    ).read_text()
+    assert ".method-details summary, .table-alternative summary" in styles
+    assert ".summary-links a" in styles
+    assert styles.count("min-height: 44px") >= 3
+    assert ".subgroup-metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }" in styles
 
 
 @pytest.mark.parametrize(

@@ -4,14 +4,46 @@ from typing import Any
 
 from dash import html
 
-from .common import accessible_table, chart_with_table, evidence_header, limitation, page_shell
+from .common import (
+    accessible_table,
+    chart_with_table,
+    empty_state,
+    evidence_header,
+    has_nonempty_list,
+    has_structured_evidence,
+    limitation,
+    page_shell,
+)
 
 
 def render(data: dict[str, Any]) -> html.Main:
     cohort = data.get("cohort", {})
     estimates = data.get("estimates", {})
     evidence = data.get("evidence", {})
-    rows = cohort.get("items", [])
+    rows = cohort.get("items", []) if isinstance(cohort, dict) else []
+    if (
+        not has_structured_evidence(evidence)
+        or not has_nonempty_list(cohort, "items")
+        or not has_nonempty_list(estimates, "items")
+    ):
+        return page_shell(
+            "Patient need, without overreach",
+            (
+                "The public survey signal is a population estimate, not a count of identifiable "
+                "patients."
+            ),
+            [
+                limitation(
+                    "NHANES is a national survey population; it does not support state targeting "
+                    "or patient-level linkage.",
+                    tone="strong",
+                ),
+                empty_state(
+                    "Patient-need evidence is unavailable in this API response; no estimates or "
+                    "provenance are displayed."
+                ),
+            ],
+        )
     figure = {
         "data": [
             {

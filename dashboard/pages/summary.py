@@ -4,7 +4,16 @@ from typing import Any
 
 from dash import dcc, html
 
-from .common import accessible_table, empty_state, evidence_header, limitation, metric, page_shell
+from .common import (
+    accessible_table,
+    empty_state,
+    evidence_header,
+    has_structured_evidence,
+    limitation,
+    metric,
+    model_label,
+    page_shell,
+)
 
 
 def render(data: dict[str, Any]) -> html.Main:
@@ -17,6 +26,28 @@ def render(data: dict[str, Any]) -> html.Main:
         (row for row in estimate_rows if row.get("key") == "primary_egfr_or_albuminuria"),
         None,
     )
+    if (
+        not has_structured_evidence(evidence)
+        or not isinstance(estimate_rows, list)
+        or not isinstance(primary, dict)
+        or not isinstance(sources, list)
+        or not sources
+    ):
+        return page_shell(
+            "What can this evidence support?",
+            "A public-data decision surface for CKD launch intelligence.",
+            [
+                limitation(
+                    "This dashboard does not diagnose, target patients, or combine incompatible "
+                    "source geographies.",
+                    tone="strong",
+                ),
+                empty_state(
+                    "Summary evidence is unavailable in this API response; no decision metrics "
+                    "or provenance are displayed."
+                ),
+            ],
+        )
     if primary:
         signal_cards = [
             metric(
@@ -33,7 +64,7 @@ def render(data: dict[str, Any]) -> html.Main:
         signal_cards = [empty_state("The primary population estimate is unavailable.")]
     selected_model = performance.get("selected_model")
     model_step = (
-        html.P(f"{selected_model} model comparison and threshold capacity.")
+        html.P(f"{model_label(selected_model)} model comparison and threshold capacity.")
         if selected_model
         else empty_state("The model comparison is unavailable.")
     )
