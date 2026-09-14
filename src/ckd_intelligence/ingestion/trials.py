@@ -86,7 +86,10 @@ def _nested_names(
         if not isinstance(item, dict) or not isinstance(item.get("name"), str):
             reasons.append(f"{field}:invalid_type")
             return []
-        names.append(item["name"].strip())
+        name = item["name"].strip()
+        if not name:
+            reasons.append(f"{field}:missing_sentinel")
+        names.append(name)
     return names
 
 
@@ -100,7 +103,10 @@ def _nested_countries(container: Mapping[str, object], reasons: list[str]) -> li
         if not isinstance(item, dict) or not isinstance(item.get("country"), str):
             reasons.append("country:invalid_type")
             return []
-        countries.append(item["country"].strip())
+        country = item["country"].strip()
+        if not country:
+            reasons.append("country:missing_sentinel")
+        countries.append(country)
     return sorted(set(countries))
 
 

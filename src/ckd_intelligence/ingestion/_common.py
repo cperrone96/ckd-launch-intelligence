@@ -11,6 +11,7 @@ from collections import Counter
 from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import date
+from numbers import Real
 from pathlib import Path
 from types import MappingProxyType
 from urllib.parse import urlparse
@@ -339,8 +340,12 @@ def native_scalar_text(value: object) -> str:
 
     if isinstance(value, bytes):
         return value.decode("utf-8", errors="replace").strip()
-    if isinstance(value, float) and math.isfinite(value) and value.is_integer():
-        return str(int(value))
+    if isinstance(value, Real) and not isinstance(value, bool):
+        numeric = float(value)
+        if not math.isfinite(numeric):
+            return ""
+        if numeric.is_integer():
+            return str(int(numeric))
     return str(value).strip()
 
 

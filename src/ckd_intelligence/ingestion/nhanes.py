@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import zipfile
 from collections.abc import Mapping
 from importlib import import_module
@@ -171,6 +172,8 @@ def ingest_nhanes(
         if release != registry.version:
             reasons.append("source_release:mismatch")
         respondent_id = text_value(row, "respondent_id", reasons)
+        if re.fullmatch(r"[1-9]\d*", respondent_id) is None:
+            reasons.append("respondent_id:invalid_identifier")
         age = integer_value(
             row,
             "age_years",

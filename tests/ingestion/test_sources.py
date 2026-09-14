@@ -9,6 +9,7 @@ from pathlib import Path
 
 import pytest
 
+from ckd_intelligence.ingestion._common import native_scalar_text
 from ckd_intelligence.ingestion.meps import ingest_meps
 from ckd_intelligence.ingestion.nhanes import ingest_nhanes
 from ckd_intelligence.ingestion.partd import ingest_partd
@@ -342,6 +343,29 @@ def test_trials_require_exact_query_and_strict_nested_types(tmp_path: Path) -> N
         assert "brief_title:invalid_type" in result.quarantine[0].reasons
 
 
+@pytest.mark.parametrize(
+    ("module", "field", "reason"),
+    [
+        ("armsInterventionsModule", "interventions", "intervention:missing_sentinel"),
+        ("contactsLocationsModule", "locations", "country:missing_sentinel"),
+    ],
+)
+def test_trial_nested_blank_values_are_quarantined(
+    module: str, field: str, reason: str, tmp_path: Path
+) -> None:
+    document = json.loads((FIXTURES / "clinicaltrials.json").read_text())
+    item_key = "name" if field == "interventions" else "country"
+    document["studies"][0]["protocolSection"][module][field][0][item_key] = "   "
+    path = tmp_path / f"blank-{field}.json"
+    with path.open("w", encoding="utf-8") as handle:
+        json.dump(document, handle)
+
+    result = ingest_trials(path, cache_dir=tmp_path / f"cache-{field}")
+
+    assert not result.valid
+    assert reason in result.quarantine[0].reasons
+
+
 def test_malformed_trial_is_quarantined_without_aborting_valid_study(tmp_path: Path) -> None:
     document = json.loads((FIXTURES / "clinicaltrials.json").read_text())
     document["studies"].insert(0, {"protocolSection": []})
@@ -421,6 +445,59 @@ def test_nhanes_xpt_boundary_dispatches_native_normalization(
 
     assert len(result.valid) == 2
     assert result.manifest.version == "2017-2018"
+
+
+class _DecodedXptFrame:
+    columns = {
+        "SEQN", "RIDAGEYR", "RIAGENDR", "RIDRETH3", "LBXSCR", "URXUMA",
+        "URXUCR", "WTMEC2YR", "SDMVSTRA", "SDMVPSU",
+    }
+
+    def to_dict(self, *, orient: str) -> list[dict[str, float]]:
+        assert orient == "records"
+        base = {
+            "RIDAGEYR": 65.0,
+            "RIAGENDR": 2.0,
+            "RIDRETH3": 3.0,
+            "LBXSCR": 1.1,
+            "URXUMA": 35.0,
+            "URXUCR": 100.0,
+            "WTMEC2YR": 5000.0,
+            "SDMVSTRA": 12.0,
+            "SDMVPSU": 1.0,
+        }
+        return [{**base, "SEQN": float("nan")}, {**base, "SEQN": 1002.0}]
+
+
+class _DecodedXptPandas:
+    @staticmethod
+    def read_sas(_payload: BytesIO, *, format: str) -> _DecodedXptFrame:
+        assert format == "xport"
+        return _DecodedXptFrame()
+
+
+def test_decoded_xpt_missing_seqn_quarantines_only_bad_participant(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    path = tmp_path / "nhanes_2017_2018.xpt"
+    path.write_bytes(b"simulated-xpt-container")
+    monkeypatch.setattr(
+        "ckd_intelligence.ingestion.nhanes._pandas", lambda: _DecodedXptPandas()
+    )
+
+    result = ingest_nhanes(path, cache_dir=tmp_path / "cache")
+
+    assert result.valid[0]["respondent_id"] == "1002"
+    assert len(result.valid) == 1
+    assert len(result.quarantine) == 1
+    assert "respondent_id:missing_sentinel" in result.quarantine[0].reasons
+    assert "respondent_id:invalid_identifier" in result.quarantine[0].reasons
+    assert "nan" not in result.quarantine[0].raw_record.values()
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_native_nonfinite_scalars_never_become_nan_or_inf_strings(value: float) -> None:
+    assert native_scalar_text(value) == ""
 
 
 def test_nhanes_native_xpt_bundle_dispatches_three_component_join(
