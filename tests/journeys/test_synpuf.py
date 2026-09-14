@@ -202,6 +202,69 @@ def test_spanning_early_claim_is_removed_before_recomputing_index() -> None:
     assert output.summaries.iloc[0]["index_date"] == pd.Timestamp("2009-12-01").date()
 
 
+def test_spanning_only_input_returns_typed_empty_outputs() -> None:
+    rows = pd.DataFrame(
+        [
+            {
+                "source_release": "2008-2010",
+                "beneficiary_id": "SPAN-ONLY",
+                "claim_id": "SPAN-ONLY-1",
+                "claim_type": "inpatient",
+                "service_from_date": "2009-01-01",
+                "service_through_date": "2010-02-01",
+                "diagnosis_code": "5853",
+                "evidence_type": "public_synthetic",
+            }
+        ]
+    )
+    output = build_journey_output(rows)
+    assert output.events.empty
+    assert output.summaries.empty
+    assert output.survival.empty
+    assert list(output.events.columns) == [
+        "synthetic_id",
+        "claim_id",
+        "source_release",
+        "event_date",
+        "event_through_date",
+        "claim_type",
+        "diagnosis_code",
+        "event_kind",
+        "event_order",
+        "is_ckd_signal",
+        "is_target_event",
+        "is_persistence_event",
+        "index_date",
+        "target_date",
+        "persistence_date",
+        "follow_up_end",
+        "evidence_type",
+    ]
+    assert list(output.summaries.columns) == [
+        "synthetic_id",
+        "index_date",
+        "target_date",
+        "persistence_date",
+        "observation_end",
+        "duration_days",
+        "event_observed",
+        "censoring_reason",
+        "has_target",
+        "evidence_type",
+    ]
+    assert list(output.survival.columns) == [
+        "time",
+        "at_risk",
+        "events",
+        "censored",
+        "survival",
+        "greenwood_variance",
+        "ci_low",
+        "ci_high",
+        "evidence_type",
+    ]
+
+
 def test_out_of_release_through_date_is_rejected(claims: pd.DataFrame) -> None:
     invalid = claims.copy()
     invalid.loc[0, "service_through_date"] = "2011-01-01"

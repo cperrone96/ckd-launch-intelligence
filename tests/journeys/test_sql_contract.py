@@ -108,6 +108,24 @@ def _spanning_early_claim() -> pd.DataFrame:
     return base
 
 
+def _spanning_only_claim() -> pd.DataFrame:
+    base = _claims().iloc[0:0].copy()
+    base.loc[0] = {
+        "source_release": "2008-2010",
+        "beneficiary_id": "SPAN-ONLY",
+        "claim_id": "SPAN-ONLY-1",
+        "claim_type": "inpatient",
+        "service_from_date": "2009-01-01",
+        "service_through_date": "2010-02-01",
+        "diagnosis_code": "5853",
+        "provider_id": "PSONLY",
+        "payment_amount_usd": 1.0,
+        "year": 2009,
+        "evidence_type": "public_synthetic",
+    }
+    return base
+
+
 def _normalize(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     result = frame[columns].copy()
     for column in result.columns:
@@ -208,6 +226,7 @@ def test_duckdb_sql_reconciles_standard_all_censored_empty_and_ties() -> None:
             _claims().iloc[0:0].copy(),
             _adversarial_ties(),
             _spanning_early_claim(),
+            _spanning_only_claim(),
         )
         for claims in scenarios:
             _run_and_compare(connection, claims)
@@ -236,6 +255,7 @@ def test_postgres_sql_reconciles_when_explicit_test_database_is_available() -> N
             _claims().iloc[0:0].copy(),
             _adversarial_ties(),
             _spanning_early_claim(),
+            _spanning_only_claim(),
         ):
             _run_postgres_scenario(connection, claims)
     finally:

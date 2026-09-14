@@ -333,6 +333,11 @@ def build_journey_output(
                 "evidence_type": EvidenceType,
             }
         )
+    if not event_rows:
+        # Every source group may be excluded by the bounded follow-up contract
+        # (for example, a spanning-only claim).  Preserve the documented typed
+        # output schema instead of sorting a columnless DataFrame.
+        return JourneyOutput(_empty_events(), _empty_summaries(), _empty_survival(), journey_rules)
     events = pd.DataFrame(event_rows).sort_values(
         ["synthetic_id", "event_date", "event_through_date", "claim_id"],
         kind="mergesort",

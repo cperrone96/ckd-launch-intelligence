@@ -49,7 +49,8 @@ on branch `feature/ckd-task6`, based on approved Task 4 commit `8d68c0e`.
 ## Fix round 2 corrections
 
 - Replaced text-only SQL assertions with executable DuckDB reconciliation tests for
-  standard, all-censored, empty, adversarial-tie, and spanning-claim scenarios.
+  standard, all-censored, empty, adversarial-tie, spanning-claim, and spanning-only
+  scenarios.
   Each scenario is rerun in the same session and a fresh DuckDB session. PostgreSQL
   coverage uses the same scenarios when `CKD_TEST_POSTGRES_URL` and `psycopg` are
   available, with an explicit unavailable-service skip.
@@ -69,9 +70,9 @@ on branch `feature/ckd-task6`, based on approved Task 4 commit `8d68c0e`.
 
 - Primary Python 3.12 environment: `/Users/christinaperrone/Documents/Claude/Projects/Data Design Dynamics/portfolio-projects/ckd-launch-intelligence/.venv/bin/python`.
 - Full test command (`PYTHONPATH=/private/tmp/ckd-task6-worktree/src python -m pytest -q`):
-  **144 passed, 1 skipped**. The only skip is PostgreSQL because `psycopg` is not
+  **145 passed, 1 skipped**. The only skip is PostgreSQL because `psycopg` is not
   installed/configured in this environment.
-- Executable SQL command for DuckDB: **1 passed**. It reconciled all five scenarios,
+- Executable SQL command for DuckDB: **1 passed**. It reconciled all six scenarios,
   including same-session and fresh-session reruns. PostgreSQL test is intentionally
   skipped only because its optional driver/database is unavailable.
 - `python -m ruff check .`: **All checks passed**.
@@ -82,9 +83,11 @@ on branch `feature/ckd-task6`, based on approved Task 4 commit `8d68c0e`.
 - Python 3.12 bytecode compilation passed for `src` and `tests`.
 - Notebook JSON validation passed.
 - `git diff --check` passed.
-- Ruff, strict mypy, and live DuckDB/PostgreSQL execution require the project's
-  dependency-complete Python 3.12 environment, which was not available in this
-  isolated shell; no source or primary worktree changes were made.
+- The primary dependency-complete Python 3.12 environment was used for pytest,
+  DuckDB, Ruff, mypy, and manual notebook execution. PostgreSQL remained skipped
+  only because `psycopg` and a configured PostgreSQL service were unavailable.
+  Standard `nbconvert --execute` was blocked by the sandbox's local kernel socket
+  policy; the notebook code cells passed two deterministic manual runs.
 
 ## Commit
 
