@@ -41,6 +41,26 @@ def _sha(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _preserved_meps_retrieved_at(source_sha256: str) -> str | None:
+    """Preserve acquisition metadata when rebuilding the same HC-243 bytes."""
+
+    manifest_path = ROOT / "data/manifests/meps_hc243_2022_landscape.json"
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    if not isinstance(manifest, dict):
+        return None
+    if (
+        manifest.get("source") != "MEPS / AHRQ"
+        or manifest.get("release") != "HC-243-2022"
+        or manifest.get("source_sha256") != source_sha256
+    ):
+        return None
+    retrieved_at = manifest.get("retrieved_at")
+    return retrieved_at if isinstance(retrieved_at, str) and retrieved_at.strip() else None
+
+
 def _write(stem: str, artifact: dict[str, Any], manifest: dict[str, Any]) -> None:
     processed = ROOT / "data/processed"
     manifests = ROOT / "data/manifests"
@@ -69,7 +89,8 @@ def _estimate_dict(estimate: Any, *, metric: str, unit: str) -> dict[str, Any]:
 def build_meps() -> None:
     result = ingest_meps(MEPS_ZIP, cache_dir=None)
     rows = [dict(row) for row in result.valid]
-    retrieved_at = _now()
+    source_sha256 = _sha(MEPS_ZIP)
+    retrieved_at = _preserved_meps_retrieved_at(source_sha256) or _now()
     domain_rows = [
         row
         for row in rows
@@ -113,7 +134,7 @@ def build_meps() -> None:
         "retrieved_at": retrieved_at,
         "source": "MEPS / AHRQ",
         "source_url": "https://meps.ahrq.gov/mepsweb/data_files/pufs/h243/h243dat.zip",
-        "source_sha256": _sha(MEPS_ZIP),
+        "source_sha256": source_sha256,
         "definition": {
             "proxy_variable": "DSKIDN53",
             "proxy_is_not_confirmed_ckd": True,

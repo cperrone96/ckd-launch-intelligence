@@ -43,6 +43,15 @@ def reseal_artifact(root: Path, artifact_name: str) -> None:
     manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
 
 
+def copy_api_data(source: Path, root: Path) -> None:
+    """Copy only the committed API inputs; raw downloads are intentionally huge."""
+
+    root.mkdir(parents=True)
+    shutil.copytree(source / "processed", root / "processed")
+    shutil.copytree(source / "manifests", root / "manifests")
+    shutil.copytree(source / "fixtures", root / "fixtures")
+
+
 def test_health_and_exact_routes(client: TestClient) -> None:
     assert client.get("/api/v1/health").json() == {
         "status": "ok",
@@ -249,7 +258,7 @@ def test_repository_rejects_tampered_checksum(tmp_path: Path) -> None:
 def test_api_fails_closed_on_tampered_committed_artifact(tmp_path: Path) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
-    shutil.copytree(source, root)
+    copy_api_data(source, root)
     artifact = root / "processed" / "partd_2024_ckd_therapy_landscape.json"
     artifact.write_text(artifact.read_text(encoding="utf-8") + "\n", encoding="utf-8")
     response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(
@@ -269,7 +278,7 @@ def test_api_fails_closed_on_non_object_or_invalid_artifact_member(
 ) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
-    shutil.copytree(source, root)
+    copy_api_data(source, root)
     artifact = root / "processed" / "patient_need_summary.json"
     artifact.write_text(replacement, encoding="utf-8")
     reseal_artifact(root, "patient_need_summary.json")
@@ -284,7 +293,7 @@ def test_api_fails_closed_on_non_object_or_invalid_artifact_member(
 def test_api_rejects_manifest_source_namespace_traversal(tmp_path: Path) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
-    shutil.copytree(source, root)
+    copy_api_data(source, root)
     manifest = root / "manifests" / "patient_need_summary.json"
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     payload["source_manifest"] = "data/manifests/../processed/patient_need_summary.json"
@@ -298,7 +307,7 @@ def test_api_rejects_manifest_source_namespace_traversal(tmp_path: Path) -> None
 def test_api_fails_closed_on_tampered_synthetic_manifest(tmp_path: Path) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
-    shutil.copytree(source, root)
+    copy_api_data(source, root)
     manifest = root / "manifests" / "synpuf-journeys-fixture.json"
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     payload["no_cross_source_join"] = False
@@ -313,7 +322,7 @@ def test_api_fails_closed_on_tampered_synthetic_manifest(tmp_path: Path) -> None
 def test_api_rejects_missing_or_stale_manifest_metadata(tmp_path: Path, field: str) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
-    shutil.copytree(source, root)
+    copy_api_data(source, root)
     manifest = root / "manifests" / "patient_need_summary.json"
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     if field == "artifact_sha256":
@@ -333,7 +342,7 @@ def test_api_rejects_missing_or_stale_manifest_metadata(tmp_path: Path, field: s
 def test_api_rejects_incomplete_manifest_metadata(tmp_path: Path, field: str) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
-    shutil.copytree(source, root)
+    copy_api_data(source, root)
     manifest = root / "manifests" / "patient_need_summary.json"
     payload = json.loads(manifest.read_text(encoding="utf-8"))
     payload.pop(field)
@@ -342,6 +351,86 @@ def test_api_rejects_incomplete_manifest_metadata(tmp_path: Path, field: str) ->
         "/api/v1/population-estimates"
     )
     assert response.status_code == 503
+
+
+@pytest.mark.parametrize("key", ["patient_need", "patient_finding", "meps", "partd", "trials"])
+@pytest.mark.parametrize("field", ["source", "release"])
+def test_repository_rejects_noncanonical_manifest_provenance(
+    tmp_path: Path, key: str, field: str
+) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    copy_api_data(source, root)
+    artifact_name = {
+        "patient_need": "patient_need_summary.json",
+        "patient_finding": "patient_finding_model_comparison.json",
+        "meps": "meps_hc243_2022_landscape.json",
+        "partd": "partd_2024_ckd_therapy_landscape.json",
+        "trials": "clinicaltrials_ckd_landscape.json",
+    }[key]
+    manifest_path = root / "manifests" / artifact_name
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest[field] = "tampered provenance"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ArtifactIntegrityError, match="provenance"):
+        ArtifactRepository(root).load_json(key)
+
+
+@pytest.mark.parametrize(
+    ("key", "field"),
+    [
+        ("patient_need", "source_release"),
+        ("patient_finding", "source"),
+        ("meps", "source"),
+        ("meps", "release"),
+        ("partd", "source"),
+        ("partd", "release"),
+        ("trials", "source"),
+        ("trials", "release"),
+    ],
+)
+def test_repository_rejects_resealed_artifact_with_tampered_provenance(
+    tmp_path: Path, key: str, field: str
+) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    copy_api_data(source, root)
+    artifact_name = {
+        "patient_need": "patient_need_summary.json",
+        "patient_finding": "patient_finding_model_comparison.json",
+        "meps": "meps_hc243_2022_landscape.json",
+        "partd": "partd_2024_ckd_therapy_landscape.json",
+        "trials": "clinicaltrials_ckd_landscape.json",
+    }[key]
+    artifact_path = root / "processed" / artifact_name
+    artifact = json.loads(artifact_path.read_text(encoding="utf-8"))
+    artifact[field] = "tampered provenance"
+    artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
+    reseal_artifact(root, artifact_name)
+    with pytest.raises(ArtifactIntegrityError, match="provenance"):
+        ArtifactRepository(root).load_json(key)
+
+
+@pytest.mark.parametrize("mutation", ["source", "release", "files", "file_entry"])
+def test_repository_rejects_tampered_upstream_source_manifest(
+    tmp_path: Path, mutation: str
+) -> None:
+    source = Path(__file__).resolve().parents[2] / "data"
+    root = tmp_path / "data"
+    copy_api_data(source, root)
+    manifest_path = root / "manifests" / "nhanes-2017-2018-patient-need.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if mutation == "source":
+        manifest["source"] = "tampered source"
+    elif mutation == "release":
+        manifest["release"] = "tampered release"
+    elif mutation == "files":
+        manifest["files"] = []
+    else:
+        manifest["files"][0]["sha256"] = "not-a-sha256"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    with pytest.raises(ArtifactIntegrityError, match="source manifest"):
+        ArtifactRepository(root).load_json("patient_need")
 
 
 @pytest.mark.parametrize(
@@ -359,7 +448,7 @@ def test_trial_dimension_requires_semantic_key(
 ) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
-    shutil.copytree(source, root)
+    copy_api_data(source, root)
     artifact = root / "processed" / "clinicaltrials_ckd_landscape.json"
     payload = json.loads(artifact.read_text(encoding="utf-8"))
     payload[dimension][0].pop(field, None)
@@ -376,7 +465,7 @@ def test_trial_dimension_requires_semantic_key(
 def test_phase_or_type_requires_phase_or_study_type(tmp_path: Path) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
-    shutil.copytree(source, root)
+    copy_api_data(source, root)
     artifact = root / "processed" / "clinicaltrials_ckd_landscape.json"
     payload = json.loads(artifact.read_text(encoding="utf-8"))
     payload["phase_or_type"][0].pop("phase", None)
@@ -402,7 +491,7 @@ def test_phase_or_type_requires_phase_or_study_type(tmp_path: Path) -> None:
 def test_api_rejects_malformed_checksum_sidecars(tmp_path: Path, checksum_text: str) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
-    shutil.copytree(source, root)
+    copy_api_data(source, root)
     sidecar = root / "processed" / "patient_need_summary.sha256"
     sidecar.write_text(checksum_text, encoding="utf-8")
     response = TestClient(create_app(CKDAnalyticsService(ArtifactRepository(root)))).get(

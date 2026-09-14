@@ -5,6 +5,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, cast
+from urllib.parse import urlparse
 
 from pydantic import TypeAdapter, ValidationError
 
@@ -35,6 +36,15 @@ class Artifact:
     manifest: dict[str, Any]
 
 
+@dataclass(frozen=True, slots=True)
+class ArtifactContract:
+    """Canonical provenance contract for one API artifact."""
+
+    source: str
+    release: str
+    source_manifest: str | None = None
+
+
 _ARTIFACTS: dict[str, tuple[str, str]] = {
     "patient_need": ("patient_need_summary.json", "patient_need_summary.json"),
     "patient_finding": (
@@ -45,6 +55,23 @@ _ARTIFACTS: dict[str, tuple[str, str]] = {
     "partd": ("partd_2024_ckd_therapy_landscape.json", "partd_2024_ckd_therapy_landscape.json"),
     "trials": ("clinicaltrials_ckd_landscape.json", "clinicaltrials_ckd_landscape.json"),
 }
+_ARTIFACT_CONTRACTS: dict[str, ArtifactContract] = {
+    "patient_need": ArtifactContract(
+        source="CDC/NCHS NHANES",
+        release="2017-2018",
+        source_manifest="data/manifests/nhanes-2017-2018-patient-need.json",
+    ),
+    "patient_finding": ArtifactContract(
+        source="CDC/NCHS NHANES",
+        release="2017-2018",
+        source_manifest="data/manifests/nhanes-2017-2018-patient-need.json",
+    ),
+    "meps": ArtifactContract(source="MEPS / AHRQ", release="HC-243-2022"),
+    "partd": ArtifactContract(
+        source="CMS Medicare Part D Prescribers by Provider and Drug", release="2024"
+    ),
+    "trials": ArtifactContract(source="ClinicalTrials.gov", release="api-v2"),
+}
 _EXPECTED_EVIDENCE_TYPE = "public_observed"
 _TRIAL_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     "geography": ("country",),
@@ -54,9 +81,9 @@ _TRIAL_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     "change_over_time": ("update_year",),
 }
 _ALLOWED_SOURCE_MANIFESTS = frozenset(
-    {
-        "data/manifests/nhanes-2017-2018-patient-need.json",
-    }
+    contract.source_manifest
+    for contract in _ARTIFACT_CONTRACTS.values()
+    if contract.source_manifest is not None
 )
 _REQUIRED_KEYS: dict[str, frozenset[str]] = {
     "patient_need": frozenset({"waterfall", "estimates", "evidence_type", "limitations"}),
@@ -83,6 +110,7 @@ _REQUIRED_KEYS: dict[str, frozenset[str]] = {
             "intended_use",
             "scorer",
             "evidence_type",
+            "source_provenance",
         }
     ),
     "meps": frozenset({"estimates", "evidence_type", "limitations"}),
@@ -125,7 +153,9 @@ class ArtifactRepository:
         return computed
 
     @staticmethod
-    def _validate_payload(key: str, payload: object) -> dict[str, Any]:
+    def _validate_payload(
+        key: str, payload: object, contract: ArtifactContract
+    ) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ArtifactIntegrityError("artifact JSON must be an object")
         required = _REQUIRED_KEYS[key]
@@ -176,6 +206,19 @@ class ArtifactRepository:
             ):
                 raise ArtifactIntegrityError("artifact estimate schema is invalid")
         if key == "patient_finding":
+            source = payload.get("source")
+            provenance = payload.get("source_provenance")
+            if (
+                not isinstance(source, str)
+                or contract.source not in source
+                or contract.release not in source
+                or not isinstance(provenance, dict)
+                or provenance.get("source") != contract.source
+                or provenance.get("release") != contract.release
+                or provenance.get("path") != contract.source_manifest
+                or provenance.get("evidence_type") != _EXPECTED_EVIDENCE_TYPE
+            ):
+                raise ArtifactIntegrityError("artifact payload provenance is invalid")
             models = payload.get("models")
             subgroups = payload.get("subgroups")
             if not isinstance(models, dict) or not models or not all(
@@ -258,10 +301,58 @@ class ArtifactRepository:
             raise ArtifactIntegrityError("artifact member schema is invalid") from error
         return cast(dict[str, Any], payload)
 
+    @staticmethod
+    def _validate_source_manifest(
+        source_manifest: object, contract: ArtifactContract, path: Path
+    ) -> None:
+        if source_manifest != contract.source_manifest:
+            raise ArtifactIntegrityError("artifact source manifest semantics are invalid")
+        try:
+            source_obj = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError, TypeError) as error:
+            raise ArtifactIntegrityError("source manifest is unreadable") from error
+        if not isinstance(source_obj, dict):
+            raise ArtifactIntegrityError("source manifest JSON must be an object")
+        if (
+            source_obj.get("source") != contract.source
+            or source_obj.get("release") != contract.release
+        ):
+            raise ArtifactIntegrityError("source manifest provenance is invalid")
+        files = source_obj.get("files")
+        if not isinstance(files, list) or not files:
+            raise ArtifactIntegrityError("source manifest files are invalid")
+        names: set[str] = set()
+        for item in files:
+            if not isinstance(item, dict):
+                raise ArtifactIntegrityError("source manifest file entry is invalid")
+            name = item.get("name")
+            url = item.get("url")
+            digest = item.get("sha256")
+            size = item.get("bytes")
+            parsed = urlparse(url) if isinstance(url, str) else None
+            if (
+                not isinstance(name, str)
+                or not name.strip()
+                or name in names
+                or Path(name).name != name
+                or parsed is None
+                or parsed.scheme != "https"
+                or not parsed.netloc
+                or not isinstance(digest, str)
+                or len(digest) != 64
+                or any(char not in "0123456789abcdef" for char in digest)
+                or isinstance(size, bool)
+                or not isinstance(size, int)
+                or size <= 0
+            ):
+                raise ArtifactIntegrityError("source manifest file entry is invalid")
+            names.add(name)
+
     def load_json(self, key: str) -> Artifact:
         if key not in _ARTIFACTS:
             raise ArtifactIntegrityError("artifact is not allowlisted")
         name, manifest_name = _ARTIFACTS[key]
+        contract = _ARTIFACT_CONTRACTS[key]
         path = (self.data_root / "processed" / name).resolve()
         checksum = path.with_suffix(".sha256")
         manifest_path = (self.data_root / "manifests" / manifest_name).resolve()
@@ -269,7 +360,9 @@ class ArtifactRepository:
             if self.data_root not in path.parents or self.data_root not in manifest_path.parents:
                 raise ArtifactIntegrityError("artifact path is outside the data root")
             digest = self._verify_checksum(path, checksum)
-            payload = self._validate_payload(key, json.loads(path.read_text(encoding="utf-8")))
+            payload = self._validate_payload(
+                key, json.loads(path.read_text(encoding="utf-8")), contract
+            )
             manifest_obj = json.loads(manifest_path.read_text(encoding="utf-8"))
             if not isinstance(manifest_obj, dict):
                 raise ArtifactIntegrityError("artifact manifest JSON must be an object")
@@ -292,12 +385,14 @@ class ArtifactRepository:
             raise ArtifactIntegrityError("artifact manifest schema is incomplete")
         if manifest["evidence_type"] != _EXPECTED_EVIDENCE_TYPE:
             raise ArtifactIntegrityError("artifact manifest evidence classification is invalid")
+        if manifest["source"] != contract.source or manifest["release"] != contract.release:
+            raise ArtifactIntegrityError("artifact manifest provenance is invalid")
         source_manifest = manifest.get("source_manifest")
-        requires_source_manifest = key in {"patient_need", "patient_finding"}
-        if requires_source_manifest and source_manifest not in _ALLOWED_SOURCE_MANIFESTS:
+        if contract.source_manifest is None:
+            if "source_manifest" in manifest:
+                raise ArtifactIntegrityError("artifact source manifest semantics are invalid")
+        elif source_manifest not in _ALLOWED_SOURCE_MANIFESTS:
             raise ArtifactIntegrityError("artifact source manifest is required")
-        if source_manifest is not None and source_manifest not in _ALLOWED_SOURCE_MANIFESTS:
-            raise ArtifactIntegrityError("artifact source manifest path is invalid")
         declared = manifest.get("artifact_sha256")
         if not isinstance(declared, str) or declared != digest:
             raise ArtifactIntegrityError("artifact manifest digest is stale")
@@ -309,15 +404,35 @@ class ArtifactRepository:
             raise ArtifactIntegrityError("artifact manifest path is stale")
         if payload.get("evidence_type") != _EXPECTED_EVIDENCE_TYPE:
             raise ArtifactIntegrityError("artifact evidence classification is invalid")
-        if source_manifest is not None:
-            if source_manifest not in _ALLOWED_SOURCE_MANIFESTS:
-                raise ArtifactIntegrityError("source manifest path is invalid")
-            source_path = (self.data_root.parent / source_manifest).resolve()
+        if key == "patient_need":
             if (
-                source_path != (self.data_root.parent / source_manifest)
-                or not source_path.is_file()
+                payload.get("source_release") != contract.release
+                or payload.get("source_manifest") != contract.source_manifest
             ):
+                raise ArtifactIntegrityError("artifact payload provenance is invalid")
+        elif (
+            (
+                key == "patient_finding"
+                and (
+                    contract.source not in str(payload.get("source", ""))
+                    or contract.release not in str(payload.get("source", ""))
+                )
+            )
+            or (
+                key not in {"patient_finding"}
+                and (
+                    payload.get("source") != contract.source
+                    or payload.get("release") != contract.release
+                )
+            )
+        ):
+            raise ArtifactIntegrityError("artifact payload provenance is invalid")
+        if contract.source_manifest is not None:
+            source_path = (self.data_root.parent / contract.source_manifest).resolve()
+            expected_source_path = self.data_root.parent / contract.source_manifest
+            if source_path != expected_source_path or not source_path.is_file():
                 raise ArtifactIntegrityError("source manifest is unavailable")
+            self._validate_source_manifest(source_manifest, contract, source_path)
         return Artifact(key, path, manifest_path, digest, payload, manifest)
 
     def load_synpuf(self) -> tuple[Path, dict[str, Any]]:
