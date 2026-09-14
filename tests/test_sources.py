@@ -54,4 +54,3 @@ def test_checksum_authenticates_committed_registry_metadata(source: SourceRecord
 
     assert re.fullmatch(r"[0-9a-f]{64}", source.checksum)
     assert source.checksum == actual_checksum
-

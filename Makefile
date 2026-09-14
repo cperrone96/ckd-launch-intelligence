@@ -16,4 +16,3 @@ compose-config:
 	docker compose config --quiet
 
 check: test lint typecheck compose-config
-
