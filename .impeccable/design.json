@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "world": "clinical-review-ledger",
+  "mode": "operate",
+  "tokens": {
+    "color": {
+      "ink": "#142033",
+      "muted": "#5f6d80",
+      "paper": "#f7f8fb",
+      "panel": "#ffffff",
+      "line": "#d9e0ea",
+      "navigation": "#142a4a",
+      "signal": "#b64b36",
+      "calm": "#e7eef8",
+      "good": "#2e6b5b"
+    },
+    "space": {
+      "page": "clamp(22px, 5vw, 72px)",
+      "section": "38px",
+      "panel": "20px",
+      "gap": "14px"
+    },
+    "type": {
+      "family": "Inter, ui-sans-serif, system-ui, sans-serif",
+      "body_measure": "65-75ch",
+      "display_tracking": "-0.035em"
+    },
+    "accessibility": {
+      "body_contrast": "4.5:1 minimum",
+      "focus": "3px signal outline",
+      "chart_alternative": "semantic table and text summary"
+    }
+  },
+  "evidence": {
+    "desktop": ".impeccable/review/desktop.png",
+    "mobile": ".impeccable/review/mobile.png",
+    "synthetic_desktop": ".impeccable/review/synthetic-desktop.png",
+    "patient_finding_mobile": ".impeccable/review/patient-finding-mobile.png",
+    "detector": "unavailable: engine 0.1.5 could not be installed in this environment"
+  }
+}

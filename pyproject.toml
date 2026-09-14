@@ -18,6 +18,8 @@ dependencies = [
   "fastapi>=0.115,<1",
   "httpx>=0.27,<1",
   "uvicorn>=0.30,<1",
+  "dash>=3,<4",
+  "plotly>=5.24,<7",
 ]
 
 [project.optional-dependencies]
@@ -54,3 +56,7 @@ select = ["E", "F", "I", "UP", "B", "SIM"]
 python_version = "3.12"
 strict = true
 files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["dash", "dash.*"]
+ignore_missing_imports = true
