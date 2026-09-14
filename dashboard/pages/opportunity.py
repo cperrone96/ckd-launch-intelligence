@@ -10,6 +10,29 @@ from .common import accessible_table, evidence_header, limitation, page_shell
 def render(data: dict[str, Any]) -> html.Main:
     opportunity = data.get("opportunity", {})
     evidence = opportunity.get("evidence", [])
+    panel_cards = []
+    for title, panel in opportunity.get("source_panels", {}).items():
+        if not isinstance(panel, dict):
+            continue
+        rows = panel.get("items", [])
+        total = panel.get("total", len(rows) if isinstance(rows, list) else 0)
+        complete = panel.get("pagination_complete", False)
+        panel_cards.append(
+            html.Div(
+                [
+                    html.P(
+                        f"{total} source-specific rows · "
+                        f"{'complete panel' if complete else 'partial panel'}",
+                        className="table-note",
+                    ),
+                    accessible_table(
+                        rows if isinstance(rows, list) else [],
+                        title=title.replace("_", " ").title(),
+                        limit=10,
+                    ),
+                ]
+            )
+        )
     return page_shell(
         "Opportunity, with the composite withheld",
         (
@@ -28,12 +51,7 @@ def render(data: dict[str, Any]) -> html.Main:
             html.Section(
                 [
                     html.H2("Source-specific panels"),
-                    html.Div(
-                        [
-                            accessible_table(rows, title=title.replace("_", " ").title(), limit=10)
-                            for title, rows in opportunity.get("source_panels", {}).items()
-                        ]
-                    ),
+                    html.Div(panel_cards),
                 ],
                 className="section",
             ),

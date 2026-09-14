@@ -5,7 +5,8 @@ import json
 import pytest
 from flask.testing import FlaskClient
 
-from dashboard.app import create_dashboard
+from dashboard.api_client import DashboardAPI
+from dashboard.app import _page, create_dashboard
 
 
 @pytest.fixture()
@@ -61,3 +62,26 @@ def test_api_error_and_empty_states_are_explicit() -> None:
     assert "Loading" in json.dumps(loading_state())
     with pytest.raises(DashboardAPIError):
         DashboardAPI(base_url="http://127.0.0.1:1").get("/does-not-exist")
+
+
+def test_every_dashboard_callback_renders_against_current_api_contract() -> None:
+    api = DashboardAPI()
+    for path in (
+        "/",
+        "/patient-need",
+        "/patient-finding",
+        "/care-and-prescribing",
+        "/trials",
+        "/opportunity",
+        "/synthetic-journeys",
+    ):
+        rendered = _page(path, api)
+        assert rendered is not None
+
+
+def test_opportunity_callback_uses_complete_typed_panels() -> None:
+    rendered = _page("/opportunity", DashboardAPI())
+    body = json.dumps(rendered.to_plotly_json(), default=str)
+    assert "220 source-specific rows" in body
+    assert "110 source-specific rows" in body
+    assert body.count("complete panel") >= 2
