@@ -44,5 +44,8 @@ docker compose up -d postgres
 
 Task 1 includes only small committed registry-metadata fixtures, not downloaded
 source rows. Each `SourceRecord.checksum` is the SHA-256 digest of the corresponding
-fixture bytes. Later ingestion will create separate manifests that authenticate
-downloaded public-data snapshots.
+fixture bytes. Tasks 2 and 5 commit dated manifests and checksums for the public
+observed aggregate artifacts; Task 6 commits a separate manifest and checksum for
+the handcrafted `public_synthetic` journey fixture. These manifests authenticate
+the bytes and preserve the evidence boundary without representing the fixture as
+official CMS rows.

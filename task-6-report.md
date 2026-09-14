@@ -3,7 +3,8 @@
 ## Scope
 
 Implemented the CKD plan's synthetic claims journey and time-to-event demonstration
-on branch `feature/ckd-task6`, based on approved Task 4 commit `8d68c0e`.
+on the integrated primary branch `feature/ckd-launch-intelligence`, covering the
+Task 6 commit range `16a8e43` through `93955fa`.
 
 ## Delivered
 
@@ -69,14 +70,17 @@ on branch `feature/ckd-task6`, based on approved Task 4 commit `8d68c0e`.
 ## Verification
 
 - Primary Python 3.12 environment: `/Users/christinaperrone/Documents/Claude/Projects/Data Design Dynamics/portfolio-projects/ckd-launch-intelligence/.venv/bin/python`.
-- Full test command (`PYTHONPATH=/private/tmp/ckd-task6-worktree/src python -m pytest -q`):
-  **145 passed, 1 skipped**. The only skip is PostgreSQL because `psycopg` is not
-  installed/configured in this environment.
+- Full test command (`.venv/bin/python -m pytest -q`): **180 passed, 2 skipped**.
+  The optional skips are PostgreSQL contracts because a configured PostgreSQL
+  service is not available in this environment.
+- The current primary branch adds two adversarial provenance tests beyond that
+  integrated Task 5/6 range; rerunning the full suite after this hardening passes
+  **182 tests with the same 2 optional PostgreSQL skips**.
 - Executable SQL command for DuckDB: **1 passed**. It reconciled all six scenarios,
   including same-session and fresh-session reruns. PostgreSQL test is intentionally
   skipped only because its optional driver/database is unavailable.
 - `python -m ruff check .`: **All checks passed**.
-- `python -m mypy`: **Success: no issues found in 40 source files**.
+- `python -m mypy`: **Success: no issues found in 50 source files**.
 - Notebook code executed twice manually with deterministic outputs. Standard
   `nbconvert --execute` was also attempted but the sandbox disallows Jupyter's local
   kernel socket bind; the notebook's code cells themselves passed both runs.
@@ -91,4 +95,6 @@ on branch `feature/ckd-task6`, based on approved Task 4 commit `8d68c0e`.
 
 ## Commit
 
-The implementation is committed on `feature/ckd-task6` after the local static checks.
+The implementation is integrated on `feature/ckd-launch-intelligence`; the
+combined primary-branch verification above covers the Task 5/6 seam and the
+current source/test tree.

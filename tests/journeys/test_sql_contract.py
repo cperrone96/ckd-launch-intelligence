@@ -8,6 +8,7 @@ import pandas as pd
 import pytest
 
 from ckd_intelligence.journeys.synpuf import build_journey_output
+from journeys.provenance import load_verified_synpuf_fixture
 
 FIXTURE = Path(__file__).parents[2] / "data" / "fixtures" / "synpuf_journeys.csv"
 SQL = (Path(__file__).parents[2] / "sql" / "marts" / "mart_synpuf_journeys.sql").read_text()
@@ -56,7 +57,7 @@ SURVIVAL_COLUMNS = [
 
 
 def _claims() -> pd.DataFrame:
-    return pd.read_csv(FIXTURE)
+    return load_verified_synpuf_fixture()
 
 
 def _adversarial_ties() -> pd.DataFrame:

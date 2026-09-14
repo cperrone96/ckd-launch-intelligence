@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import shutil
 from pathlib import Path
 
 import pandas as pd
@@ -12,13 +14,44 @@ from ckd_intelligence.journeys.synpuf import (
     validate_journey_order,
 )
 from ckd_intelligence.statistics.time_to_event import kaplan_meier
+from journeys.provenance import load_verified_synpuf_fixture
 
 FIXTURE = Path(__file__).parents[2] / "data" / "fixtures" / "synpuf_journeys.csv"
 
 
 @pytest.fixture()
 def claims() -> pd.DataFrame:
-    return pd.read_csv(FIXTURE)
+    return load_verified_synpuf_fixture()
+
+
+def test_synpuf_manifest_rejects_changed_bytes_and_metadata(tmp_path: Path) -> None:
+    manifest_path = tmp_path / "manifest.json"
+    fixture_path = tmp_path / "synpuf_journeys.csv"
+    shutil.copyfile(FIXTURE, fixture_path)
+    manifest = json.loads(
+        (FIXTURE.parent.parent / "manifests" / "synpuf-journeys-fixture.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    load_verified_synpuf_fixture(manifest_path, fixture_path)
+
+    fixture_path.write_bytes(fixture_path.read_bytes() + b"\n")
+    with pytest.raises(AssertionError, match="fixture_sha256"):
+        load_verified_synpuf_fixture(manifest_path, fixture_path)
+
+    shutil.copyfile(FIXTURE, fixture_path)
+    for field, value in (
+        ("evidence_type", "public_observed"),
+        ("fixture_kind", "official_extract"),
+        ("source_rows_are_official", True),
+        ("no_cross_source_join", False),
+    ):
+        changed = dict(manifest)
+        changed[field] = value
+        manifest_path.write_text(json.dumps(changed), encoding="utf-8")
+        with pytest.raises(AssertionError, match=field):
+            load_verified_synpuf_fixture(manifest_path, fixture_path)
 
 
 def test_journey_events_are_chronological(claims: pd.DataFrame) -> None:
