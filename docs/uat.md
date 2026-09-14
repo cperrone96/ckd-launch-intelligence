@@ -1,7 +1,7 @@
 # UAT and release gate
 
 Release review date: 2026-09-11. The review covers release commits through
-`4fdd07d`; subsequent documentation-only commits do not expand that reviewed range.
+`8d72a22`; subsequent documentation-only commits do not expand that reviewed range.
 
 ## Automated gate
 
@@ -13,7 +13,7 @@ The offline gate is:
 .venv/bin/pytest -q
 ```
 
-The current result is **280 passed, 2 skipped**. The two skips are explicit
+The current result is **285 passed, 2 skipped**. The two skips are explicit
 PostgreSQL integration contracts because no PostgreSQL URL is configured. Ruff is
 clean and strict mypy reports no issues across 73 source files. The test suite uses
 committed fixtures and artifacts; it does not call source websites.
