@@ -67,16 +67,22 @@ nonfinite, unknown-category, and out-of-range values.
 - Development operating reference: 0.39835, selected only from grouped out-of-fold
   logistic-regression predictions. The deterministic policy selects exactly 402 of
   4,023 development observations (9.99%) and never exceeds capacity.
+- The recorded scalar value is only a probability boundary. If equal scores cross
+  the capacity boundary, a scalar cannot encode exact selection and the API raises;
+  callers must use the deterministic ranked-mask interface.
 - Capacity-matched holdout comparison: each model ranks holdout probabilities
   without using holdout labels, then selects exactly 99 of 993 observations. Ties
   resolve by descending probability followed by stable row order, so capacity is
   never exceeded. Realized probability boundaries differ by model.
 - Holdout use: the holdout is evaluated once after preprocessing, model fitting,
   pre-specifying the primary model, and creating the development operating reference.
-- Uncertainty: 1,000 deterministic percentile bootstrap replicates resample the six
-  holdout survey clusters with replacement. These intervals quantify sampling
-  variation within this split but remain imprecise because only six holdout clusters
-  are available.
+- Uncertainty: 1,000 deterministic percentile bootstrap replicates resample the full
+  holdout by its six survey clusters with replacement. Within every replicate, each
+  model is reranked and a new exact-capacity mask is computed before overall and
+  subgroup metrics are measured. Fractional capacity is rounded to the nearest whole
+  observation for that replicate (minimum one), and selected count always equals the
+  resulting requested count. These intervals quantify sampling variation within this
+  split but remain imprecise because only six holdout clusters are available.
 
 This grouped approach reduces direct cluster leakage. With only 30 public survey
 clusters, one split can still be variable and should not be treated as external
@@ -88,18 +94,20 @@ PR-AUC is interpreted against the held-out prevalence reference of 0.1863.
 
 | Model | ROC-AUC (95% CI) | PR-AUC (95% CI) | Brier (95% CI) | Precision (95% CI) | Recall (95% CI) |
 |---|---:|---:|---:|---:|---:|
-| Prevalence/no-skill | 0.5000 (0.5000–0.5000) | 0.1863 (0.1617–0.2100) | 0.1516 (0.1362–0.1664) | 0.2222 (0.1644–0.3205) | 0.1189 (0.1071–0.1300) |
-| Logistic regression | 0.7550 (0.7081–0.7809) | 0.4625 (0.3903–0.5135) | 0.1300 (0.1196–0.1388) | 0.5354 (0.4724–0.6027) | 0.2865 (0.2276–0.3407) |
-| Random forest | 0.7433 (0.7065–0.7723) | 0.4505 (0.3713–0.5155) | 0.1293 (0.1188–0.1372) | 0.5455 (0.4766–0.6211) | 0.2919 (0.2345–0.3547) |
+| Prevalence/no-skill | 0.5000 (0.5000–0.5000) | 0.1863 (0.1617–0.2100) | 0.1516 (0.1362–0.1664) | 0.2222 (0.1327–0.2604) | 0.1189 (0.0726–0.1412) |
+| Logistic regression | 0.7550 (0.7081–0.7809) | 0.4625 (0.3903–0.5135) | 0.1300 (0.1196–0.1388) | 0.5354 (0.4811–0.5914) | 0.2865 (0.2605–0.3200) |
+| Random forest | 0.7433 (0.7065–0.7723) | 0.4505 (0.3713–0.5155) | 0.1293 (0.1188–0.1372) | 0.5455 (0.4395–0.6344) | 0.2919 (0.2611–0.3155) |
 
 Precision, recall, and confusion matrices use the same exact 99-observation capacity
 for every model. The no-skill scores are all tied, so its selected set is an explicit,
-deterministic ordering reference rather than a meaningful ranking.
+deterministic ordering reference rather than a meaningful ranking. Its capacity
+precision and recall depend on arbitrary stable row order; they are not estimates of
+expected random-ranking performance.
 
 At the capacity-matched boundary of 0.38224, logistic regression flags exactly 99 of
 993 held-out observations (9.97%):
 
-| | Predicted below threshold | Predicted at/above threshold |
+| | Not selected | Selected by exact-capacity rank |
 |---|---:|---:|
 | Indicator negative | 762 | 46 |
 | Indicator positive | 132 | 53 |
@@ -136,7 +144,8 @@ better used to demonstrate honest diagnostics than to imply clinical readiness.
 
 ## Subgroup diagnostics
 
-These are descriptive holdout checks using the same frozen threshold.
+These are descriptive checks of the logistic model's holdout-specific,
+exact-capacity ranked mask, not applications of the development boundary.
 
 | Dimension | Group | n | Events | Precision | Recall | Brier |
 |---|---|---:|---:|---:|---:|---:|
@@ -146,8 +155,13 @@ These are descriptive holdout checks using the same frozen threshold.
 | Sex | Female | 515 | 98 | 0.5000 | 0.2857 | 0.1312 |
 | Sex | Male | 478 | 87 | 0.5814 | 0.2874 | 0.1287 |
 
-Cluster-bootstrap uncertainty is included for subgroup precision, recall, and Brier
-score in the JSON artifact; intervals carry an explicit six-cluster limitation.
+Cluster-bootstrap uncertainty is included where estimable for subgroup precision,
+recall, and Brier score in the JSON artifact. Each full-holdout replicate is reranked
+at exact capacity before its subgroup is measured. Sparse, one-cluster, and undefined
+metric intervals are `null` and carry an explicit caveat instead of a degenerate
+interval. In particular, the 18-event age 18–39 subgroup is treated as sparse, so
+all three of its uncertainty intervals are unavailable rather than reported as
+zero-width estimates.
 The model flags no one in either younger age band at this capacity threshold. That
 is an important operational limitation, not evidence that screening is unnecessary
 in those groups. Age is the strongest available signal, so the model largely
@@ -175,10 +189,13 @@ a semantic version, required-field types/ranges/categories, explicit reject poli
 for missing and unknown inputs, float64 coefficient precision, ordered features and
 categories, the logistic intercept and coefficients, development-fitted scaling,
 aggregate metrics, uncertainty, split counts, limitations, and subgroup diagnostics.
-It embeds the Task 3 source-manifest path, release, retrieval date, URLs, byte counts,
-and SHA-256 digests. A validated loader rejects inconsistent or tampered contracts,
-and full-vector tests reproduce the fitted pipeline's holdout probabilities to
-numerical tolerance. It contains no participant rows or identifiers.
+For public-observed execution, it embeds the Task 3 source-manifest path, release,
+retrieval date, URLs, byte counts, and SHA-256 digests. Fixture execution instead
+identifies and hashes the actual fixture CSV. Required numeric inputs and numeric
+artifact fields must be JSON numbers; numeric strings are rejected. A validated
+loader rejects inconsistent or tampered contracts, and full-vector tests reproduce
+the fitted pipeline's holdout probabilities to numerical tolerance. It contains no
+participant rows or identifiers.
 
 Run:
 

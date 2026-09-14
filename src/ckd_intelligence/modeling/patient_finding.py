@@ -70,6 +70,10 @@ class FeatureValidationError(ValueError):
     """Raised when model features or scoring input violate the documented contract."""
 
 
+class CapacityBoundaryError(ValueError):
+    """Raised when a scalar threshold cannot represent an exact tied capacity."""
+
+
 @dataclass(frozen=True, slots=True)
 class CalibrationBin:
     mean_probability: float
@@ -134,7 +138,7 @@ class SubgroupMetrics:
     brier_score: float
     precision_interval: UncertaintyInterval | None
     recall_interval: UncertaintyInterval | None
-    brier_interval: UncertaintyInterval
+    brier_interval: UncertaintyInterval | None
     caveat: str | None
 
 
@@ -191,10 +195,9 @@ class LogisticScorer:
             if value is None or (isinstance(value, float) and math.isnan(value)):
                 raise FeatureValidationError(f"{name} must be present for scoring")
             if name in NUMERIC_FEATURES:
-                try:
-                    number = float(value)  # type: ignore[arg-type]
-                except (TypeError, ValueError) as exc:
-                    raise FeatureValidationError(f"{name} must be numeric") from exc
+                if not _is_json_number(value):
+                    raise FeatureValidationError(f"{name} must be a JSON number")
+                number = float(cast(float | int, value))
                 if not math.isfinite(number):
                     raise FeatureValidationError(f"{name} must be finite")
                 lower, upper = _numeric_range(name)
@@ -323,6 +326,14 @@ class LogisticScorer:
             intercept = float(cast(float | int | str, payload["intercept"]))
         except (TypeError, ValueError) as exc:
             raise FeatureValidationError("scorer artifact contains invalid field types") from exc
+        raw_numeric_values: list[object] = [
+            *cast(dict[object, object], payload["numeric_means"]).values(),
+            *cast(dict[object, object], payload["numeric_scales"]).values(),
+            *cast(list[object], payload["coefficients"]),
+            payload["intercept"],
+        ]
+        if any(not _is_json_number(value) for value in raw_numeric_values):
+            raise FeatureValidationError("scorer numeric fields must be JSON numbers")
         if not feature_order or len(set(feature_order)) != len(feature_order):
             raise FeatureValidationError("feature_order must contain unique fields")
         if set(feature_order) - set(PRE_LAB_FEATURES):
@@ -455,6 +466,10 @@ class ModelComparison:
 def _looks_like_leakage(column: str) -> bool:
     normalized = column.strip().casefold().replace("-", "_").replace(" ", "_")
     return any(token in normalized for token in LEAKAGE_TOKENS)
+
+
+def _is_json_number(value: object) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
 
 
 def _numeric_range(name: str) -> tuple[float, float]:
@@ -599,7 +614,11 @@ def _bootstrap_indices(
 def select_capacity_decision(
     probabilities: Sequence[float], capacity: float | int
 ) -> CapacityDecision:
-    """Select exactly the allowed count with a deterministic tie-break."""
+    """Select exactly the allowed count with a deterministic tie-break.
+
+    Fractional capacity is rounded to the nearest whole observation for the current
+    sample, with a minimum of one and a maximum of the sample size.
+    """
 
     values = np.asarray(probabilities, dtype=float)
     if len(values) == 0 or not np.isfinite(values).all():
@@ -623,8 +642,8 @@ def select_capacity_decision(
 def _metric_intervals(
     y: np.ndarray,
     probabilities: np.ndarray,
-    predicted: np.ndarray,
     groups: np.ndarray,
+    capacity: float | int,
     *,
     replicates: int,
     random_state: int,
@@ -640,7 +659,8 @@ def _metric_intervals(
     for positions in samples:
         sample_y = y[positions]
         sample_p = probabilities[positions]
-        sample_predicted = predicted[positions]
+        sample_decision = select_capacity_decision(sample_p.tolist(), capacity)
+        sample_predicted = np.asarray(sample_decision.selected, dtype=bool)
         if len(np.unique(sample_y)) == 2:
             values["roc_auc"].append(float(roc_auc_score(sample_y, sample_p)))
             values["pr_auc"].append(float(average_precision_score(sample_y, sample_p)))
@@ -695,8 +715,8 @@ def _metrics(
     intervals = _metric_intervals(
         y,
         probabilities,
-        predicted,
         groups,
+        capacity,
         replicates=replicates,
         random_state=random_state,
     )
@@ -742,9 +762,22 @@ def _capacity_count(total: int, capacity: float | int) -> int:
 
 
 def select_operating_threshold(report: ModelComparison, capacity: float | int) -> float:
-    """Choose a capacity threshold only from out-of-fold development predictions."""
+    """Return the development boundary only when it uniquely encodes exact capacity.
 
-    return select_capacity_decision(report.selection_probabilities, capacity).threshold
+    A scalar threshold cannot express a partial selection among equal probabilities.
+    Call :func:`select_capacity_decision` when a deterministic exact-capacity mask is
+    required.
+    """
+
+    decision = select_capacity_decision(report.selection_probabilities, capacity)
+    values = np.asarray(report.selection_probabilities, dtype=float)
+    scalar_selected_count = int((values >= decision.threshold).sum())
+    if scalar_selected_count != decision.requested_count:
+        raise CapacityBoundaryError(
+            "boundary probability is tied; use select_capacity_decision for the "
+            "exact-capacity ranked mask"
+        )
+    return decision.threshold
 
 
 def _subgroups(
@@ -753,6 +786,7 @@ def _subgroups(
     probabilities: np.ndarray,
     selected: np.ndarray,
     groups: np.ndarray,
+    capacity: float | int,
     *,
     replicates: int,
     random_state: int,
@@ -777,25 +811,48 @@ def _subgroups(
             group_selected = selected[mask]
             group_clusters = groups[mask]
             positives = int(group_y.sum())
-            caveat = None
-            if len(group_y) < 30 or positives < 5 or len(group_y) - positives < 5:
-                caveat = (
-                    "Small subgroup/event count; metrics are descriptive and potentially unstable."
+            caveats: list[str] = []
+            if len(group_y) < 30 or positives < 20 or len(group_y) - positives < 20:
+                caveats.append(
+                    "Sparse subgroup (fewer than 20 events or non-events, or fewer "
+                    "than 30 records); metrics are descriptive and potentially unstable."
                 )
             predicted = group_selected
             if int(predicted.sum()) == 0:
-                no_flags = (
-                    "No records were flagged at the selected threshold; precision is undefined."
+                caveats.append(
+                    "No records were flagged by the holdout-specific exact-capacity "
+                    "ranked mask; precision is undefined."
                 )
-                caveat = f"{caveat} {no_flags}" if caveat else no_flags
-            intervals = _metric_intervals(
-                group_y,
-                group_p,
-                predicted,
-                group_clusters,
+            subgroup_cluster_count = len(set(str(item) for item in group_clusters))
+            sparse = (
+                len(group_y) < 30
+                or positives < 20
+                or len(group_y) - positives < 20
+                or subgroup_cluster_count < 2
+            )
+            if subgroup_cluster_count < 2:
+                caveats.append(
+                    "Fewer than two contributing clusters; uncertainty intervals "
+                    "are unavailable."
+                )
+            elif sparse:
+                caveats.append(
+                    "Sparse subgroup; uncertainty intervals are unavailable."
+                )
+            intervals = _subgroup_metric_intervals(
+                y,
+                probabilities,
+                groups,
+                values.to_numpy(dtype=object),
+                value,
+                capacity,
                 replicates=replicates,
                 random_state=random_state + len(records),
-            )
+            ) if not sparse else {"precision": None, "recall": None, "brier": None}
+            if int(predicted.sum()) == 0:
+                intervals["precision"] = None
+            if positives == 0:
+                intervals["recall"] = None
             records.append(
                 SubgroupMetrics(
                     group=dimension,
@@ -816,12 +873,66 @@ def _subgroups(
                     brier_score=float(brier_score_loss(group_y, group_p)),
                     precision_interval=intervals["precision"],
                     recall_interval=intervals["recall"],
-                    brier_interval=_required_interval(intervals, "brier"),
-                    caveat=caveat,
+                    brier_interval=intervals["brier"],
+                    caveat=" ".join(caveats) or None,
                 )
             )
         output[dimension] = tuple(records)
     return output
+
+
+def _subgroup_metric_intervals(
+    y: np.ndarray,
+    probabilities: np.ndarray,
+    groups: np.ndarray,
+    subgroup_values: np.ndarray,
+    subgroup_value: object,
+    capacity: float | int,
+    *,
+    replicates: int,
+    random_state: int,
+) -> dict[str, UncertaintyInterval | None]:
+    """Bootstrap the full holdout, rerank capacity, then measure one subgroup."""
+
+    original_mask = subgroup_values == subgroup_value
+    subgroup_clusters = len(set(str(item) for item in groups[original_mask]))
+    if subgroup_clusters < 2:
+        return {"precision": None, "recall": None, "brier": None}
+
+    samples = _bootstrap_indices(groups, replicates=replicates, random_state=random_state)
+    values: dict[str, list[float]] = {"precision": [], "recall": [], "brier": []}
+    for positions in samples:
+        sample_y = y[positions]
+        sample_p = probabilities[positions]
+        sample_subgroup = subgroup_values[positions] == subgroup_value
+        if not bool(sample_subgroup.any()):
+            continue
+        decision = select_capacity_decision(sample_p.tolist(), capacity)
+        sample_selected = np.asarray(decision.selected, dtype=bool)[sample_subgroup]
+        subgroup_y = sample_y[sample_subgroup]
+        subgroup_p = sample_p[sample_subgroup]
+        values["brier"].append(float(brier_score_loss(subgroup_y, subgroup_p)))
+        if int(sample_selected.sum()) > 0:
+            values["precision"].append(
+                float(precision_score(subgroup_y, sample_selected, zero_division=0))
+            )
+        if int(subgroup_y.sum()) > 0:
+            values["recall"].append(
+                float(recall_score(subgroup_y, sample_selected, zero_division=0))
+            )
+
+    return {
+        name: (
+            _percentile_interval(
+                metric_values,
+                requested=replicates,
+                cluster_count=subgroup_clusters,
+            )
+            if metric_values
+            else None
+        )
+        for name, metric_values in values.items()
+    }
 
 
 def _portable_scorer(pipeline: Pipeline, features: Sequence[str]) -> LogisticScorer:
@@ -1177,6 +1288,7 @@ def train_patient_finding_models(
             logistic_holdout,
             np.asarray(logistic_decision.selected, dtype=bool),
             holdout_group_array,
+            capacity,
             replicates=bootstrap_replicates,
             random_state=random_state + 40,
         ),

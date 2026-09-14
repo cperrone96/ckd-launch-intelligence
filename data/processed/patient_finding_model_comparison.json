@@ -104,8 +104,8 @@
       "precision_interval": {
         "caveat": "Only 6 holdout clusters; interval precision is limited.",
         "cluster_count": 6,
-        "high": 0.6027397260273972,
-        "low": 0.4724223740900312,
+        "high": 0.5913978494623656,
+        "low": 0.4811037735849057,
         "method": "holdout_cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -114,8 +114,8 @@
       "recall_interval": {
         "caveat": "Only 6 holdout clusters; interval precision is limited.",
         "cluster_count": 6,
-        "high": 0.34069900687547744,
-        "low": 0.22758620689655173,
+        "high": 0.32,
+        "low": 0.2604639050387597,
         "method": "holdout_cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -177,8 +177,8 @@
       "precision_interval": {
         "caveat": "Only 6 holdout clusters; interval precision is limited.",
         "cluster_count": 6,
-        "high": 0.3205246913580247,
-        "low": 0.16437233325847742,
+        "high": 0.2604166666666667,
+        "low": 0.1326530612244898,
         "method": "holdout_cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -187,8 +187,8 @@
       "recall_interval": {
         "caveat": "Only 6 holdout clusters; interval precision is limited.",
         "cluster_count": 6,
-        "high": 0.13000520833333334,
-        "low": 0.10714285714285714,
+        "high": 0.14124447310243182,
+        "low": 0.07262352736851246,
         "method": "holdout_cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -270,8 +270,8 @@
       "precision_interval": {
         "caveat": "Only 6 holdout clusters; interval precision is limited.",
         "cluster_count": 6,
-        "high": 0.6210668563300142,
-        "low": 0.47655319940476193,
+        "high": 0.6344338037634408,
+        "low": 0.4395089285714286,
         "method": "holdout_cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -280,8 +280,8 @@
       "recall_interval": {
         "caveat": "Only 6 holdout clusters; interval precision is limited.",
         "cluster_count": 6,
-        "high": 0.3547413793103448,
-        "low": 0.23448275862068965,
+        "high": 0.3155150576977202,
+        "low": 0.26108374384236455,
         "method": "holdout_cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -428,7 +428,8 @@
   "selected_threshold": 0.398348385969703,
   "selection_policy": "logistic_prespecified_before_holdout",
   "source": "Verified CDC/NCHS NHANES 2017-2018 public-use files",
-  "source_manifest": {
+  "source_provenance": {
+    "evidence_type": "public_observed",
     "files": [
       {
         "bytes": 3412720,
@@ -467,17 +468,9 @@
   "subgroups": {
     "age_band": [
       {
-        "brier_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.06459824219334187,
-          "low": 0.03645755559059979,
-          "method": "holdout_cluster_bootstrap_percentile",
-          "requested_replicates": 1000,
-          "valid_replicates": 1000
-        },
+        "brier_interval": null,
         "brier_score": 0.049643774481603266,
-        "caveat": "No records were flagged at the selected threshold; precision is undefined.",
+        "caveat": "Sparse subgroup (fewer than 20 events or non-events, or fewer than 30 records); metrics are descriptive and potentially unstable. No records were flagged by the holdout-specific exact-capacity ranked mask; precision is undefined. Sparse subgroup; uncertainty intervals are unavailable.",
         "group": "age_band",
         "n": 344,
         "positives": 18,
@@ -485,15 +478,7 @@
         "precision_interval": null,
         "prevalence": 0.05232558139534884,
         "recall": 0.0,
-        "recall_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.0,
-          "low": 0.0,
-          "method": "holdout_cluster_bootstrap_percentile",
-          "requested_replicates": 1000,
-          "valid_replicates": 1000
-        },
+        "recall_interval": null,
         "value": "18-39"
       },
       {
@@ -507,7 +492,7 @@
           "valid_replicates": 1000
         },
         "brier_score": 0.13737998988498348,
-        "caveat": "No records were flagged at the selected threshold; precision is undefined.",
+        "caveat": "No records were flagged by the holdout-specific exact-capacity ranked mask; precision is undefined.",
         "group": "age_band",
         "n": 316,
         "positives": 51,
@@ -545,8 +530,8 @@
         "precision_interval": {
           "caveat": "Only 6 holdout clusters; interval precision is limited.",
           "cluster_count": 6,
-          "high": 0.5949826459779501,
-          "low": 0.47244094488188976,
+          "high": 0.5909213098729228,
+          "low": 0.47787364798426746,
           "method": "holdout_cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
@@ -556,8 +541,8 @@
         "recall_interval": {
           "caveat": "Only 6 holdout clusters; interval precision is limited.",
           "cluster_count": 6,
-          "high": 0.5092592592592593,
-          "low": 0.4051670703904246,
+          "high": 0.625,
+          "low": 0.3695652173913043,
           "method": "holdout_cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
@@ -585,8 +570,8 @@
         "precision_interval": {
           "caveat": "Only 6 holdout clusters; interval precision is limited.",
           "cluster_count": 6,
-          "high": 0.6122448979591837,
-          "low": 0.391304347826087,
+          "high": 0.6078431372549019,
+          "low": 0.39654359141184126,
           "method": "holdout_cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
@@ -596,8 +581,8 @@
         "recall_interval": {
           "caveat": "Only 6 holdout clusters; interval precision is limited.",
           "cluster_count": 6,
-          "high": 0.3877551020408163,
-          "low": 0.1978021978021978,
+          "high": 0.35811021865238724,
+          "low": 0.21503456221198158,
           "method": "holdout_cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
@@ -623,8 +608,8 @@
         "precision_interval": {
           "caveat": "Only 6 holdout clusters; interval precision is limited.",
           "cluster_count": 6,
-          "high": 0.6888888888888889,
-          "low": 0.5,
+          "high": 0.6774193548387096,
+          "low": 0.4791666666666667,
           "method": "holdout_cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
@@ -634,8 +619,8 @@
         "recall_interval": {
           "caveat": "Only 6 holdout clusters; interval precision is limited.",
           "cluster_count": 6,
-          "high": 0.3402116692257074,
-          "low": 0.20588235294117646,
+          "high": 0.36470588235294116,
+          "low": 0.24324324324324326,
           "method": "holdout_cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
