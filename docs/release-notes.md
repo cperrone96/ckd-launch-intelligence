@@ -37,7 +37,7 @@ employer, client, or proprietary business data.
 
 ### Verification
 
-The release gate passed with 257 tests passing and two explicit PostgreSQL skips;
+The release gate passed with 280 tests passing and two explicit PostgreSQL skips;
 Ruff and strict mypy were clean. The committed review captures are under
 `.impeccable/review/`. CI validates artifacts, OpenAPI/tests, static checks, and
 notebook smoke execution without downloading source rows.
