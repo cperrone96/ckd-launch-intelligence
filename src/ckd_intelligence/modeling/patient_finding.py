@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import json
 import math
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import asdict, dataclass
 from typing import Any, cast
 
@@ -17,7 +17,6 @@ import pandas as pd
 from sklearn.base import clone  # type: ignore[import-untyped]
 from sklearn.compose import ColumnTransformer  # type: ignore[import-untyped]
 from sklearn.ensemble import RandomForestClassifier  # type: ignore[import-untyped]
-from sklearn.impute import SimpleImputer  # type: ignore[import-untyped]
 from sklearn.linear_model import LogisticRegression  # type: ignore[import-untyped]
 from sklearn.metrics import (  # type: ignore[import-untyped]
     average_precision_score,
@@ -79,6 +78,27 @@ class CalibrationBin:
 
 
 @dataclass(frozen=True, slots=True)
+class UncertaintyInterval:
+    low: float
+    high: float
+    method: str
+    requested_replicates: int
+    valid_replicates: int
+    cluster_count: int
+    caveat: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class CapacityDecision:
+    selected: tuple[bool, ...]
+    threshold: float
+    requested_count: int
+    selected_count: int
+    selected_share: float
+    tie_policy: str
+
+
+@dataclass(frozen=True, slots=True)
 class ModelMetrics:
     roc_auc: float
     pr_auc: float
@@ -91,6 +111,15 @@ class ModelMetrics:
     mean_probability: float
     n: int
     positives: int
+    requested_count: int
+    selected_count: int
+    selected_share: float
+    tie_policy: str
+    roc_auc_interval: UncertaintyInterval
+    pr_auc_interval: UncertaintyInterval
+    brier_interval: UncertaintyInterval
+    precision_interval: UncertaintyInterval
+    recall_interval: UncertaintyInterval
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,7 +132,19 @@ class SubgroupMetrics:
     precision: float | None
     recall: float | None
     brier_score: float
+    precision_interval: UncertaintyInterval | None
+    recall_interval: UncertaintyInterval | None
+    brier_interval: UncertaintyInterval
     caveat: str | None
+
+
+@dataclass(frozen=True, slots=True)
+class PairedDifference:
+    metric: str
+    comparison: str
+    estimate: float
+    interval: UncertaintyInterval
+    interpretation: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,13 +163,15 @@ class LogisticScorer:
     """Portable, JSON-safe logistic scorer; no pickle or executable artifact."""
 
     feature_order: tuple[str, ...]
-    numeric_medians: Mapping[str, float]
     numeric_means: Mapping[str, float]
     numeric_scales: Mapping[str, float]
-    categorical_modes: Mapping[str, str]
     categorical_levels: Mapping[str, tuple[str, ...]]
     coefficients: tuple[float, ...]
     intercept: float
+    artifact_version: str = "1.0.0"
+    missing_value_policy: str = "reject"
+    unknown_category_policy: str = "reject"
+    coefficient_precision: str = "float64"
 
     def _validated(self, record: Mapping[str, object]) -> dict[str, object]:
         leaked = sorted(name for name in record if _looks_like_leakage(name))
@@ -184,36 +227,169 @@ class LogisticScorer:
                     float(values[name] == level) for level in self.categorical_levels[name]
                 )
         linear = self.intercept + float(np.dot(np.asarray(vector), np.asarray(self.coefficients)))
-        return float(1.0 / (1.0 + math.exp(-max(-709.0, min(709.0, linear)))))
+        if linear >= 0:
+            return float(1.0 / (1.0 + math.exp(-linear)))
+        exponential = math.exp(linear)
+        return float(exponential / (1.0 + exponential))
 
     def as_dict(self) -> dict[str, object]:
         return {
             "format": "portable_logistic_json_v1",
+            "artifact_version": self.artifact_version,
+            "missing_value_policy": self.missing_value_policy,
+            "unknown_category_policy": self.unknown_category_policy,
+            "coefficient_precision": self.coefficient_precision,
             "feature_order": list(self.feature_order),
-            "numeric_medians": dict(self.numeric_medians),
             "numeric_means": dict(self.numeric_means),
             "numeric_scales": dict(self.numeric_scales),
-            "categorical_modes": dict(self.categorical_modes),
             "categorical_levels": {
                 name: list(levels) for name, levels in self.categorical_levels.items()
             },
+            "required_fields": [
+                (
+                    {
+                        "name": name,
+                        "type": "number",
+                        "minimum": _numeric_range(name)[0],
+                        "maximum": _numeric_range(name)[1],
+                    }
+                    if name in NUMERIC_FEATURES
+                    else {
+                        "name": name,
+                        "type": "string",
+                        "allowed_values": list(self.categorical_levels[name]),
+                    }
+                )
+                for name in self.feature_order
+            ],
             "coefficients": list(self.coefficients),
             "intercept": self.intercept,
         }
+
+    @classmethod
+    def from_dict(cls, payload: Mapping[str, object]) -> LogisticScorer:
+        """Load and validate the versioned portable scorer contract."""
+
+        required = {
+            "format",
+            "artifact_version",
+            "missing_value_policy",
+            "unknown_category_policy",
+            "coefficient_precision",
+            "feature_order",
+            "numeric_means",
+            "numeric_scales",
+            "categorical_levels",
+            "required_fields",
+            "coefficients",
+            "intercept",
+        }
+        missing = sorted(required - set(payload))
+        if missing:
+            raise FeatureValidationError(f"scorer artifact missing fields: {', '.join(missing)}")
+        if (
+            payload["format"] != "portable_logistic_json_v1"
+            or payload["artifact_version"] != "1.0.0"
+        ):
+            raise FeatureValidationError("unsupported scorer artifact format or version")
+        if payload["missing_value_policy"] != "reject":
+            raise FeatureValidationError("unsupported missing-value policy")
+        if payload["unknown_category_policy"] != "reject":
+            raise FeatureValidationError("unsupported unknown-category policy")
+        if payload["coefficient_precision"] != "float64":
+            raise FeatureValidationError("unsupported coefficient precision")
+        try:
+            feature_order = tuple(
+                str(value) for value in cast(list[object], payload["feature_order"])
+            )
+            numeric_means = {
+                str(name): float(cast(float | int | str, value))
+                for name, value in cast(dict[object, object], payload["numeric_means"]).items()
+            }
+            numeric_scales = {
+                str(name): float(cast(float | int | str, value))
+                for name, value in cast(dict[object, object], payload["numeric_scales"]).items()
+            }
+            categorical_levels = {
+                str(name): tuple(str(level) for level in cast(list[object], values))
+                for name, values in cast(
+                    dict[object, object], payload["categorical_levels"]
+                ).items()
+            }
+            coefficients = tuple(
+                float(cast(float | int | str, value))
+                for value in cast(list[object], payload["coefficients"])
+            )
+            intercept = float(cast(float | int | str, payload["intercept"]))
+        except (TypeError, ValueError) as exc:
+            raise FeatureValidationError("scorer artifact contains invalid field types") from exc
+        if not feature_order or len(set(feature_order)) != len(feature_order):
+            raise FeatureValidationError("feature_order must contain unique fields")
+        if set(feature_order) - set(PRE_LAB_FEATURES):
+            raise FeatureValidationError("scorer artifact contains unsupported features")
+        expected_numeric = {name for name in feature_order if name in NUMERIC_FEATURES}
+        if set(numeric_means) != expected_numeric or set(numeric_scales) != expected_numeric:
+            raise FeatureValidationError(
+                "scorer numeric preprocessing fields do not match feature_order"
+            )
+        expected_categorical = {
+            name for name in feature_order if name in CATEGORICAL_FEATURES
+        }
+        if set(categorical_levels) != expected_categorical or any(
+            not levels or len(set(levels)) != len(levels)
+            for levels in categorical_levels.values()
+        ):
+            raise FeatureValidationError(
+                "scorer categorical levels do not match feature_order"
+            )
+        expected_coefficients = sum(name in NUMERIC_FEATURES for name in feature_order) + sum(
+            len(categorical_levels.get(name, ()))
+            for name in feature_order
+            if name in CATEGORICAL_FEATURES
+        )
+        if len(coefficients) != expected_coefficients:
+            raise FeatureValidationError(
+                "scorer coefficient length does not match feature encoding"
+            )
+        numeric_values = (
+            *numeric_means.values(),
+            *numeric_scales.values(),
+            *coefficients,
+            intercept,
+        )
+        if any(not math.isfinite(value) for value in numeric_values):
+            raise FeatureValidationError("scorer numeric fields must be finite")
+        if any(value <= 0 for value in numeric_scales.values()):
+            raise FeatureValidationError("scorer numeric scales must be positive")
+        scorer = cls(
+            feature_order=feature_order,
+            numeric_means=numeric_means,
+            numeric_scales=numeric_scales,
+            categorical_levels=categorical_levels,
+            coefficients=coefficients,
+            intercept=intercept,
+        )
+        if payload["required_fields"] != scorer.as_dict()["required_fields"]:
+            raise FeatureValidationError("required field contract does not match scorer encoding")
+        return scorer
 
 
 @dataclass(frozen=True, slots=True)
 class ModelComparison:
     models: Mapping[str, ModelMetrics]
     selected_model: str
+    selection_policy: str
     selection_probabilities: tuple[float, ...]
+    holdout_probabilities: tuple[float, ...]
     selected_threshold: float
     threshold_capacity: float | int
+    development_capacity: CapacityDecision
     holdout_prevalence: float
     holdout_n: int
     split: SplitSummary
     subgroups: Mapping[str, tuple[SubgroupMetrics, ...]]
     cohort_sensitivity: Mapping[str, Mapping[str, float | int | str]]
+    paired_differences: Mapping[str, PairedDifference]
     scorer: LogisticScorer
     features: tuple[str, ...]
     intended_use: str
@@ -233,8 +409,16 @@ class ModelComparison:
         return {
             "artifact_schema": "ckd_patient_finding_model_comparison_v1",
             "selected_model": self.selected_model,
+            "selection_policy": self.selection_policy,
             "selected_threshold": self.selected_threshold,
             "threshold_capacity": self.threshold_capacity,
+            "development_capacity": {
+                "requested_count": self.development_capacity.requested_count,
+                "selected_count": self.development_capacity.selected_count,
+                "selected_share": self.development_capacity.selected_share,
+                "threshold": self.development_capacity.threshold,
+                "tie_policy": self.development_capacity.tie_policy,
+            },
             "holdout_prevalence": self.holdout_prevalence,
             "holdout_n": self.holdout_n,
             "features": list(self.features),
@@ -253,13 +437,19 @@ class ModelComparison:
                 for dimension, metrics in self.subgroups.items()
             },
             "cohort_sensitivity": self.cohort_sensitivity,
+            "paired_differences": {
+                name: asdict(difference)
+                for name, difference in self.paired_differences.items()
+            },
             "scorer": self.scorer.as_dict(),
             "intended_use": self.intended_use,
             "limitations": list(self.limitations),
         }
 
     def to_json(self) -> str:
-        return json.dumps(self.to_artifact(), sort_keys=True, indent=2) + "\n"
+        return json.dumps(
+            self.to_artifact(), sort_keys=True, indent=2, allow_nan=False
+        ) + "\n"
 
 
 def _looks_like_leakage(column: str) -> bool:
@@ -307,22 +497,12 @@ def _pipeline(kind: str, features: Sequence[str], random_state: int) -> Pipeline
         [
             (
                 "numeric",
-                Pipeline(
-                    [
-                        ("imputer", SimpleImputer(strategy="median")),
-                        ("scaler", StandardScaler()),
-                    ]
-                ),
+                StandardScaler(),
                 numeric,
             ),
             (
                 "categorical",
-                Pipeline(
-                    [
-                        ("imputer", SimpleImputer(strategy="most_frequent")),
-                        ("one_hot", OneHotEncoder(handle_unknown="ignore", sparse_output=False)),
-                    ]
-                ),
+                OneHotEncoder(handle_unknown="error", sparse_output=False),
                 categorical,
             ),
         ],
@@ -372,8 +552,138 @@ def _calibration_bins(y: np.ndarray, probabilities: np.ndarray) -> tuple[Calibra
     return tuple(output)
 
 
-def _metrics(y: np.ndarray, probabilities: np.ndarray, threshold: float) -> ModelMetrics:
-    predicted = probabilities >= threshold
+def _percentile_interval(
+    values: Sequence[float], *, requested: int, cluster_count: int
+) -> UncertaintyInterval:
+    valid = np.asarray([value for value in values if math.isfinite(value)], dtype=float)
+    if len(valid) == 0:
+        raise FeatureValidationError("cluster bootstrap produced no valid replicates")
+    caveats: list[str] = []
+    if cluster_count < 20:
+        caveats.append(
+            f"Only {cluster_count} holdout clusters; interval precision is limited."
+        )
+    if len(valid) < max(20, int(0.8 * requested)):
+        caveats.append(
+            f"Only {len(valid)} of {requested} bootstrap replicates were estimable."
+        )
+    low, high = np.percentile(valid, [2.5, 97.5])
+    return UncertaintyInterval(
+        low=float(low),
+        high=float(high),
+        method="holdout_cluster_bootstrap_percentile",
+        requested_replicates=requested,
+        valid_replicates=int(len(valid)),
+        cluster_count=cluster_count,
+        caveat=" ".join(caveats) or None,
+    )
+
+
+def _bootstrap_indices(
+    groups: np.ndarray, *, replicates: int, random_state: int
+) -> list[np.ndarray]:
+    if replicates < 20:
+        raise ValueError("bootstrap_replicates must be at least 20")
+    unique = np.asarray(sorted(set(str(value) for value in groups)), dtype=object)
+    if len(unique) < 2:
+        raise FeatureValidationError("at least two clusters are required for uncertainty")
+    positions = {group: np.flatnonzero(groups.astype(str) == group) for group in unique}
+    rng = np.random.default_rng(random_state)
+    output: list[np.ndarray] = []
+    for _ in range(replicates):
+        sampled = rng.choice(unique, size=len(unique), replace=True)
+        output.append(np.concatenate([positions[str(group)] for group in sampled]))
+    return output
+
+
+def select_capacity_decision(
+    probabilities: Sequence[float], capacity: float | int
+) -> CapacityDecision:
+    """Select exactly the allowed count with a deterministic tie-break."""
+
+    values = np.asarray(probabilities, dtype=float)
+    if len(values) == 0 or not np.isfinite(values).all():
+        raise ValueError("probabilities must be a nonempty finite sequence")
+    count = _capacity_count(len(values), capacity)
+    stable_position = np.arange(len(values))
+    order = np.lexsort((stable_position, -values))
+    selected = np.zeros(len(values), dtype=bool)
+    selected[order[:count]] = True
+    threshold = float(values[order[count - 1]])
+    return CapacityDecision(
+        selected=tuple(bool(value) for value in selected),
+        threshold=threshold,
+        requested_count=count,
+        selected_count=int(selected.sum()),
+        selected_share=float(selected.mean()),
+        tie_policy="descending_probability_then_stable_row_order",
+    )
+
+
+def _metric_intervals(
+    y: np.ndarray,
+    probabilities: np.ndarray,
+    predicted: np.ndarray,
+    groups: np.ndarray,
+    *,
+    replicates: int,
+    random_state: int,
+) -> dict[str, UncertaintyInterval | None]:
+    samples = _bootstrap_indices(groups, replicates=replicates, random_state=random_state)
+    values: dict[str, list[float]] = {
+        "roc_auc": [],
+        "pr_auc": [],
+        "brier": [],
+        "precision": [],
+        "recall": [],
+    }
+    for positions in samples:
+        sample_y = y[positions]
+        sample_p = probabilities[positions]
+        sample_predicted = predicted[positions]
+        if len(np.unique(sample_y)) == 2:
+            values["roc_auc"].append(float(roc_auc_score(sample_y, sample_p)))
+            values["pr_auc"].append(float(average_precision_score(sample_y, sample_p)))
+        values["brier"].append(float(brier_score_loss(sample_y, sample_p)))
+        if int(sample_predicted.sum()) > 0:
+            values["precision"].append(
+                float(precision_score(sample_y, sample_predicted, zero_division=0))
+            )
+        if int(sample_y.sum()) > 0:
+            values["recall"].append(
+                float(recall_score(sample_y, sample_predicted, zero_division=0))
+            )
+    clusters = len(set(str(value) for value in groups))
+    return {
+        name: (
+            _percentile_interval(metric_values, requested=replicates, cluster_count=clusters)
+            if metric_values
+            else None
+        )
+        for name, metric_values in values.items()
+    }
+
+
+def _required_interval(
+    intervals: Mapping[str, UncertaintyInterval | None], name: str
+) -> UncertaintyInterval:
+    interval = intervals[name]
+    if interval is None:
+        raise FeatureValidationError(f"{name} uncertainty could not be estimated")
+    return interval
+
+
+def _metrics(
+    y: np.ndarray,
+    probabilities: np.ndarray,
+    groups: np.ndarray,
+    capacity: float | int,
+    *,
+    replicates: int,
+    random_state: int,
+) -> ModelMetrics:
+    decision = select_capacity_decision(probabilities.tolist(), capacity)
+    predicted = np.asarray(decision.selected, dtype=bool)
     matrix = confusion_matrix(y, predicted, labels=[0, 1])
     tn, fp, fn, tp = (int(value) for value in matrix.ravel())
     roc = float(roc_auc_score(y, probabilities)) if len(np.unique(y)) == 2 else float("nan")
@@ -382,13 +692,21 @@ def _metrics(y: np.ndarray, probabilities: np.ndarray, threshold: float) -> Mode
         if int(y.sum()) > 0
         else float("nan")
     )
+    intervals = _metric_intervals(
+        y,
+        probabilities,
+        predicted,
+        groups,
+        replicates=replicates,
+        random_state=random_state,
+    )
     return ModelMetrics(
         roc_auc=roc,
         pr_auc=pr,
         brier_score=float(brier_score_loss(y, probabilities)),
         precision=float(precision_score(y, predicted, zero_division=0)),
         recall=float(recall_score(y, predicted, zero_division=0)),
-        threshold=float(threshold),
+        threshold=decision.threshold,
         confusion_matrix={
             "true_negative": tn,
             "false_positive": fp,
@@ -399,6 +717,15 @@ def _metrics(y: np.ndarray, probabilities: np.ndarray, threshold: float) -> Mode
         mean_probability=float(probabilities.mean()),
         n=int(len(y)),
         positives=int(y.sum()),
+        requested_count=decision.requested_count,
+        selected_count=decision.selected_count,
+        selected_share=decision.selected_share,
+        tie_policy=decision.tie_policy,
+        roc_auc_interval=_required_interval(intervals, "roc_auc"),
+        pr_auc_interval=_required_interval(intervals, "pr_auc"),
+        brier_interval=_required_interval(intervals, "brier"),
+        precision_interval=_required_interval(intervals, "precision"),
+        recall_interval=_required_interval(intervals, "recall"),
     )
 
 
@@ -417,17 +744,18 @@ def _capacity_count(total: int, capacity: float | int) -> int:
 def select_operating_threshold(report: ModelComparison, capacity: float | int) -> float:
     """Choose a capacity threshold only from out-of-fold development predictions."""
 
-    probabilities = np.asarray(report.selection_probabilities, dtype=float)
-    count = _capacity_count(len(probabilities), capacity)
-    descending = np.sort(probabilities)[::-1]
-    return float(descending[count - 1])
+    return select_capacity_decision(report.selection_probabilities, capacity).threshold
 
 
 def _subgroups(
     holdout: pd.DataFrame,
     y: np.ndarray,
     probabilities: np.ndarray,
-    threshold: float,
+    selected: np.ndarray,
+    groups: np.ndarray,
+    *,
+    replicates: int,
+    random_state: int,
 ) -> dict[str, tuple[SubgroupMetrics, ...]]:
     age = pd.to_numeric(holdout["age_years"], errors="coerce")
     dimensions: dict[str, pd.Series] = {
@@ -446,18 +774,28 @@ def _subgroups(
             mask = values.eq(value).fillna(False).to_numpy(dtype=bool)
             group_y = y[mask]
             group_p = probabilities[mask]
+            group_selected = selected[mask]
+            group_clusters = groups[mask]
             positives = int(group_y.sum())
             caveat = None
             if len(group_y) < 30 or positives < 5 or len(group_y) - positives < 5:
                 caveat = (
                     "Small subgroup/event count; metrics are descriptive and potentially unstable."
                 )
-            predicted = group_p >= threshold
+            predicted = group_selected
             if int(predicted.sum()) == 0:
                 no_flags = (
                     "No records were flagged at the selected threshold; precision is undefined."
                 )
                 caveat = f"{caveat} {no_flags}" if caveat else no_flags
+            intervals = _metric_intervals(
+                group_y,
+                group_p,
+                predicted,
+                group_clusters,
+                replicates=replicates,
+                random_state=random_state + len(records),
+            )
             records.append(
                 SubgroupMetrics(
                     group=dimension,
@@ -476,6 +814,9 @@ def _subgroups(
                         else None
                     ),
                     brier_score=float(brier_score_loss(group_y, group_p)),
+                    precision_interval=intervals["precision"],
+                    recall_interval=intervals["recall"],
+                    brier_interval=_required_interval(intervals, "brier"),
                     caveat=caveat,
                 )
             )
@@ -488,27 +829,15 @@ def _portable_scorer(pipeline: Pipeline, features: Sequence[str]) -> LogisticSco
     model: LogisticRegression = pipeline.named_steps["model"]
     numeric = [name for name in features if name in NUMERIC_FEATURES]
     categorical = [name for name in features if name in CATEGORICAL_FEATURES]
-    numeric_pipeline: Pipeline = preprocess.named_transformers_["numeric"]
-    imputer: SimpleImputer = numeric_pipeline.named_steps["imputer"]
-    scaler: StandardScaler = numeric_pipeline.named_steps["scaler"]
-    categorical_pipeline: Pipeline = preprocess.named_transformers_["categorical"]
-    categorical_imputer: SimpleImputer = categorical_pipeline.named_steps["imputer"]
-    encoder: OneHotEncoder = categorical_pipeline.named_steps["one_hot"]
+    scaler: StandardScaler = preprocess.named_transformers_["numeric"]
+    encoder: OneHotEncoder = preprocess.named_transformers_["categorical"]
     return LogisticScorer(
         feature_order=tuple(features),
-        numeric_medians={
-            name: float(value)
-            for name, value in zip(numeric, imputer.statistics_, strict=True)
-        },
         numeric_means={
             name: float(value) for name, value in zip(numeric, scaler.mean_, strict=True)
         },
         numeric_scales={
             name: float(value) for name, value in zip(numeric, scaler.scale_, strict=True)
-        },
-        categorical_modes={
-            name: str(value)
-            for name, value in zip(categorical, categorical_imputer.statistics_, strict=True)
         },
         categorical_levels={
             name: tuple(str(value) for value in levels)
@@ -519,6 +848,143 @@ def _portable_scorer(pipeline: Pipeline, features: Sequence[str]) -> LogisticSco
     )
 
 
+def _validate_training_features(features: pd.DataFrame) -> pd.DataFrame:
+    validated = features.copy()
+    for name in validated:
+        if name in NUMERIC_FEATURES:
+            values = pd.to_numeric(validated[name], errors="coerce")
+            if values.isna().any() or not np.isfinite(values.to_numpy(dtype=float)).all():
+                raise FeatureValidationError(f"{name} must be complete, numeric, and finite")
+            lower, upper = _numeric_range(name)
+            if bool((~values.between(lower, upper)).any()):
+                raise FeatureValidationError(
+                    f"{name} must be between {lower:g} and {upper:g}"
+                )
+            validated[name] = values.astype(float)
+        else:
+            if validated[name].isna().any():
+                raise FeatureValidationError(f"{name} must be complete")
+            values = validated[name].astype("string").str.strip()
+            if bool(values.eq("").any()):
+                raise FeatureValidationError(f"{name} must contain nonempty categories")
+            validated[name] = values
+    return validated
+
+
+def _validated_grouped_splits(
+    splitter: StratifiedGroupKFold,
+    features: pd.DataFrame,
+    y: np.ndarray,
+    groups: pd.Series,
+    *,
+    context: str,
+) -> list[tuple[np.ndarray, np.ndarray]]:
+    for outcome_class in (0, 1):
+        class_group_count = int(groups.loc[y == outcome_class].nunique())
+        if class_group_count < splitter.n_splits:
+            raise FeatureValidationError(
+                f"{context} folds must contain both outcome classes; class "
+                f"{outcome_class} occurs in only {class_group_count} groups"
+            )
+    splits = list(splitter.split(features, y, groups))
+    for fold, (fit_index, score_index) in enumerate(splits, start=1):
+        if len(np.unique(y[fit_index])) != 2 or len(np.unique(y[score_index])) != 2:
+            raise FeatureValidationError(
+                f"{context} fold {fold} must contain both outcome classes in fit and score sets"
+            )
+        fit_groups = set(groups.iloc[fit_index].astype(str))
+        score_groups = set(groups.iloc[score_index].astype(str))
+        if not fit_groups.isdisjoint(score_groups):
+            raise FeatureValidationError(f"{context} fold {fold} leaks groups")
+    return splits
+
+
+def _paired_metric_differences(
+    y: np.ndarray,
+    logistic: np.ndarray,
+    forest: np.ndarray,
+    groups: np.ndarray,
+    *,
+    replicates: int,
+    random_state: int,
+) -> dict[str, PairedDifference]:
+    specifications: dict[
+        str,
+        tuple[
+            float,
+            Callable[[np.ndarray, np.ndarray, np.ndarray], float],
+        ],
+    ] = {
+        "roc_auc": (
+            float(roc_auc_score(y, logistic) - roc_auc_score(y, forest)),
+            lambda truth, first, second: float(
+                roc_auc_score(truth, first) - roc_auc_score(truth, second)
+            ),
+        ),
+        "pr_auc": (
+            float(average_precision_score(y, logistic) - average_precision_score(y, forest)),
+            lambda truth, first, second: float(
+                average_precision_score(truth, first)
+                - average_precision_score(truth, second)
+            ),
+        ),
+        "brier_score": (
+            float(brier_score_loss(y, logistic) - brier_score_loss(y, forest)),
+            lambda truth, first, second: float(
+                brier_score_loss(truth, first) - brier_score_loss(truth, second)
+            ),
+        ),
+    }
+    bootstraps = _bootstrap_indices(
+        groups, replicates=replicates, random_state=random_state
+    )
+    output: dict[str, PairedDifference] = {}
+    for metric, (estimate, calculate) in specifications.items():
+        values: list[float] = []
+        for positions in bootstraps:
+            sample_y = y[positions]
+            if len(np.unique(sample_y)) != 2:
+                continue
+            values.append(calculate(sample_y, logistic[positions], forest[positions]))
+        interval = _percentile_interval(
+            values,
+            requested=replicates,
+            cluster_count=len(set(str(value) for value in groups)),
+        )
+        interval = UncertaintyInterval(
+            low=min(interval.low, estimate),
+            high=max(interval.high, estimate),
+            method=interval.method,
+            requested_replicates=interval.requested_replicates,
+            valid_replicates=interval.valid_replicates,
+            cluster_count=interval.cluster_count,
+            caveat=interval.caveat,
+        )
+        if interval.low <= 0 <= interval.high:
+            interpretation = "Interval includes zero; no reliable model advantage is established."
+        elif metric == "brier_score":
+            interpretation = (
+                "Logistic regression has lower error."
+                if interval.high < 0
+                else "Random forest has lower error."
+            )
+        else:
+            interpretation = (
+                "Logistic regression has higher discrimination."
+                if interval.low > 0
+                else "Random forest has higher discrimination."
+            )
+        key = f"logistic_minus_random_forest_{metric}"
+        output[key] = PairedDifference(
+            metric=metric,
+            comparison="logistic_regression minus random_forest",
+            estimate=estimate,
+            interval=interval,
+            interpretation=interpretation,
+        )
+    return output
+
+
 def train_patient_finding_models(
     train: pd.DataFrame,
     groups: Sequence[object] | pd.Series,
@@ -526,9 +992,12 @@ def train_patient_finding_models(
     capacity: float | int = 0.10,
     random_state: int = 20260910,
     target_column: str = "ckd_indicator",
+    bootstrap_replicates: int = 200,
 ) -> ModelComparison:
     """Compare no-skill, logistic, and tree models with a group-isolated holdout."""
 
+    if target_column != "ckd_indicator":
+        raise LeakageError("target is the fixed laboratory indicator documented for this task")
     if target_column not in train:
         raise FeatureValidationError(f"missing target column: {target_column}")
     if len(train) != len(groups):
@@ -538,23 +1007,43 @@ def train_patient_finding_models(
         raise FeatureValidationError("target must be complete and binary")
     if y_series.nunique() < 2:
         raise FeatureValidationError("target must contain both outcome classes")
+    for alternative in ("sensitivity_egfr_only", "sensitivity_albuminuria_only"):
+        if alternative in train:
+            values = pd.to_numeric(train[alternative], errors="coerce")
+            if values.isna().any():
+                raise FeatureValidationError(
+                    "cohort sensitivity must use the common complete-case domain"
+                )
+            if not set(values.unique()).issubset({0, 1}):
+                raise FeatureValidationError("sensitivity outcomes must be binary")
     group_series = pd.Series(groups, index=train.index, dtype="string")
     if group_series.isna().any() or group_series.nunique() < 10:
         raise FeatureValidationError("at least ten complete groups are required")
 
-    features = build_pre_lab_features(train)
+    features = _validate_training_features(build_pre_lab_features(train))
     if not {"age_years", "sex", "race_ethnicity"}.issubset(features.columns):
         raise FeatureValidationError("age_years, sex, and race_ethnicity are required")
     y = y_series.astype(int).to_numpy()
     split_cv = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=random_state)
-    development_index, holdout_index = next(split_cv.split(features, y, group_series))
+    outer_splits = _validated_grouped_splits(
+        split_cv, features, y, group_series, context="outer"
+    )
+    development_index, holdout_index = outer_splits[0]
     development = features.iloc[development_index].reset_index(drop=True)
     holdout = features.iloc[holdout_index].reset_index(drop=True)
     y_development = y[development_index]
     y_holdout = y[holdout_index]
     development_groups = group_series.iloc[development_index].reset_index(drop=True)
+    holdout_groups = group_series.iloc[holdout_index].reset_index(drop=True)
 
     oof_cv = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=random_state + 1)
+    inner_splits = _validated_grouped_splits(
+        oof_cv,
+        development,
+        y_development,
+        development_groups,
+        context="development",
+    )
     models: dict[str, Pipeline] = {
         name: _pipeline(name, list(features.columns), random_state)
         for name in ("logistic_regression", "random_forest")
@@ -567,18 +1056,30 @@ def train_patient_finding_models(
             development,
             y_development,
             groups=development_groups,
-            cv=oof_cv,
+            cv=inner_splits,
             method="predict_proba",
             n_jobs=1,
         )[:, 1]
         fitted[name] = clone(pipeline).fit(development, y_development)
 
+    scorer = _portable_scorer(fitted["logistic_regression"], list(features.columns))
+    selection_probabilities = tuple(float(value) for value in oof["logistic_regression"])
+    development_decision = select_capacity_decision(selection_probabilities, capacity)
+    holdout_probability_map = {
+        name: pipeline.predict_proba(holdout)[:, 1] for name, pipeline in fitted.items()
+    }
+    logistic_holdout = holdout_probability_map["logistic_regression"]
+    forest_holdout = holdout_probability_map["random_forest"]
+    logistic_decision = select_capacity_decision(logistic_holdout, capacity)
     temporary = ModelComparison(
         models={},
         selected_model="logistic_regression",
-        selection_probabilities=tuple(float(value) for value in oof["logistic_regression"]),
-        selected_threshold=0.5,
+        selection_policy="logistic_prespecified_before_holdout",
+        selection_probabilities=selection_probabilities,
+        holdout_probabilities=tuple(float(value) for value in logistic_holdout),
+        selected_threshold=development_decision.threshold,
         threshold_capacity=capacity,
+        development_capacity=development_decision,
         holdout_prevalence=float(y_holdout.mean()),
         holdout_n=int(len(y_holdout)),
         split=SplitSummary(
@@ -592,7 +1093,8 @@ def train_patient_finding_models(
         ),
         subgroups={},
         cohort_sensitivity={},
-        scorer=_portable_scorer(fitted["logistic_regression"], list(features.columns)),
+        paired_differences={},
+        scorer=scorer,
         features=tuple(features.columns),
         intended_use=(
             "Educational comparison of population-level screening opportunity; "
@@ -600,18 +1102,34 @@ def train_patient_finding_models(
         ),
         limitations=(),
     )
-    threshold = select_operating_threshold(temporary, capacity)
-    holdout_probabilities = {
-        name: pipeline.predict_proba(holdout)[:, 1] for name, pipeline in fitted.items()
-    }
     prevalence = float(y_development.mean())
     no_skill_probabilities = np.full(len(y_holdout), prevalence, dtype=float)
+    holdout_group_array = holdout_groups.astype(str).to_numpy()
     metrics: dict[str, ModelMetrics] = {
-        "prevalence_no_skill": _metrics(y_holdout, no_skill_probabilities, threshold),
-        "logistic_regression": _metrics(
-            y_holdout, holdout_probabilities["logistic_regression"], threshold
+        "prevalence_no_skill": _metrics(
+            y_holdout,
+            no_skill_probabilities,
+            holdout_group_array,
+            capacity,
+            replicates=bootstrap_replicates,
+            random_state=random_state + 10,
         ),
-        "random_forest": _metrics(y_holdout, holdout_probabilities["random_forest"], threshold),
+        "logistic_regression": _metrics(
+            y_holdout,
+            logistic_holdout,
+            holdout_group_array,
+            capacity,
+            replicates=bootstrap_replicates,
+            random_state=random_state + 20,
+        ),
+        "random_forest": _metrics(
+            y_holdout,
+            forest_holdout,
+            holdout_group_array,
+            capacity,
+            replicates=bootstrap_replicates,
+            random_state=random_state + 30,
+        ),
     }
 
     sensitivity: dict[str, Mapping[str, float | int | str]] = {
@@ -624,33 +1142,53 @@ def train_patient_finding_models(
     for alternative in ("sensitivity_egfr_only", "sensitivity_albuminuria_only"):
         if alternative in train:
             values = pd.to_numeric(train.iloc[holdout_index][alternative], errors="coerce")
-            valid = values.notna().to_numpy()
-            alternative_y = values.loc[values.notna()].astype(int).to_numpy()
-            alternative_p = holdout_probabilities["logistic_regression"][valid]
-            if len(alternative_y) and len(np.unique(alternative_y)) == 2:
+            if values.isna().any():
+                raise FeatureValidationError(
+                    "cohort sensitivity must use the common complete-case domain"
+                )
+            if not set(values.unique()).issubset({0, 1}):
+                raise FeatureValidationError("sensitivity outcomes must be binary")
+            alternative_y = values.astype(int).to_numpy()
+            if len(np.unique(alternative_y)) == 2:
                 sensitivity[alternative] = {
                     "holdout_n": int(len(alternative_y)),
                     "holdout_prevalence": float(alternative_y.mean()),
-                    "roc_auc": float(roc_auc_score(alternative_y, alternative_p)),
-                    "pr_auc": float(average_precision_score(alternative_y, alternative_p)),
+                    "roc_auc": float(roc_auc_score(alternative_y, logistic_holdout)),
+                    "pr_auc": float(
+                        average_precision_score(alternative_y, logistic_holdout)
+                    ),
                 }
 
     return ModelComparison(
         models=metrics,
         selected_model="logistic_regression",
+        selection_policy=temporary.selection_policy,
         selection_probabilities=temporary.selection_probabilities,
-        selected_threshold=threshold,
+        holdout_probabilities=temporary.holdout_probabilities,
+        selected_threshold=temporary.selected_threshold,
         threshold_capacity=capacity,
+        development_capacity=temporary.development_capacity,
         holdout_prevalence=float(y_holdout.mean()),
         holdout_n=int(len(y_holdout)),
         split=temporary.split,
         subgroups=_subgroups(
             holdout,
             y_holdout,
-            holdout_probabilities["logistic_regression"],
-            threshold,
+            logistic_holdout,
+            np.asarray(logistic_decision.selected, dtype=bool),
+            holdout_group_array,
+            replicates=bootstrap_replicates,
+            random_state=random_state + 40,
         ),
         cohort_sensitivity=sensitivity,
+        paired_differences=_paired_metric_differences(
+            y_holdout,
+            logistic_holdout,
+            forest_holdout,
+            holdout_group_array,
+            replicates=bootstrap_replicates,
+            random_state=random_state + 50,
+        ),
         scorer=temporary.scorer,
         features=tuple(features.columns),
         intended_use=temporary.intended_use,

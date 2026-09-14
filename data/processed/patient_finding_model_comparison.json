@@ -20,6 +20,13 @@
       "roc_auc": 0.8782037239868565
     }
   },
+  "development_capacity": {
+    "requested_count": 402,
+    "selected_count": 402,
+    "selected_share": 0.09992542878448919,
+    "threshold": 0.398348385969703,
+    "tie_policy": "descending_probability_then_stable_row_order"
+  },
   "evidence_type": "public_observed",
   "features": [
     "age_years",
@@ -37,6 +44,15 @@
   ],
   "models": {
     "logistic_regression": {
+      "brier_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.13878261330368502,
+        "low": 0.11962470366294138,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
       "brier_score": 0.12999292720757588,
       "calibration_bins": [
         {
@@ -66,21 +82,70 @@
         }
       ],
       "confusion_matrix": {
-        "false_negative": 140,
-        "false_positive": 35,
-        "true_negative": 773,
-        "true_positive": 45
+        "false_negative": 132,
+        "false_positive": 46,
+        "true_negative": 762,
+        "true_positive": 53
       },
       "mean_probability": 0.1766129138580593,
       "n": 993,
       "positives": 185,
       "pr_auc": 0.4624967402699805,
-      "precision": 0.5625,
-      "recall": 0.24324324324324326,
+      "pr_auc_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.5134536094393053,
+        "low": 0.39025575418925545,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision": 0.5353535353535354,
+      "precision_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.6027397260273972,
+        "low": 0.4724223740900312,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall": 0.2864864864864865,
+      "recall_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.34069900687547744,
+        "low": 0.22758620689655173,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "requested_count": 99,
       "roc_auc": 0.7549538399785924,
-      "threshold": 0.398348385969703
+      "roc_auc_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.7808508265239036,
+        "low": 0.7081282861656203,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_count": 99,
+      "selected_share": 0.09969788519637462,
+      "threshold": 0.3822438660409149,
+      "tie_policy": "descending_probability_then_stable_row_order"
     },
     "prevalence_no_skill": {
+      "brier_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.16639395312277913,
+        "low": 0.1362333041795974,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
       "brier_score": 0.15159565669874012,
       "calibration_bins": [
         {
@@ -90,21 +155,70 @@
         }
       ],
       "confusion_matrix": {
-        "false_negative": 185,
-        "false_positive": 0,
-        "true_negative": 808,
-        "true_positive": 0
+        "false_negative": 163,
+        "false_positive": 77,
+        "true_negative": 731,
+        "true_positive": 22
       },
       "mean_probability": 0.18717375093214017,
       "n": 993,
       "positives": 185,
       "pr_auc": 0.1863041289023162,
-      "precision": 0.0,
-      "recall": 0.0,
+      "pr_auc_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.20995670995670995,
+        "low": 0.1617499993097412,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision": 0.2222222222222222,
+      "precision_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.3205246913580247,
+        "low": 0.16437233325847742,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall": 0.11891891891891893,
+      "recall_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.13000520833333334,
+        "low": 0.10714285714285714,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "requested_count": 99,
       "roc_auc": 0.5,
-      "threshold": 0.398348385969703
+      "roc_auc_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.5,
+        "low": 0.5,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_count": 99,
+      "selected_share": 0.09969788519637462,
+      "threshold": 0.1871737509321402,
+      "tie_policy": "descending_probability_then_stable_row_order"
     },
     "random_forest": {
+      "brier_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.13715301038724437,
+        "low": 0.11879857781549842,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
       "brier_score": 0.1293407162081356,
       "calibration_bins": [
         {
@@ -134,24 +248,112 @@
         }
       ],
       "confusion_matrix": {
-        "false_negative": 135,
-        "false_positive": 41,
-        "true_negative": 767,
-        "true_positive": 50
+        "false_negative": 131,
+        "false_positive": 45,
+        "true_negative": 763,
+        "true_positive": 54
       },
       "mean_probability": 0.17510370608843942,
       "n": 993,
       "positives": 185,
       "pr_auc": 0.4505406041107313,
-      "precision": 0.5494505494505495,
-      "recall": 0.2702702702702703,
+      "pr_auc_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.5154866127040622,
+        "low": 0.371272228052346,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision": 0.5454545454545454,
+      "precision_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.6210668563300142,
+        "low": 0.47655319940476193,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall": 0.2918918918918919,
+      "recall_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.3547413793103448,
+        "low": 0.23448275862068965,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "requested_count": 99,
       "roc_auc": 0.7432934171795558,
-      "threshold": 0.398348385969703
+      "roc_auc_interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.7722572581398071,
+        "low": 0.7064734109711797,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_count": 99,
+      "selected_share": 0.09969788519637462,
+      "threshold": 0.37930594800720224,
+      "tie_policy": "descending_probability_then_stable_row_order"
     }
   },
   "outcome": "Cross-sectional eGFR <60 or UACR >=30 mg/g indicator; not confirmed CKD",
+  "paired_differences": {
+    "logistic_minus_random_forest_brier_score": {
+      "comparison": "logistic_regression minus random_forest",
+      "estimate": 0.0006522109994402947,
+      "interpretation": "Interval includes zero; no reliable model advantage is established.",
+      "interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.0032330287496714957,
+        "low": -0.0021327029804008683,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "brier_score"
+    },
+    "logistic_minus_random_forest_pr_auc": {
+      "comparison": "logistic_regression minus random_forest",
+      "estimate": 0.011956136159249175,
+      "interpretation": "Interval includes zero; no reliable model advantage is established.",
+      "interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.025491020175406387,
+        "low": -0.00529635134176655,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "pr_auc"
+    },
+    "logistic_minus_random_forest_roc_auc": {
+      "comparison": "logistic_regression minus random_forest",
+      "estimate": 0.011660422799036674,
+      "interpretation": "Interval includes zero; no reliable model advantage is established.",
+      "interval": {
+        "caveat": "Only 6 holdout clusters; interval precision is limited.",
+        "cluster_count": 6,
+        "high": 0.032532865210030626,
+        "low": -0.009555965314462234,
+        "method": "holdout_cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "roc_auc"
+    }
+  },
   "performance_interpretation": "Unweighted held-out analytic-sample metrics; not population estimates",
   "scorer": {
+    "artifact_version": "1.0.0",
     "categorical_levels": {
       "race_ethnicity": [
         "Mexican American",
@@ -166,10 +368,7 @@
         "Male"
       ]
     },
-    "categorical_modes": {
-      "race_ethnicity": "Non-Hispanic White",
-      "sex": "Female"
-    },
+    "coefficient_precision": "float64",
     "coefficients": [
       0.9753730534532106,
       0.019594146012556768,
@@ -188,19 +387,74 @@
     ],
     "format": "portable_logistic_json_v1",
     "intercept": -1.7942396903518996,
+    "missing_value_policy": "reject",
     "numeric_means": {
       "age_years": 50.19736515038529
     },
-    "numeric_medians": {
-      "age_years": 52.0
-    },
     "numeric_scales": {
       "age_years": 18.622826515594415
-    }
+    },
+    "required_fields": [
+      {
+        "maximum": 120.0,
+        "minimum": 18.0,
+        "name": "age_years",
+        "type": "number"
+      },
+      {
+        "allowed_values": [
+          "Female",
+          "Male"
+        ],
+        "name": "sex",
+        "type": "string"
+      },
+      {
+        "allowed_values": [
+          "Mexican American",
+          "Non-Hispanic Asian",
+          "Non-Hispanic Black",
+          "Non-Hispanic White",
+          "Other Hispanic",
+          "Other Race - Including Multi-Racial"
+        ],
+        "name": "race_ethnicity",
+        "type": "string"
+      }
+    ],
+    "unknown_category_policy": "reject"
   },
   "selected_model": "logistic_regression",
   "selected_threshold": 0.398348385969703,
+  "selection_policy": "logistic_prespecified_before_holdout",
   "source": "Verified CDC/NCHS NHANES 2017-2018 public-use files",
+  "source_manifest": {
+    "files": [
+      {
+        "bytes": 3412720,
+        "name": "DEMO_J.xpt",
+        "sha256": "c0b46e0345ea19404928656277c8b0d10b0cca348a9b2fe4fc3c67e8b7ee73ec",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DEMO_J.xpt"
+      },
+      {
+        "bytes": 2106080,
+        "name": "BIOPRO_J.xpt",
+        "sha256": "5bcd5722c1892883b96a9d7fed0befadabacae313f800fadc0133cd5dd00c4c6",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BIOPRO_J.xpt"
+      },
+      {
+        "bytes": 509760,
+        "name": "ALB_CR_J.xpt",
+        "sha256": "0017a7b8d87d29009923e22300b4ec393b06c9bbf6147eb6b2d777aca605bcbf",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/ALB_CR_J.xpt"
+      }
+    ],
+    "join_policy": "Documented one-to-one within-cycle NHANES component join; no cross-source or cross-person linkage",
+    "path": "data/manifests/nhanes-2017-2018-patient-need.json",
+    "release": "2017-2018",
+    "retrieved_at": "2026-09-11",
+    "source": "CDC/NCHS NHANES"
+  },
   "split": {
     "development_group_count": 24,
     "development_n": 4023,
@@ -213,60 +467,179 @@
   "subgroups": {
     "age_band": [
       {
+        "brier_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.06459824219334187,
+          "low": 0.03645755559059979,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "brier_score": 0.049643774481603266,
         "caveat": "No records were flagged at the selected threshold; precision is undefined.",
         "group": "age_band",
         "n": 344,
         "positives": 18,
         "precision": null,
+        "precision_interval": null,
         "prevalence": 0.05232558139534884,
         "recall": 0.0,
+        "recall_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.0,
+          "low": 0.0,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "value": "18-39"
       },
       {
+        "brier_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.1465651560776903,
+          "low": 0.12793390520446754,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "brier_score": 0.13737998988498348,
         "caveat": "No records were flagged at the selected threshold; precision is undefined.",
         "group": "age_band",
         "n": 316,
         "positives": 51,
         "precision": null,
+        "precision_interval": null,
         "prevalence": 0.16139240506329114,
         "recall": 0.0,
+        "recall_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.0,
+          "low": 0.0,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "value": "40-59"
       },
       {
+        "brier_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.22406455028942224,
+          "low": 0.18779111776280347,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "brier_score": 0.2059863107861758,
         "caveat": null,
         "group": "age_band",
         "n": 333,
         "positives": 116,
-        "precision": 0.5625,
+        "precision": 0.5353535353535354,
+        "precision_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.5949826459779501,
+          "low": 0.47244094488188976,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "prevalence": 0.3483483483483483,
-        "recall": 0.3879310344827586,
+        "recall": 0.45689655172413796,
+        "recall_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.5092592592592593,
+          "low": 0.4051670703904246,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "value": "60+"
       }
     ],
     "sex": [
       {
+        "brier_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.14911839024796594,
+          "low": 0.11790950913387073,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "brier_score": 0.13116395773817555,
         "caveat": null,
         "group": "sex",
         "n": 515,
         "positives": 98,
-        "precision": 0.5217391304347826,
+        "precision": 0.5,
+        "precision_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.6122448979591837,
+          "low": 0.391304347826087,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "prevalence": 0.19029126213592232,
-        "recall": 0.24489795918367346,
+        "recall": 0.2857142857142857,
+        "recall_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.3877551020408163,
+          "low": 0.1978021978021978,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "value": "Female"
       },
       {
+        "brier_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.14206812254924622,
+          "low": 0.1148121573429751,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "brier_score": 0.12873125205431468,
         "caveat": null,
         "group": "sex",
         "n": 478,
         "positives": 87,
-        "precision": 0.6176470588235294,
+        "precision": 0.5813953488372093,
+        "precision_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.6888888888888889,
+          "low": 0.5,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "prevalence": 0.18200836820083682,
-        "recall": 0.2413793103448276,
+        "recall": 0.28735632183908044,
+        "recall_interval": {
+          "caveat": "Only 6 holdout clusters; interval precision is limited.",
+          "cluster_count": 6,
+          "high": 0.3402116692257074,
+          "low": 0.20588235294117646,
+          "method": "holdout_cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "value": "Male"
       }
     ]

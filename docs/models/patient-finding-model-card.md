@@ -8,10 +8,12 @@ clinical decision tool, or a patient-targeting system. The outcome is a
 cross-sectional laboratory indicator, not confirmed chronic kidney disease (CKD),
 because NHANES cannot demonstrate persistence for at least three months.
 
-The retained model is logistic regression. It outperformed the no-skill reference
-and had slightly better held-out discrimination than the random-forest comparator.
-The tree's added complexity did not produce a performance advantage large enough to
-justify selecting it.
+Logistic regression is the pre-specified primary model because interpretability is
+the appropriate default for this educational use case. This choice was fixed before
+holdout evaluation. The random forest is a comparator, not a candidate selected by
+looking at the holdout. Paired cluster-bootstrap intervals include zero for every
+logistic-versus-forest difference, so no reliable advantage between those two models
+is established.
 
 ## Data and cohort
 
@@ -48,10 +50,11 @@ Its inclusion demonstrates categorical preprocessing and should not be interpret
 as justification for race-based care. No subgroup assessment in this small,
 single-cycle analysis constitutes fairness certification.
 
-Numeric imputation, scaling, categorical imputation, and one-hot encoding are fit
-inside each development fold. The final preprocessing and model are fit on the
-development sample only. The scoring representation requires complete input and
-rejects missing, unexpected, forbidden, nonfinite, and out-of-range values.
+Numeric scaling and categorical one-hot encoding are fit inside each development
+fold. The final preprocessing and model are fit on the development sample only.
+Missing values are rejected consistently during training and scoring; the artifact
+does not claim or perform imputation. It also rejects unexpected, forbidden,
+nonfinite, unknown-category, and out-of-range values.
 
 ## Validation design
 
@@ -61,11 +64,19 @@ rejects missing, unexpected, forbidden, nonfinite, and out-of-range values.
 - Development: 4,023 observations across 24 grouped survey clusters.
 - Untouched holdout: 993 observations across 6 grouped survey clusters, including
   185 indicator-positive observations (18.63%).
-- Threshold selection: the threshold of 0.39835 is selected only from grouped
-  out-of-fold logistic-regression predictions in the development sample. It
-  represents capacity for approximately 10% of development observations.
+- Development operating reference: 0.39835, selected only from grouped out-of-fold
+  logistic-regression predictions. The deterministic policy selects exactly 402 of
+  4,023 development observations (9.99%) and never exceeds capacity.
+- Capacity-matched holdout comparison: each model ranks holdout probabilities
+  without using holdout labels, then selects exactly 99 of 993 observations. Ties
+  resolve by descending probability followed by stable row order, so capacity is
+  never exceeded. Realized probability boundaries differ by model.
 - Holdout use: the holdout is evaluated once after preprocessing, model fitting,
-  and threshold selection.
+  pre-specifying the primary model, and creating the development operating reference.
+- Uncertainty: 1,000 deterministic percentile bootstrap replicates resample the six
+  holdout survey clusters with replacement. These intervals quantify sampling
+  variation within this split but remain imprecise because only six holdout clusters
+  are available.
 
 This grouped approach reduces direct cluster leakage. With only 30 public survey
 clusters, one split can still be variable and should not be treated as external
@@ -75,27 +86,36 @@ validation.
 
 PR-AUC is interpreted against the held-out prevalence reference of 0.1863.
 
-| Model | ROC-AUC | PR-AUC | Brier score | Precision | Recall |
+| Model | ROC-AUC (95% CI) | PR-AUC (95% CI) | Brier (95% CI) | Precision (95% CI) | Recall (95% CI) |
 |---|---:|---:|---:|---:|---:|
-| Prevalence/no-skill | 0.5000 | 0.1863 | 0.1516 | 0.0000 | 0.0000 |
-| Logistic regression | 0.7550 | 0.4625 | 0.1300 | 0.5625 | 0.2432 |
-| Random forest | 0.7433 | 0.4505 | 0.1293 | 0.5495 | 0.2703 |
+| Prevalence/no-skill | 0.5000 (0.5000–0.5000) | 0.1863 (0.1617–0.2100) | 0.1516 (0.1362–0.1664) | 0.2222 (0.1644–0.3205) | 0.1189 (0.1071–0.1300) |
+| Logistic regression | 0.7550 (0.7081–0.7809) | 0.4625 (0.3903–0.5135) | 0.1300 (0.1196–0.1388) | 0.5354 (0.4724–0.6027) | 0.2865 (0.2276–0.3407) |
+| Random forest | 0.7433 (0.7065–0.7723) | 0.4505 (0.3713–0.5155) | 0.1293 (0.1188–0.1372) | 0.5455 (0.4766–0.6211) | 0.2919 (0.2345–0.3547) |
 
-Precision, recall, and the confusion matrices apply the selected logistic operating
-threshold to all model probabilities for a transparent reference. They are not
-threshold-optimized separately for each comparator. The no-skill probability is
-below this threshold, so it flags no holdout observations.
+Precision, recall, and confusion matrices use the same exact 99-observation capacity
+for every model. The no-skill scores are all tied, so its selected set is an explicit,
+deterministic ordering reference rather than a meaningful ranking.
 
-At the selected threshold, logistic regression flags 80 of 993 held-out
-observations (8.06%):
+At the capacity-matched boundary of 0.38224, logistic regression flags exactly 99 of
+993 held-out observations (9.97%):
 
 | | Predicted below threshold | Predicted at/above threshold |
 |---|---:|---:|
-| Indicator negative | 773 | 35 |
-| Indicator positive | 140 | 45 |
+| Indicator negative | 762 | 46 |
+| Indicator positive | 132 | 53 |
 
-The held-out flagged share need not equal the 10% development capacity because the
-threshold is frozen before holdout evaluation and score distributions can differ.
+The development threshold remains separately recorded for future fixed-threshold
+demonstrations. The table above instead uses the fair, exact-capacity policy so ties
+and different model score scales cannot silently exceed the operating limit.
+
+Paired logistic-minus-random-forest differences are small and uncertain:
+
+- ROC-AUC: 0.0117 (95% CI −0.0096 to 0.0325).
+- PR-AUC: 0.0120 (95% CI −0.0053 to 0.0255).
+- Brier score: 0.0007 (95% CI −0.0021 to 0.0032; lower is better).
+
+Every interval includes zero. The holdout therefore supports the pre-specified
+interpretability decision, not a performance-superiority claim.
 
 ## Calibration
 
@@ -122,10 +142,12 @@ These are descriptive holdout checks using the same frozen threshold.
 |---|---|---:|---:|---:|---:|---:|
 | Age | 18–39 | 344 | 18 | undefined (no flags) | 0.0000 | 0.0496 |
 | Age | 40–59 | 316 | 51 | undefined (no flags) | 0.0000 | 0.1374 |
-| Age | 60+ | 333 | 116 | 0.5625 | 0.3879 | 0.2060 |
-| Sex | Female | 515 | 98 | 0.5217 | 0.2449 | 0.1312 |
-| Sex | Male | 478 | 87 | 0.6176 | 0.2414 | 0.1287 |
+| Age | 60+ | 333 | 116 | 0.5354 | 0.4569 | 0.2060 |
+| Sex | Female | 515 | 98 | 0.5000 | 0.2857 | 0.1312 |
+| Sex | Male | 478 | 87 | 0.5814 | 0.2874 | 0.1287 |
 
+Cluster-bootstrap uncertainty is included for subgroup precision, recall, and Brier
+score in the JSON artifact; intervals carry an explicit six-cluster limitation.
 The model flags no one in either younger age band at this capacity threshold. That
 is an important operational limitation, not evidence that screening is unnecessary
 in those groups. Age is the strongest available signal, so the model largely
@@ -148,11 +170,15 @@ the eGFR equation; it is another reason not to interpret this model causally.
 
 ## Scoring artifact and reproducibility
 
-The committed artifact is deterministic JSON rather than pickle. It contains the
-logistic intercept and coefficients, development-fitted numeric scaling values,
-categorical levels, aggregate metrics, split counts, limitations, and subgroup
-diagnostics. It contains no participant rows or identifiers. The scorer is intended
-only to demonstrate a validated software boundary and rejects invalid input.
+The committed artifact is deterministic, strict JSON rather than pickle. It contains
+a semantic version, required-field types/ranges/categories, explicit reject policies
+for missing and unknown inputs, float64 coefficient precision, ordered features and
+categories, the logistic intercept and coefficients, development-fitted scaling,
+aggregate metrics, uncertainty, split counts, limitations, and subgroup diagnostics.
+It embeds the Task 3 source-manifest path, release, retrieval date, URLs, byte counts,
+and SHA-256 digests. A validated loader rejects inconsistent or tampered contracts,
+and full-vector tests reproduce the fitted pipeline's holdout probabilities to
+numerical tolerance. It contains no participant rows or identifiers.
 
 Run:
 

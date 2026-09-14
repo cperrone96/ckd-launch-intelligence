@@ -5,7 +5,6 @@ from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -13,7 +12,9 @@ from ckd_intelligence.analysis.artifacts import patient_finding_output_paths
 from ckd_intelligence.modeling.patient_finding import (
     FeatureValidationError,
     LeakageError,
+    LogisticScorer,
     build_pre_lab_features,
+    select_capacity_decision,
     select_operating_threshold,
     train_patient_finding_models,
 )
@@ -47,6 +48,11 @@ def test_official_model_artifact_is_aggregate_checksummed_and_nonclinical() -> N
     assert artifact["split"]["threshold_source"] == "out_of_fold_development_predictions"
     assert "not a diagnosis" in artifact["intended_use"].casefold()
     assert artifact["features"] == ["age_years", "sex", "race_ethnicity"]
+    assert artifact["selection_policy"] == "logistic_prespecified_before_holdout"
+    assert artifact["source_manifest"]["path"] == (
+        "data/manifests/nhanes-2017-2018-patient-need.json"
+    )
+    assert len(artifact["source_manifest"]["files"]) == 3
     payload = artifact_path.read_text(encoding="utf-8").casefold()
     assert "seqn" not in payload
     assert "respondent_id" not in payload
@@ -130,12 +136,23 @@ def test_feature_builder_uses_only_documented_pre_lab_allowlist() -> None:
 
 def test_threshold_uses_validation_predictions_and_respects_capacity() -> None:
     cohort, groups = _modeling_cohort()
-    comparison = train_patient_finding_models(cohort, groups, capacity=0.12)
+    comparison = train_patient_finding_models(
+        cohort, groups, capacity=0.12, bootstrap_replicates=20
+    )
 
     threshold = select_operating_threshold(comparison, capacity=0.12)
-    selected = np.asarray(comparison.selection_probabilities) >= threshold
+    decision = select_capacity_decision(comparison.selection_probabilities, capacity=0.12)
 
-    assert selected.sum() == pytest.approx(0.12 * len(selected), abs=1)
+    assert decision.threshold == threshold
+    assert sum(decision.selected) == decision.requested_count
+    assert decision.selected_count == decision.requested_count
+    assert decision.selected_share == pytest.approx(
+        decision.requested_count / len(comparison.selection_probabilities)
+    )
+    assert decision.tie_policy == "descending_probability_then_stable_row_order"
+    assert comparison.development_capacity.requested_count == decision.requested_count
+    assert comparison.development_capacity.selected_count == decision.selected_count
+    assert comparison.development_capacity.selected_share == decision.selected_share
     assert comparison.split.holdout_groups.isdisjoint(comparison.split.development_groups)
     assert comparison.split.threshold_source == "out_of_fold_development_predictions"
 
@@ -143,7 +160,9 @@ def test_threshold_uses_validation_predictions_and_respects_capacity() -> None:
 def test_comparison_reports_baselines_calibration_subgroups_and_denominators() -> None:
     cohort, groups = _modeling_cohort()
 
-    comparison = train_patient_finding_models(cohort, groups, capacity=0.15)
+    comparison = train_patient_finding_models(
+        cohort, groups, capacity=0.15, bootstrap_replicates=20
+    )
 
     assert set(comparison.models) == {"prevalence_no_skill", "logistic_regression", "random_forest"}
     assert comparison.models["logistic_regression"].roc_auc > 0.5
@@ -162,11 +181,57 @@ def test_comparison_reports_baselines_calibration_subgroups_and_denominators() -
             assert metrics.caveat is not None
 
 
+def test_comparison_reports_cluster_aware_uncertainty_and_paired_differences() -> None:
+    cohort, groups = _modeling_cohort()
+    comparison = train_patient_finding_models(
+        cohort,
+        groups,
+        capacity=0.15,
+        bootstrap_replicates=80,
+    )
+
+    logistic = comparison.models["logistic_regression"]
+    assert logistic.roc_auc_interval.method == "holdout_cluster_bootstrap_percentile"
+    assert logistic.roc_auc_interval.cluster_count > 1
+    assert logistic.roc_auc_interval.low <= logistic.roc_auc <= logistic.roc_auc_interval.high
+    assert logistic.pr_auc_interval.low <= logistic.pr_auc <= logistic.pr_auc_interval.high
+    assert logistic.brier_interval.low <= logistic.brier_score <= logistic.brier_interval.high
+    paired = comparison.paired_differences["logistic_minus_random_forest_roc_auc"]
+    assert paired.interval.low <= paired.estimate <= paired.interval.high
+    assert paired.interval.valid_replicates > 0
+    for dimension in ("age_band", "sex"):
+        for metric in comparison.subgroups[dimension]:
+            assert metric.brier_interval.cluster_count > 1
+
+
+def test_model_selection_is_prespecified_and_not_based_on_holdout_advantage() -> None:
+    cohort, groups = _modeling_cohort()
+    comparison = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
+
+    assert comparison.selected_model == "logistic_regression"
+    assert comparison.selection_policy == "logistic_prespecified_before_holdout"
+    assert "holdout" not in comparison.selection_policy.replace("before_holdout", "")
+
+
+def test_capacity_policy_never_exceeds_limit_when_probabilities_tie() -> None:
+    decision = select_capacity_decision([0.8, 0.8, 0.8, 0.2], capacity=2)
+
+    assert decision.selected == (True, True, False, False)
+    assert decision.requested_count == 2
+    assert decision.selected_count == 2
+    assert decision.selected_share == 0.5
+    assert decision.threshold == 0.8
+
+
 def test_training_and_json_artifact_are_deterministic() -> None:
     cohort, groups = _modeling_cohort()
 
-    first = train_patient_finding_models(cohort, groups, capacity=0.15)
-    second = train_patient_finding_models(cohort, groups, capacity=0.15)
+    first = train_patient_finding_models(
+        cohort, groups, capacity=0.15, bootstrap_replicates=20
+    )
+    second = train_patient_finding_models(
+        cohort, groups, capacity=0.15, bootstrap_replicates=20
+    )
 
     assert first.to_json() == second.to_json()
     assert "respondent_id" not in first.to_json()
@@ -175,7 +240,9 @@ def test_training_and_json_artifact_are_deterministic() -> None:
 
 def test_subgroup_with_no_capacity_flags_explains_undefined_precision() -> None:
     cohort, groups = _modeling_cohort()
-    comparison = train_patient_finding_models(cohort, groups, capacity=0.01)
+    comparison = train_patient_finding_models(
+        cohort, groups, capacity=0.01, bootstrap_replicates=20
+    )
 
     unflagged = [
         metric
@@ -190,7 +257,9 @@ def test_subgroup_with_no_capacity_flags_explains_undefined_precision() -> None:
 
 def test_scoring_artifact_rejects_incomplete_out_of_range_and_extra_input() -> None:
     cohort, groups = _modeling_cohort()
-    comparison = train_patient_finding_models(cohort, groups, capacity=0.15)
+    comparison = train_patient_finding_models(
+        cohort, groups, capacity=0.15, bootstrap_replicates=20
+    )
     scorer = comparison.scorer
 
     probability = scorer.score_one(
@@ -217,7 +286,9 @@ def test_scoring_artifact_rejects_incomplete_out_of_range_and_extra_input() -> N
 
 def test_portable_json_scorer_reproduces_fitted_logistic_holdout_probabilities() -> None:
     cohort, groups = _modeling_cohort()
-    comparison = train_patient_finding_models(cohort, groups, capacity=0.15)
+    comparison = train_patient_finding_models(
+        cohort, groups, capacity=0.15, bootstrap_replicates=20
+    )
     holdout = cohort.loc[groups.astype(str).isin(comparison.split.holdout_groups)]
 
     probabilities = [
@@ -231,15 +302,43 @@ def test_portable_json_scorer_reproduces_fitted_logistic_holdout_probabilities()
         for row in holdout.itertuples(index=False)
     ]
 
-    assert np.mean(probabilities) == pytest.approx(
-        comparison.models["logistic_regression"].mean_probability,
-        abs=1e-12,
-    )
+    assert probabilities == pytest.approx(comparison.holdout_probabilities, abs=1e-12)
+
+
+def test_portable_scorer_round_trip_is_validated_and_numerically_stable() -> None:
+    cohort, groups = _modeling_cohort()
+    comparison = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
+    payload = json.loads(json.dumps(comparison.scorer.as_dict(), allow_nan=False))
+    reloaded = LogisticScorer.from_dict(payload)
+    row = {"age_years": 67, "sex": "Female", "race_ethnicity": "Group B"}
+
+    assert reloaded.score_one(row) == pytest.approx(comparison.scorer.score_one(row), abs=1e-15)
+    assert payload["artifact_version"] == "1.0.0"
+    assert payload["missing_value_policy"] == "reject"
+    assert payload["unknown_category_policy"] == "reject"
+    assert payload["coefficient_precision"] == "float64"
+
+    broken = dict(payload)
+    broken["coefficients"] = broken["coefficients"][:-1]
+    with pytest.raises(FeatureValidationError, match="coefficient length"):
+        LogisticScorer.from_dict(broken)
+
+    missing_scale = dict(payload)
+    missing_scale["numeric_scales"] = {}
+    with pytest.raises(FeatureValidationError, match="numeric preprocessing fields"):
+        LogisticScorer.from_dict(missing_scale)
+
+    extreme = dict(payload)
+    extreme["coefficients"] = [1e6] * len(extreme["coefficients"])
+    extreme_scorer = LogisticScorer.from_dict(extreme)
+    assert extreme_scorer.score_one(row) == 1.0
 
 
 def test_threshold_selection_never_reads_holdout_probabilities() -> None:
     cohort, groups = _modeling_cohort()
-    comparison = train_patient_finding_models(cohort, groups, capacity=0.15)
+    comparison = train_patient_finding_models(
+        cohort, groups, capacity=0.15, bootstrap_replicates=20
+    )
     original = select_operating_threshold(comparison, capacity=0.20)
     tampered_metrics = replace(
         comparison.models["logistic_regression"],
@@ -260,3 +359,46 @@ def test_training_rejects_fractional_target_values_instead_of_truncating_them() 
 
     with pytest.raises(FeatureValidationError, match="complete and binary"):
         train_patient_finding_models(cohort, groups)
+
+
+@pytest.mark.parametrize("target", ["age_years", "diabetes_history"])
+def test_training_rejects_allowed_feature_as_target_and_invalid_training_input(
+    target: str,
+) -> None:
+    cohort, groups = _modeling_cohort()
+    with pytest.raises(LeakageError, match="fixed laboratory indicator"):
+        train_patient_finding_models(cohort, groups, target_column=target)
+
+    cohort.loc[0, "age_years"] = 121
+    with pytest.raises(FeatureValidationError, match="age_years"):
+        train_patient_finding_models(cohort, groups)
+
+
+def test_training_rejects_grouped_folds_without_both_classes() -> None:
+    cohort, _ = _modeling_cohort()
+    cohort = cohort.iloc[:40].copy()
+    cohort["ckd_indicator"] = 0
+    cohort.loc[:3, "ckd_indicator"] = 1
+    groups = pd.Series([f"group-{index // 4}" for index in range(40)])
+
+    with pytest.raises(FeatureValidationError, match="fold.*both outcome classes"):
+        train_patient_finding_models(cohort, groups)
+
+
+def test_sensitivity_targets_must_use_the_same_complete_holdout_domain() -> None:
+    cohort, groups = _modeling_cohort()
+    cohort["sensitivity_egfr_only"] = cohort["ckd_indicator"]
+    cohort.loc[0, "sensitivity_egfr_only"] = pd.NA
+
+    with pytest.raises(FeatureValidationError, match="common complete-case domain"):
+        train_patient_finding_models(cohort, groups)
+
+
+def test_model_artifact_uses_strict_json_without_nan_tokens() -> None:
+    cohort, groups = _modeling_cohort()
+    comparison = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
+
+    payload = json.dumps(comparison.to_artifact(), allow_nan=False)
+
+    assert "NaN" not in payload
+    assert "Infinity" not in payload
