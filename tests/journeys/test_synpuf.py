@@ -42,8 +42,9 @@ def test_journey_is_synthetic_only_and_no_observed_values_are_allowed(
         build_journey_output(claims.assign(evidence_type="public_observed"))
     with pytest.raises(ValueError, match="evidence_type"):
         build_journey_output(claims.drop(columns="evidence_type"))
+    null_labels = pd.Series(pd.NA, index=claims.index, dtype="object")
     with pytest.raises(ValueError, match="public_synthetic"):
-        build_journey_output(claims.assign(evidence_type=pd.NA))
+        build_journey_output(claims.assign(evidence_type=null_labels))
 
 
 def test_schema_valid_empty_input_returns_typed_empty_outputs(
@@ -110,6 +111,33 @@ def test_deterministic_tie_break_uses_claim_id(claims: pd.DataFrame) -> None:
     assert list(rows.loc[rows["synthetic_id"] == "SYN004", "claim_id"]) == ["A", "B"]
 
 
+def test_only_first_qualifying_persistence_claim_is_flagged() -> None:
+    rows = pd.DataFrame(
+        [
+            {
+                "source_release": "2008-2010",
+                "beneficiary_id": "TIE",
+                "claim_id": claim_id,
+                "claim_type": "outpatient",
+                "service_from_date": event_date,
+                "service_through_date": event_date,
+                "diagnosis_code": diagnosis,
+                "evidence_type": "public_synthetic",
+            }
+            for claim_id, event_date, diagnosis in (
+                ("A", "2009-01-01", "4019"),
+                ("B", "2009-02-01", "5853"),
+                ("D", "2009-05-02", "5853"),
+                ("E", "2009-05-02", "4019"),
+                ("F", "2009-05-02", "5853"),
+            )
+        ]
+    )
+    output = build_journey_output(rows)
+    assert list(output.events.loc[output.events["is_persistence_event"], "claim_id"]) == ["D"]
+    assert list(output.events["event_order"]) == [0, 2, 3, 3, 3]
+
+
 def test_post_follow_up_claims_never_define_target_or_persistence(
     claims: pd.DataFrame,
 ) -> None:
@@ -142,6 +170,36 @@ def test_post_follow_up_claims_never_define_target_or_persistence(
     summary = output.summaries.iloc[0]
     assert bool(summary["event_observed"]) is False
     assert bool(summary["has_target"]) is False
+
+
+def test_spanning_early_claim_is_removed_before_recomputing_index() -> None:
+    rows = pd.DataFrame(
+        [
+            {
+                "source_release": "2008-2010",
+                "beneficiary_id": "SPAN",
+                "claim_id": "SPAN-1",
+                "claim_type": "inpatient",
+                "service_from_date": "2009-01-01",
+                "service_through_date": "2010-02-01",
+                "diagnosis_code": "4019",
+                "evidence_type": "public_synthetic",
+            },
+            {
+                "source_release": "2008-2010",
+                "beneficiary_id": "SPAN",
+                "claim_id": "SPAN-2",
+                "claim_type": "outpatient",
+                "service_from_date": "2009-12-01",
+                "service_through_date": "2009-12-01",
+                "diagnosis_code": "5853",
+                "evidence_type": "public_synthetic",
+            },
+        ]
+    )
+    output = build_journey_output(rows)
+    assert list(output.events["claim_id"]) == ["SPAN-2"]
+    assert output.summaries.iloc[0]["index_date"] == pd.Timestamp("2009-12-01").date()
 
 
 def test_out_of_release_through_date_is_rejected(claims: pd.DataFrame) -> None:

@@ -9,6 +9,8 @@ CREATE SCHEMA IF NOT EXISTS analytics_synthetic;
 DROP TABLE IF EXISTS analytics_synthetic.mart_journeys;
 DROP TABLE IF EXISTS analytics_synthetic.mart_journey_summaries;
 DROP TABLE IF EXISTS analytics_synthetic.mart_journey_survival;
+DROP TABLE IF EXISTS analytics_synthetic.mart_journey_survival_metadata;
+DROP TABLE IF EXISTS _synpuf_journey_base;
 
 CREATE TEMP TABLE _synpuf_journey_base AS
 WITH input_contract AS (
@@ -42,6 +44,7 @@ WITH input_contract AS (
     WHERE event_date BETWEEN DATE '2008-01-01' AND DATE '2010-12-31'
       AND event_through_date BETWEEN DATE '2008-01-01' AND DATE '2010-12-31'
       AND event_through_date >= event_date
+      AND event_through_date <= event_date + INTERVAL '365 days'
 ), indexed AS (
     SELECT
         in_release.*,
@@ -86,13 +89,14 @@ WITH input_contract AS (
         MIN(CASE
                 WHEN is_ckd_signal = 1
                  AND event_date >= target_date + INTERVAL '90 days'
-                THEN event_date
-            END) OVER (PARTITION BY synthetic_id) AS persistence_date
+                THEN event_position
+            END) OVER (PARTITION BY synthetic_id) AS persistence_position
     FROM target_dates
 )
 SELECT
     synthetic_id,
     claim_id,
+    source_release,
     event_date,
     event_through_date,
     claim_type,
@@ -104,16 +108,23 @@ SELECT
           OR event_position < first_target_position THEN 'pre_target'
         ELSE 'follow_up'
     END AS event_kind,
-    event_position AS event_order,
+    CASE
+        WHEN event_position = 1 THEN 0
+        WHEN event_position = first_target_position THEN 2
+        WHEN first_target_position IS NULL OR event_position < first_target_position THEN 1
+        ELSE 3
+    END AS event_order,
     is_ckd_signal,
     CASE WHEN event_position = first_target_position THEN TRUE ELSE FALSE END AS is_target_event,
-    CASE WHEN persistence_date IS NOT NULL AND event_date = persistence_date
+    CASE WHEN event_position = persistence_position
          THEN TRUE ELSE FALSE END AS is_persistence_event,
     index_date,
     target_date,
-    persistence_date,
+    CASE WHEN persistence_position IS NOT NULL
+         THEN MIN(CASE WHEN event_position = persistence_position THEN event_date END)
+              OVER (PARTITION BY synthetic_id)
+         ELSE NULL END AS persistence_date,
     follow_up_end,
-    source_release,
     evidence_type
 FROM persistence;
 
@@ -209,3 +220,5 @@ FROM analytics_synthetic.mart_journey_survival;
 --   as ckd_intelligence.statistics.time_to_event.kaplan_meier;
 -- * mart_journey_survival_metadata persists the median survival method output;
 -- * all three tables contain only public_synthetic evidence.
+
+DROP TABLE IF EXISTS _synpuf_journey_base;

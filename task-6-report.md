@@ -46,13 +46,39 @@ on branch `feature/ckd-task6`, based on approved Task 4 commit `8d68c0e`.
   provenance for the release contract only.
 - Notebook cells have stable IDs and repeat the synthetic/non-representative boundary.
 
+## Fix round 2 corrections
+
+- Replaced text-only SQL assertions with executable DuckDB reconciliation tests for
+  standard, all-censored, empty, adversarial-tie, and spanning-claim scenarios.
+  Each scenario is rerun in the same session and a fresh DuckDB session. PostgreSQL
+  coverage uses the same scenarios when `CKD_TEST_POSTGRES_URL` and `psycopg` are
+  available, with an explicit unavailable-service skip.
+- SQL and Python now share category event order `index=0`, `pre_target=1`,
+  `target=2`, `follow_up=3`. Only the first qualifying CKD claim at the inclusive
+  persistence boundary receives `is_persistence_event=true`, including same-day ties.
+- Eligibility and service-through filtering occur before final index/follow-up
+  calculation. A spanning early claim is removed and the index is recomputed from
+  the remaining valid claim; spanning-only beneficiaries produce typed empty output.
+- SQL drops all temporary and final output tables, including metadata, so same- and
+  fresh-session reruns are safe.
+- Strict typing was made explicit around pandas' dynamically typed row operations.
+  The existing notebook import-format issue was also corrected so the repository
+  lint gate is clean.
+
 ## Verification
 
-- Targeted tests: **23 passed** using the available Anaconda environment.
-- Full tests excluding the pre-existing DuckDB-dependent SQL test: **142 passed**;
-  the complete suite is blocked only by missing `duckdb` in the available runtime.
-- Notebook code executed twice manually with deterministic outputs. `nbconvert`
-  kernel execution was blocked by the sandbox's local socket restriction.
+- Primary Python 3.12 environment: `/Users/christinaperrone/Documents/Claude/Projects/Data Design Dynamics/portfolio-projects/ckd-launch-intelligence/.venv/bin/python`.
+- Full test command (`PYTHONPATH=/private/tmp/ckd-task6-worktree/src python -m pytest -q`):
+  **144 passed, 1 skipped**. The only skip is PostgreSQL because `psycopg` is not
+  installed/configured in this environment.
+- Executable SQL command for DuckDB: **1 passed**. It reconciled all five scenarios,
+  including same-session and fresh-session reruns. PostgreSQL test is intentionally
+  skipped only because its optional driver/database is unavailable.
+- `python -m ruff check .`: **All checks passed**.
+- `python -m mypy`: **Success: no issues found in 40 source files**.
+- Notebook code executed twice manually with deterministic outputs. Standard
+  `nbconvert --execute` was also attempted but the sandbox disallows Jupyter's local
+  kernel socket bind; the notebook's code cells themselves passed both runs.
 - Python 3.12 bytecode compilation passed for `src` and `tests`.
 - Notebook JSON validation passed.
 - `git diff --check` passed.

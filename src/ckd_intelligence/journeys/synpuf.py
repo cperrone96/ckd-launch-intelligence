@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import date, timedelta
-from typing import Any, Final
+from typing import Any, Final, cast
 
 import pandas as pd
 
@@ -90,10 +90,10 @@ def _is_ckd_code(value: object, prefixes: tuple[str, ...]) -> bool:
 
 
 def _as_date(value: object, field_name: str) -> date:
-    parsed: Any = pd.to_datetime(value, errors="coerce")
+    parsed: Any = pd.to_datetime(str(value), errors="coerce")
     if pd.isna(parsed):
         raise ValueError(f"{field_name} contains an invalid date")
-    return parsed.date()
+    return cast(date, parsed.date())
 
 
 def _validate_input(claims: pd.DataFrame, rules: JourneyRules) -> pd.DataFrame:
@@ -154,6 +154,7 @@ def _empty_events() -> pd.DataFrame:
             "is_persistence_event": pd.Series(dtype="bool"),
             "index_date": pd.Series(dtype="object"),
             "target_date": pd.Series(dtype="object"),
+            "persistence_date": pd.Series(dtype="object"),
             "follow_up_end": pd.Series(dtype="object"),
             "evidence_type": pd.Series(dtype="string"),
         }
@@ -215,7 +216,7 @@ def build_journey_output(
     event_order = {
         kind: position for position, kind in enumerate(journey_rules.allowed_event_order)
     }
-    frame = _validate_input(claims, journey_rules)
+    frame: Any = _validate_input(claims, journey_rules)
     frame = frame.sort_values(
         ["beneficiary_id", "event_date", "event_through_date", "claim_id"],
         kind="mergesort",
@@ -227,20 +228,37 @@ def build_journey_output(
     summaries: list[dict[str, Any]] = []
     for synthetic_id, group in frame.groupby("beneficiary_id", sort=False):
         group = group.reset_index(drop=True)
+        # Eligibility is applied before the final index date.  Recompute the
+        # index after removing a spanning/post-censor row so that a later valid
+        # claim cannot inherit a discarded row's index or follow-up boundary.
+        for _ in range(2):
+            index_date = group.loc[0, "event_date"]
+            follow_up_end = min(
+                journey_rules.observation_end,
+                index_date + timedelta(days=journey_rules.follow_up_days),
+            )
+            bounded = group.loc[
+                (group["event_date"] <= follow_up_end)
+                & (group["event_through_date"] <= follow_up_end)
+            ].reset_index(drop=True)
+            if bounded.empty or list(bounded["claim_id"]) == list(group["claim_id"]):
+                group = bounded
+                break
+            group = bounded
+        if group.empty:
+            # A beneficiary without any eligible bounded claim has no journey
+            # grain and is excluded.
+            continue
         index_date = group.loc[0, "event_date"]
         follow_up_end = min(
             journey_rules.observation_end,
             index_date + timedelta(days=journey_rules.follow_up_days),
         )
-        # Claims after follow-up are not journey facts.  Their claim dates remain
-        # in the source input, but they cannot define target or persistence.
         group = group.loc[
             (group["event_date"] <= follow_up_end)
             & (group["event_through_date"] <= follow_up_end)
         ].reset_index(drop=True)
         if group.empty:
-            # A beneficiary whose first source claim cannot be represented inside
-            # the follow-up window has no valid journey grain and is excluded.
             continue
         is_target = group["diagnosis_code"].map(
             lambda value: _is_ckd_code(value, journey_rules.target_prefixes)
@@ -293,6 +311,7 @@ def build_journey_output(
                     "is_persistence_event": persistence_position == position,
                     "index_date": index_date,
                     "target_date": target_date,
+                    "persistence_date": persistence_date,
                     "follow_up_end": follow_up_end,
                     "evidence_type": EvidenceType,
                 }
