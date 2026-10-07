@@ -11,7 +11,7 @@ The product is educational. It is not a diagnostic system, a clinical decision
 tool, a patient-targeting system, a market forecast, or a claim of commercial
 experience. No customer, employer, client, or proprietary business data is used.
 
-## Two-minute hiring-manager path
+## Two-minute reviewer path
 
 1. Open the [dashboard review screenshot](.impeccable/review/desktop.png) or run
    the dashboard locally.
