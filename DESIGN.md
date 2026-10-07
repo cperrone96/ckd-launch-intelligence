@@ -2,7 +2,7 @@
 
 ## Direction contract
 
-This is an Operate-mode evidence workbench for analytics leaders and hiring reviewers. The visual language is a restrained clinical-review ledger: warm paper-white content, ink-black type, deep indigo navigation, and restrained signal colors reserved for evidence strength and state. The material is the audit trail, not a decorative medical metaphor.
+This is an Operate-mode evidence workbench for analytics leaders and portfolio reviewers. The visual language is a restrained clinical-review ledger: warm paper-white content, ink-black type, deep indigo navigation, and restrained signal colors reserved for evidence strength and state. The material is the audit trail, not a decorative medical metaphor.
 
 ### First viewport
 

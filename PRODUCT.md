@@ -12,7 +12,7 @@ delegated: Dash on top of the versioned offline FastAPI response contracts; the 
 
 ## Users
 
-Primary users are portfolio reviewers, hiring managers, and analytics leaders evaluating whether this project demonstrates defensible CKD launch-intelligence analysis. They arrive for a fast, decision-oriented review rather than patient care or beneficiary-level operations.
+Primary users are portfolio reviewers and analytics leaders evaluating whether this project demonstrates defensible CKD launch-intelligence analysis. They arrive for a fast, decision-oriented review rather than patient care or beneficiary-level operations.
 
 ## Product Purpose
 
