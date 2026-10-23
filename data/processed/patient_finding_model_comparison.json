@@ -1,320 +1,474 @@
 {
-  "analysis_population": "NHANES 2017-2018 MEC-examined adults excluding known pregnancy with complete eGFR and UACR",
-  "artifact_schema": "ckd_patient_finding_model_comparison_v1",
+  "analysis_population": "NHANES 2017-2018 MEC-examined adults excluding known pregnancy with complete eGFR, UACR and pre-laboratory predictors",
+  "artifact_schema": "ckd_patient_finding_model_comparison_v2",
+  "cohort_attrition": {
+    "excluded_any_missing_predictor": 275,
+    "indicator_domain": 5016,
+    "missing_by_predictor": {
+      "body_mass_index": 60,
+      "diabetes_history": 3,
+      "hypertension_history": 10,
+      "systolic_blood_pressure": 219
+    },
+    "model_cohort": 4741
+  },
   "cohort_sensitivity": {
     "primary_definition": {
-      "holdout_n": 993,
-      "holdout_prevalence": 0.1863041289023162,
+      "evaluated_n": 4741,
+      "evaluated_prevalence": 0.18350558953807214,
       "target": "ckd_indicator"
     },
     "sensitivity_albuminuria_only": {
-      "holdout_n": 993,
-      "holdout_prevalence": 0.14501510574018128,
-      "pr_auc": 0.3072334388417981,
-      "roc_auc": 0.6957449941107186
+      "evaluated_n": 4741,
+      "evaluated_prevalence": 0.1326724319763763,
+      "pr_auc": 0.3339476713533233,
+      "roc_auc": 0.7236731610301077
     },
     "sensitivity_egfr_only": {
-      "holdout_n": 993,
-      "holdout_prevalence": 0.08056394763343404,
-      "pr_auc": 0.4257843890642434,
-      "roc_auc": 0.8782037239868565
+      "evaluated_n": 4741,
+      "evaluated_prevalence": 0.08141742248470787,
+      "pr_auc": 0.30981524877091554,
+      "roc_auc": 0.8479747535737017
     }
   },
-  "development_capacity": {
-    "requested_count": 402,
-    "selected_count": 402,
-    "selected_share": 0.09992542878448919,
-    "threshold": 0.398348385969703,
-    "tie_policy": "descending_probability_then_stable_row_order"
-  },
+  "evaluated_n": 4741,
+  "evaluated_prevalence": 0.18350558953807214,
   "evidence_type": "public_observed",
   "features": [
     "age_years",
     "sex",
-    "race_ethnicity"
+    "race_ethnicity",
+    "body_mass_index",
+    "systolic_blood_pressure",
+    "diabetes_history",
+    "hypertension_history",
+    "smoking_status"
   ],
-  "holdout_n": 993,
-  "holdout_prevalence": 0.1863041289023162,
   "intended_use": "Educational comparison of population-level screening opportunity; not a diagnosis or clinical decision tool.",
   "limitations": [
     "Cross-sectional NHANES laboratory indicators cannot confirm chronic disease.",
-    "Performance metrics are unweighted and describe this held-out analytic sample, not U.S. population performance.",
-    "Demographics-only predictors omit clinical context and must not be used for care decisions.",
+    "Performance metrics are unweighted and describe this analytic cohort, not U.S. population performance.",
+    "Intervals resample survey clusters with the fitted fold models held fixed; they do not include model-refitting variability.",
     "Subgroup metrics are descriptive; small event counts can be unstable."
   ],
   "models": {
-    "logistic_regression": {
+    "logistic_demographics_only": {
       "brier_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.13878261330368502,
-        "low": 0.11962470366294138,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.13811963687124454,
+        "low": 0.12373058463453347,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "brier_score": 0.12999292720757588,
+      "brier_score": 0.13117533856379038,
       "calibration_bins": [
         {
-          "mean_probability": 0.04165000027524008,
-          "n": 200,
-          "observed_rate": 0.045
+          "mean_probability": 0.040385500386484245,
+          "n": 949,
+          "observed_rate": 0.05795574288724974
         },
         {
-          "mean_probability": 0.08023465919391677,
-          "n": 199,
-          "observed_rate": 0.09045226130653267
+          "mean_probability": 0.08212094290285127,
+          "n": 949,
+          "observed_rate": 0.08535300316122234
         },
         {
-          "mean_probability": 0.14535437340737045,
-          "n": 197,
-          "observed_rate": 0.15736040609137056
+          "mean_probability": 0.154355419153153,
+          "n": 954,
+          "observed_rate": 0.13522012578616352
         },
         {
-          "mean_probability": 0.23469850811468476,
-          "n": 199,
-          "observed_rate": 0.18592964824120603
+          "mean_probability": 0.2498053628693145,
+          "n": 944,
+          "observed_rate": 0.22139830508474576
         },
         {
-          "mean_probability": 0.3825258159108139,
-          "n": 198,
-          "observed_rate": 0.45454545454545453
+          "mean_probability": 0.3943228619514472,
+          "n": 945,
+          "observed_rate": 0.41904761904761906
         }
       ],
       "confusion_matrix": {
-        "false_negative": 132,
-        "false_positive": 46,
-        "true_negative": 762,
-        "true_positive": 53
+        "false_negative": 628,
+        "false_positive": 232,
+        "true_negative": 3639,
+        "true_positive": 242
       },
-      "mean_probability": 0.1766129138580593,
-      "n": 993,
-      "positives": 185,
-      "pr_auc": 0.4624967402699805,
+      "mean_probability": 0.18392006995284493,
+      "n": 4741,
+      "positives": 870,
+      "pr_auc": 0.41204113261238057,
       "pr_auc_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.5134536094393053,
-        "low": 0.39025575418925545,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.44156709454662785,
+        "low": 0.381210603800216,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "precision": 0.5353535353535354,
+      "precision": 0.510548523206751,
       "precision_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.5913978494623656,
-        "low": 0.4811037735849057,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5527950310559007,
+        "low": 0.4646526990524975,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "recall": 0.2864864864864865,
+      "recall": 0.27816091954022987,
       "recall_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.32,
-        "low": 0.2604639050387597,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.30207219695089216,
+        "low": 0.25749908701399565,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "requested_count": 99,
-      "roc_auc": 0.7549538399785924,
+      "requested_count": 474,
+      "roc_auc": 0.7409117902944677,
       "roc_auc_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.7808508265239036,
-        "low": 0.7081282861656203,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7556510074360491,
+        "low": 0.7254244556900145,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "selected_count": 99,
-      "selected_share": 0.09969788519637462,
-      "threshold": 0.3822438660409149,
+      "selected_count": 474,
+      "selected_share": 0.09997890740350138,
+      "threshold": 0.39105316714626714,
+      "tie_policy": "descending_probability_then_stable_row_order"
+    },
+    "logistic_regression": {
+      "brier_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.1309527370135526,
+        "low": 0.11790908118992749,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "brier_score": 0.12437859933882764,
+      "calibration_bins": [
+        {
+          "mean_probability": 0.03487963438635901,
+          "n": 949,
+          "observed_rate": 0.05690200210748156
+        },
+        {
+          "mean_probability": 0.06633717369624545,
+          "n": 948,
+          "observed_rate": 0.06223628691983123
+        },
+        {
+          "mean_probability": 0.12920423140456372,
+          "n": 948,
+          "observed_rate": 0.10337552742616034
+        },
+        {
+          "mean_probability": 0.2366922977203216,
+          "n": 948,
+          "observed_rate": 0.23628691983122363
+        },
+        {
+          "mean_probability": 0.4512848471690046,
+          "n": 948,
+          "observed_rate": 0.4588607594936709
+        }
+      ],
+      "confusion_matrix": {
+        "false_negative": 606,
+        "false_positive": 210,
+        "true_negative": 3661,
+        "true_positive": 264
+      },
+      "mean_probability": 0.18364825109118396,
+      "n": 4741,
+      "positives": 870,
+      "pr_auc": 0.4642758487689423,
+      "pr_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.4944037172407875,
+        "low": 0.4361279256129689,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision": 0.5569620253164557,
+      "precision_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5946179411118435,
+        "low": 0.5043197755960729,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall": 0.30344827586206896,
+      "recall_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.3202943398477107,
+        "low": 0.27950401177936884,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "requested_count": 474,
+      "roc_auc": 0.7722335551418298,
+      "roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7841515557218884,
+        "low": 0.7589110680347045,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_count": 474,
+      "selected_share": 0.09997890740350138,
+      "threshold": 0.43074498896983215,
       "tie_policy": "descending_probability_then_stable_row_order"
     },
     "prevalence_no_skill": {
       "brier_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.16639395312277913,
-        "low": 0.1362333041795974,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.15756532349562133,
+        "low": 0.1414905121763883,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "brier_score": 0.15159565669874012,
+      "brier_score": 0.14983128814635674,
       "calibration_bins": [
         {
-          "mean_probability": 0.1871737509321402,
-          "n": 993,
-          "observed_rate": 0.1863041289023162
+          "mean_probability": 0.18350558953807214,
+          "n": 4741,
+          "observed_rate": 0.18350558953807214
         }
       ],
       "confusion_matrix": {
-        "false_negative": 163,
-        "false_positive": 77,
-        "true_negative": 731,
-        "true_positive": 22
+        "false_negative": 790,
+        "false_positive": 394,
+        "true_negative": 3477,
+        "true_positive": 80
       },
-      "mean_probability": 0.18717375093214017,
-      "n": 993,
-      "positives": 185,
-      "pr_auc": 0.1863041289023162,
+      "mean_probability": 0.18350558953807214,
+      "n": 4741,
+      "positives": 870,
+      "pr_auc": 0.18350558953807214,
       "pr_auc_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.20995670995670995,
-        "low": 0.1617499993097412,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.19572387064132551,
+        "low": 0.17032877551820527,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "precision": 0.2222222222222222,
+      "precision": 0.16877637130801687,
       "precision_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.2604166666666667,
-        "low": 0.1326530612244898,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.22622351900591103,
+        "low": 0.14225896335305152,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "recall": 0.11891891891891893,
+      "recall": 0.09195402298850575,
       "recall_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.14124447310243182,
-        "low": 0.07262352736851246,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.12319644839067703,
+        "low": 0.07900130815786156,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "requested_count": 99,
+      "requested_count": 474,
       "roc_auc": 0.5,
       "roc_auc_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
+        "caveat": null,
+        "cluster_count": 30,
         "high": 0.5,
         "low": 0.5,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "selected_count": 99,
-      "selected_share": 0.09969788519637462,
-      "threshold": 0.1871737509321402,
+      "selected_count": 474,
+      "selected_share": 0.09997890740350138,
+      "threshold": 0.18350558953807214,
       "tie_policy": "descending_probability_then_stable_row_order"
     },
     "random_forest": {
       "brier_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.13715301038724437,
-        "low": 0.11879857781549842,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.12989817264730105,
+        "low": 0.116826015740703,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "brier_score": 0.1293407162081356,
+      "brier_score": 0.12314573281149341,
       "calibration_bins": [
         {
-          "mean_probability": 0.0673075235309022,
-          "n": 200,
-          "observed_rate": 0.075
+          "mean_probability": 0.05799355143056193,
+          "n": 949,
+          "observed_rate": 0.05374077976817703
         },
         {
-          "mean_probability": 0.08697300974876611,
-          "n": 198,
-          "observed_rate": 0.06565656565656566
+          "mean_probability": 0.07176058997449365,
+          "n": 948,
+          "observed_rate": 0.06118143459915612
         },
         {
-          "mean_probability": 0.11937551289272307,
-          "n": 198,
-          "observed_rate": 0.15656565656565657
+          "mean_probability": 0.12267118509650024,
+          "n": 948,
+          "observed_rate": 0.10759493670886076
         },
         {
-          "mean_probability": 0.18925250658139894,
-          "n": 198,
-          "observed_rate": 0.20202020202020202
+          "mean_probability": 0.23520278701371483,
+          "n": 948,
+          "observed_rate": 0.2320675105485232
         },
         {
-          "mean_probability": 0.4124998575553169,
-          "n": 199,
-          "observed_rate": 0.4321608040201005
+          "mean_probability": 0.42911010048312465,
+          "n": 948,
+          "observed_rate": 0.4630801687763713
         }
       ],
       "confusion_matrix": {
-        "false_negative": 131,
-        "false_positive": 45,
-        "true_negative": 763,
-        "true_positive": 54
+        "false_negative": 609,
+        "false_positive": 213,
+        "true_negative": 3658,
+        "true_positive": 261
       },
-      "mean_probability": 0.17510370608843942,
-      "n": 993,
-      "positives": 185,
-      "pr_auc": 0.4505406041107313,
+      "mean_probability": 0.18332120236699204,
+      "n": 4741,
+      "positives": 870,
+      "pr_auc": 0.4711542071951875,
       "pr_auc_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.5154866127040622,
-        "low": 0.371272228052346,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5020940112103187,
+        "low": 0.4424451990400176,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "precision": 0.5454545454545454,
+      "precision": 0.5506329113924051,
       "precision_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.6344338037634408,
-        "low": 0.4395089285714286,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5887476014349676,
+        "low": 0.5154164752303992,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "recall": 0.2918918918918919,
+      "recall": 0.3,
       "recall_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.3155150576977202,
-        "low": 0.26108374384236455,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.3321450894520287,
+        "low": 0.2793858917333111,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "requested_count": 99,
-      "roc_auc": 0.7432934171795558,
+      "requested_count": 474,
+      "roc_auc": 0.7801154770070404,
       "roc_auc_interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.7722572581398071,
-        "low": 0.7064734109711797,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7912147855124655,
+        "low": 0.7681595123182784,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "selected_count": 99,
-      "selected_share": 0.09969788519637462,
-      "threshold": 0.37930594800720224,
+      "selected_count": 474,
+      "selected_share": 0.09997890740350138,
+      "threshold": 0.4097042602810147,
       "tie_policy": "descending_probability_then_stable_row_order"
     }
   },
+  "operating_capacity": {
+    "requested_count": 474,
+    "selected_count": 474,
+    "selected_share": 0.09997890740350138,
+    "threshold": 0.43074498896983215,
+    "tie_policy": "descending_probability_then_stable_row_order"
+  },
   "outcome": "Cross-sectional eGFR <60 or UACR >=30 mg/g indicator; not confirmed CKD",
   "paired_differences": {
+    "logistic_minus_demographics_only_brier_score": {
+      "comparison": "logistic_regression minus logistic_demographics_only",
+      "estimate": -0.006796739224962739,
+      "interpretation": "logistic_regression has lower error.",
+      "interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": -0.0038846761956554733,
+        "low": -0.009535545406477806,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "brier_score"
+    },
+    "logistic_minus_demographics_only_pr_auc": {
+      "comparison": "logistic_regression minus logistic_demographics_only",
+      "estimate": 0.05223471615656172,
+      "interpretation": "logistic_regression has higher discrimination.",
+      "interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.08196392657083419,
+        "low": 0.024392535756282675,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "pr_auc"
+    },
+    "logistic_minus_demographics_only_roc_auc": {
+      "comparison": "logistic_regression minus logistic_demographics_only",
+      "estimate": 0.031321764847362044,
+      "interpretation": "logistic_regression has higher discrimination.",
+      "interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.044715902431779066,
+        "low": 0.018172094964165726,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "roc_auc"
+    },
     "logistic_minus_random_forest_brier_score": {
       "comparison": "logistic_regression minus random_forest",
-      "estimate": 0.0006522109994402947,
-      "interpretation": "Interval includes zero; no reliable model advantage is established.",
+      "estimate": 0.001232866527334231,
+      "interpretation": "random_forest has lower error.",
       "interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.0032330287496714957,
-        "low": -0.0021327029804008683,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.0021375872088834364,
+        "low": 0.0002642267588364996,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
@@ -322,14 +476,14 @@
     },
     "logistic_minus_random_forest_pr_auc": {
       "comparison": "logistic_regression minus random_forest",
-      "estimate": 0.011956136159249175,
-      "interpretation": "Interval includes zero; no reliable model advantage is established.",
+      "estimate": -0.006878358426245235,
+      "interpretation": "Interval includes zero; no reliable difference is established.",
       "interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.025491020175406387,
-        "low": -0.00529635134176655,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.000765420244398163,
+        "low": -0.01421283174095075,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
@@ -337,24 +491,33 @@
     },
     "logistic_minus_random_forest_roc_auc": {
       "comparison": "logistic_regression minus random_forest",
-      "estimate": 0.011660422799036674,
-      "interpretation": "Interval includes zero; no reliable model advantage is established.",
+      "estimate": -0.00788192186521064,
+      "interpretation": "random_forest has higher discrimination.",
       "interval": {
-        "caveat": "Only 6 holdout clusters; interval precision is limited.",
-        "cluster_count": 6,
-        "high": 0.032532865210030626,
-        "low": -0.009555965314462234,
-        "method": "holdout_cluster_bootstrap_percentile",
+        "caveat": null,
+        "cluster_count": 30,
+        "high": -0.0024606010741796084,
+        "low": -0.01392182070420459,
+        "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "metric": "roc_auc"
     }
   },
-  "performance_interpretation": "Unweighted held-out analytic-sample metrics; not population estimates",
+  "performance_interpretation": "Unweighted pooled out-of-fold metrics for the analytic cohort; not population estimates",
   "scorer": {
     "artifact_version": "1.0.0",
     "categorical_levels": {
+      "diabetes_history": [
+        "Borderline",
+        "No",
+        "Yes"
+      ],
+      "hypertension_history": [
+        "No",
+        "Yes"
+      ],
       "race_ethnicity": [
         "Mexican American",
         "Non-Hispanic Asian",
@@ -366,33 +529,57 @@
       "sex": [
         "Female",
         "Male"
+      ],
+      "smoking_status": [
+        "Current",
+        "Former",
+        "Never"
       ]
     },
     "coefficient_precision": "float64",
     "coefficients": [
-      0.9753730534532106,
-      0.019594146012556768,
-      -0.012473709750008907,
-      -0.018591240466817753,
-      -0.1579009161324008,
-      0.31008663452446744,
-      0.02763707403688899,
-      -0.19181261704053298,
-      0.0377015013409576
+      0.6379881617682315,
+      0.02423032872789991,
+      0.2684779698704691,
+      0.035739792984874036,
+      -0.040035876362151376,
+      -0.01641546246242786,
+      -0.1428314082633796,
+      0.19341174130915723,
+      0.05219554072669679,
+      -0.19809032096950482,
+      0.10743382628214221,
+      -0.39257714990042286,
+      -0.2804160338244468,
+      0.6686971003476018,
+      -0.2694266902982882,
+      0.2651306069210338,
+      0.03761880571875388,
+      -0.00039879669233280207,
+      -0.04151609240372854
     ],
     "feature_order": [
       "age_years",
       "sex",
-      "race_ethnicity"
+      "race_ethnicity",
+      "body_mass_index",
+      "systolic_blood_pressure",
+      "diabetes_history",
+      "hypertension_history",
+      "smoking_status"
     ],
     "format": "portable_logistic_json_v1",
-    "intercept": -1.7942396903518996,
+    "intercept": -1.6579550772475757,
     "missing_value_policy": "reject",
     "numeric_means": {
-      "age_years": 50.19736515038529
+      "age_years": 49.97637629192153,
+      "body_mass_index": 29.699198481333053,
+      "systolic_blood_pressure": 126.22590170850032
     },
     "numeric_scales": {
-      "age_years": 18.622826515594415
+      "age_years": 18.39409767809811,
+      "body_mass_index": 7.310023182403655,
+      "systolic_blood_pressure": 19.645577380664967
     },
     "required_fields": [
       {
@@ -420,13 +607,51 @@
         ],
         "name": "race_ethnicity",
         "type": "string"
+      },
+      {
+        "maximum": 80.0,
+        "minimum": 10.0,
+        "name": "body_mass_index",
+        "type": "number"
+      },
+      {
+        "maximum": 260.0,
+        "minimum": 60.0,
+        "name": "systolic_blood_pressure",
+        "type": "number"
+      },
+      {
+        "allowed_values": [
+          "Borderline",
+          "No",
+          "Yes"
+        ],
+        "name": "diabetes_history",
+        "type": "string"
+      },
+      {
+        "allowed_values": [
+          "No",
+          "Yes"
+        ],
+        "name": "hypertension_history",
+        "type": "string"
+      },
+      {
+        "allowed_values": [
+          "Current",
+          "Former",
+          "Never"
+        ],
+        "name": "smoking_status",
+        "type": "string"
       }
     ],
     "unknown_category_policy": "reject"
   },
   "selected_model": "logistic_regression",
-  "selected_threshold": 0.398348385969703,
-  "selection_policy": "logistic_prespecified_before_holdout",
+  "selected_threshold": 0.43074498896983215,
+  "selection_policy": "logistic_prespecified_before_evaluation",
   "source": "Verified CDC/NCHS NHANES 2017-2018 public-use files",
   "source_provenance": {
     "evidence_type": "public_observed",
@@ -448,6 +673,36 @@
         "name": "ALB_CR_J.xpt",
         "sha256": "0017a7b8d87d29009923e22300b4ec393b06c9bbf6147eb6b2d777aca605bcbf",
         "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/ALB_CR_J.xpt"
+      },
+      {
+        "bytes": 1466000,
+        "name": "BMX_J.xpt",
+        "sha256": "8d675e42d8826ac98714b2c3dd4c5138a5e353fb4424f7eff5e6db4a01ce838a",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BMX_J.xpt"
+      },
+      {
+        "bytes": 1466000,
+        "name": "BPX_J.xpt",
+        "sha256": "f98f1d9a4c18173e715c749b4294f6f1525140d5ad5751316bb17cc038fb3423",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BPX_J.xpt"
+      },
+      {
+        "bytes": 3851840,
+        "name": "DIQ_J.xpt",
+        "sha256": "1ecbf5360dfc331d1efbf32198553dc30e9a1f4cff0a907ed30ca72bac797f89",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DIQ_J.xpt"
+      },
+      {
+        "bytes": 544560,
+        "name": "BPQ_J.xpt",
+        "sha256": "63cfe1c331a1e7d3534328ac86312a21ffee3e01aa189bc1f74d06855239e5aa",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BPQ_J.xpt"
+      },
+      {
+        "bytes": 2305600,
+        "name": "SMQ_J.xpt",
+        "sha256": "73c3708e540cbf520a566508aa629c3e4ba53cad77dae9388ca36384646455f4",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/SMQ_J.xpt"
       }
     ],
     "join_policy": "Documented one-to-one within-cycle NHANES component join; no cross-source or cross-person linkage",
@@ -457,55 +712,92 @@
     "source": "CDC/NCHS NHANES"
   },
   "split": {
-    "development_group_count": 24,
-    "development_n": 4023,
-    "holdout_group_count": 6,
-    "holdout_n": 993,
+    "evaluated_n": 4741,
+    "folds": 5,
+    "group_count": 30,
     "random_state": 20260910,
-    "strategy": "stratified grouped 5-fold partition; one fold untouched as holdout",
-    "threshold_source": "out_of_fold_development_predictions"
+    "scoring_fold_group_counts": [
+      6,
+      6,
+      6,
+      6,
+      6
+    ],
+    "scoring_fold_sizes": [
+      952,
+      919,
+      940,
+      979,
+      951
+    ],
+    "strategy": "stratified grouped 5-fold cross-validation; survey clusters never shared between fitting and scoring folds; pooled out-of-fold predictions",
+    "threshold_source": "pooled_out_of_fold_logistic_predictions"
   },
   "subgroups": {
     "age_band": [
       {
-        "brier_interval": null,
-        "brier_score": 0.049643774481603266,
-        "caveat": "Sparse subgroup (fewer than 20 events or non-events, or fewer than 30 records); metrics are descriptive and potentially unstable. No records were flagged by the holdout-specific exact-capacity ranked mask; precision is undefined. Sparse subgroup; uncertainty intervals are unavailable.",
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.07433789310182423,
+          "low": 0.05474784074318841,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.06403460971477253,
+        "caveat": "No records were flagged by the exact-capacity ranked mask; precision is undefined.",
         "group": "age_band",
-        "n": 344,
-        "positives": 18,
+        "n": 1552,
+        "positives": 107,
         "precision": null,
         "precision_interval": null,
-        "prevalence": 0.05232558139534884,
+        "prevalence": 0.06894329896907217,
         "recall": 0.0,
-        "recall_interval": null,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.0,
+          "low": 0.0,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
         "value": "18-39"
       },
       {
         "brier_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.1465651560776903,
-          "low": 0.12793390520446754,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.11410062042937867,
+          "low": 0.09180259253205761,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "brier_score": 0.13737998988498348,
-        "caveat": "No records were flagged by the holdout-specific exact-capacity ranked mask; precision is undefined.",
+        "brier_score": 0.10320131830117736,
+        "caveat": null,
         "group": "age_band",
-        "n": 316,
-        "positives": 51,
-        "precision": null,
-        "precision_interval": null,
-        "prevalence": 0.16139240506329114,
-        "recall": 0.0,
+        "n": 1453,
+        "positives": 186,
+        "precision": 0.5,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.6176820728291317,
+          "low": 0.28121875,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.12801101169993118,
+        "recall": 0.06989247311827956,
         "recall_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.0,
-          "low": 0.0,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.10495300576958866,
+          "low": 0.029848525230987917,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
@@ -513,37 +805,37 @@
       },
       {
         "brier_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.22406455028942224,
-          "low": 0.18779111776280347,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.20460285417892224,
+          "low": 0.1880419016435907,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "brier_score": 0.2059863107861758,
+        "brier_score": 0.19605167609242177,
         "caveat": null,
         "group": "age_band",
-        "n": 333,
-        "positives": 116,
-        "precision": 0.5353535353535354,
+        "n": 1736,
+        "positives": 577,
+        "precision": 0.5602678571428571,
         "precision_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.5909213098729228,
-          "low": 0.47787364798426746,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.599148420811718,
+          "low": 0.5113084296218487,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "prevalence": 0.3483483483483483,
-        "recall": 0.45689655172413796,
+        "prevalence": 0.3323732718894009,
+        "recall": 0.43500866551126516,
         "recall_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.625,
-          "low": 0.3695652173913043,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.47222478474784746,
+          "low": 0.394044019856998,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
@@ -553,37 +845,37 @@
     "sex": [
       {
         "brier_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.14911839024796594,
-          "low": 0.11790950913387073,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.1358616925854229,
+          "low": 0.11641219177327819,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "brier_score": 0.13116395773817555,
+        "brier_score": 0.1265853121817394,
         "caveat": null,
         "group": "sex",
-        "n": 515,
-        "positives": 98,
-        "precision": 0.5,
+        "n": 2423,
+        "positives": 442,
+        "precision": 0.5336134453781513,
         "precision_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.6078431372549019,
-          "low": 0.39654359141184126,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.5933741325264092,
+          "low": 0.47033349652238504,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "prevalence": 0.19029126213592232,
-        "recall": 0.2857142857142857,
+        "prevalence": 0.18241848947585637,
+        "recall": 0.2873303167420814,
         "recall_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.35811021865238724,
-          "low": 0.21503456221198158,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.32874082809224314,
+          "low": 0.25177796431337285,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
@@ -591,37 +883,37 @@
       },
       {
         "brier_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.14206812254924622,
-          "low": 0.1148121573429751,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.1312987169825263,
+          "low": 0.11374352038912551,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "brier_score": 0.12873125205431468,
+        "brier_score": 0.12207192754487804,
         "caveat": null,
         "group": "sex",
-        "n": 478,
-        "positives": 87,
-        "precision": 0.5813953488372093,
+        "n": 2318,
+        "positives": 428,
+        "precision": 0.5805084745762712,
         "precision_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.6774193548387096,
-          "low": 0.4791666666666667,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.647595292316882,
+          "low": 0.48935473381027594,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "prevalence": 0.18200836820083682,
-        "recall": 0.28735632183908044,
+        "prevalence": 0.18464193270060397,
+        "recall": 0.32009345794392524,
         "recall_interval": {
-          "caveat": "Only 6 holdout clusters; interval precision is limited.",
-          "cluster_count": 6,
-          "high": 0.36470588235294116,
-          "low": 0.24324324324324326,
-          "method": "holdout_cluster_bootstrap_percentile",
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.35667646441318496,
+          "low": 0.2672795191123637,
+          "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },

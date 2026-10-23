@@ -75,9 +75,7 @@ _ARTIFACT_CONTRACTS: dict[str, ArtifactContract] = {
     "trials": ArtifactContract(source="ClinicalTrials.gov", release="api-v2"),
 }
 _EXPECTED_EVIDENCE_TYPE = "public_observed"
-_NHANES_SOURCE_MANIFEST_SHA256 = (
-    "9a27bf96e0f981360c0837ea92c648bebd82c7da77b6e28a4f57cc98b63ff353"
-)
+_NHANES_SOURCE_MANIFEST_SHA256 = "a26e5d1153a71f5816fd224643a02fcb9490139c0c6ff8cfd097e519cdd1a146"
 _TRIAL_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
     "geography": ("country",),
     "status": ("overall_status",),
@@ -107,10 +105,10 @@ _REQUIRED_KEYS: dict[str, frozenset[str]] = {
             "selected_model",
             "selected_threshold",
             "selection_policy",
-            "development_capacity",
+            "operating_capacity",
             "threshold_capacity",
-            "holdout_prevalence",
-            "holdout_n",
+            "evaluated_prevalence",
+            "evaluated_n",
             "features",
             "split",
             "performance_interpretation",
@@ -160,9 +158,7 @@ class ArtifactRepository:
         return computed
 
     @staticmethod
-    def _validate_payload(
-        key: str, payload: object, contract: ArtifactContract
-    ) -> dict[str, Any]:
+    def _validate_payload(key: str, payload: object, contract: ArtifactContract) -> dict[str, Any]:
         if not isinstance(payload, dict):
             raise ArtifactIntegrityError("artifact JSON must be an object")
         required = _REQUIRED_KEYS[key]
@@ -231,21 +227,25 @@ class ArtifactRepository:
                 raise ArtifactIntegrityError("artifact payload provenance is invalid")
             models = payload.get("models")
             subgroups = payload.get("subgroups")
-            if not isinstance(models, dict) or not models or not all(
-                isinstance(item, dict) for item in models.values()
+            if (
+                not isinstance(models, dict)
+                or not models
+                or not all(isinstance(item, dict) for item in models.values())
             ):
                 raise ArtifactIntegrityError("artifact model schema is invalid")
-            if not isinstance(subgroups, dict) or not subgroups or not all(
-                isinstance(item, list) and all(isinstance(row, dict) for row in item)
-                for item in subgroups.values()
+            if (
+                not isinstance(subgroups, dict)
+                or not subgroups
+                or not all(
+                    isinstance(item, list) and all(isinstance(row, dict) for row in item)
+                    for item in subgroups.values()
+                )
             ):
                 raise ArtifactIntegrityError("artifact subgroup schema is invalid")
         try:
             if key == "patient_need":
                 TypeAdapter(list[WaterfallItem]).validate_python(payload["waterfall"])
-                TypeAdapter(
-                    list[PopulationEstimateItem]
-                ).validate_python(
+                TypeAdapter(list[PopulationEstimateItem]).validate_python(
                     [{"key": row_key, **row} for row_key, row in payload["estimates"].items()]
                 )
             elif key == "meps":
@@ -290,9 +290,9 @@ class ArtifactRepository:
                     "selection_policy",
                     "selected_threshold",
                     "threshold_capacity",
-                    "development_capacity",
-                    "holdout_prevalence",
-                    "holdout_n",
+                    "operating_capacity",
+                    "evaluated_prevalence",
+                    "evaluated_n",
                     "features",
                     "split",
                     "models",
@@ -429,19 +429,16 @@ class ArtifactRepository:
             ):
                 raise ArtifactIntegrityError("artifact payload provenance is invalid")
         elif (
-            (
-                key == "patient_finding"
-                and (
-                    contract.source not in str(payload.get("source", ""))
-                    or contract.release not in str(payload.get("source", ""))
-                )
+            key == "patient_finding"
+            and (
+                contract.source not in str(payload.get("source", ""))
+                or contract.release not in str(payload.get("source", ""))
             )
-            or (
-                key not in {"patient_finding"}
-                and (
-                    payload.get("source") != contract.source
-                    or payload.get("release") != contract.release
-                )
+        ) or (
+            key not in {"patient_finding"}
+            and (
+                payload.get("source") != contract.source
+                or payload.get("release") != contract.release
             )
         ):
             raise ArtifactIntegrityError("artifact payload provenance is invalid")

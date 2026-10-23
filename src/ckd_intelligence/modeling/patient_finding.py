@@ -1,7 +1,11 @@
-"""Leakage-safe screening-opportunity model comparison.
+"""Leakage-controlled risk model for a laboratory-defined CKD indicator.
 
-This module supports an educational population-analytics demonstration. It does not
-diagnose CKD, recommend care, or identify patients for clinical action.
+Predictors are restricted to an allowlist of variables that are available before
+kidney laboratory testing (demographics, body measures, blood pressure, diabetes and
+hypertension history, smoking). Performance is estimated with survey-cluster-grouped
+cross-validation, and the selected logistic model is exported as a portable JSON
+scorer. The model ranks population-level screening opportunity; it does not
+diagnose CKD.
 """
 
 from __future__ import annotations
@@ -14,7 +18,6 @@ from typing import Any, cast
 
 import numpy as np
 import pandas as pd
-from sklearn.base import clone  # type: ignore[import-untyped]
 from sklearn.compose import ColumnTransformer  # type: ignore[import-untyped]
 from sklearn.ensemble import RandomForestClassifier  # type: ignore[import-untyped]
 from sklearn.linear_model import LogisticRegression  # type: ignore[import-untyped]
@@ -26,10 +29,7 @@ from sklearn.metrics import (  # type: ignore[import-untyped]
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import (  # type: ignore[import-untyped]
-    StratifiedGroupKFold,
-    cross_val_predict,
-)
+from sklearn.model_selection import StratifiedGroupKFold  # type: ignore[import-untyped]
 from sklearn.pipeline import Pipeline  # type: ignore[import-untyped]
 from sklearn.preprocessing import OneHotEncoder, StandardScaler  # type: ignore[import-untyped]
 
@@ -43,6 +43,8 @@ PRE_LAB_FEATURES = (
     "hypertension_history",
     "smoking_status",
 )
+DEMOGRAPHIC_FEATURES = ("age_years", "sex", "race_ethnicity")
+DEMOGRAPHICS_MODEL = "logistic_demographics_only"
 NUMERIC_FEATURES = frozenset({"age_years", "body_mass_index", "systolic_blood_pressure"})
 CATEGORICAL_FEATURES = frozenset(PRE_LAB_FEATURES) - NUMERIC_FEATURES
 LEAKAGE_TOKENS = (
@@ -150,12 +152,13 @@ class PairedDifference:
 
 
 @dataclass(frozen=True, slots=True)
-class SplitSummary:
+class CrossValidationSummary:
     strategy: str
-    development_n: int
-    holdout_n: int
-    development_groups: frozenset[str]
-    holdout_groups: frozenset[str]
+    folds: int
+    evaluated_n: int
+    group_count: int
+    scoring_fold_sizes: tuple[int, ...]
+    scoring_fold_group_counts: tuple[int, ...]
     threshold_source: str
     random_state: int
 
@@ -381,14 +384,13 @@ class ModelComparison:
     models: Mapping[str, ModelMetrics]
     selected_model: str
     selection_policy: str
-    selection_probabilities: tuple[float, ...]
-    holdout_probabilities: tuple[float, ...]
+    out_of_fold_probabilities: tuple[float, ...]
     selected_threshold: float
     threshold_capacity: float | int
-    development_capacity: CapacityDecision
-    holdout_prevalence: float
-    holdout_n: int
-    split: SplitSummary
+    operating_capacity: CapacityDecision
+    evaluated_prevalence: float
+    evaluated_n: int
+    split: CrossValidationSummary
     subgroups: Mapping[str, tuple[SubgroupMetrics, ...]]
     cohort_sensitivity: Mapping[str, Mapping[str, float | int | str]]
     paired_differences: Mapping[str, PairedDifference]
@@ -409,30 +411,22 @@ class ModelComparison:
         """Return aggregate, deterministic JSON content without row-level predictions."""
 
         return {
-            "artifact_schema": "ckd_patient_finding_model_comparison_v1",
+            "artifact_schema": "ckd_patient_finding_model_comparison_v2",
             "selected_model": self.selected_model,
             "selection_policy": self.selection_policy,
             "selected_threshold": self.selected_threshold,
             "threshold_capacity": self.threshold_capacity,
-            "development_capacity": {
-                "requested_count": self.development_capacity.requested_count,
-                "selected_count": self.development_capacity.selected_count,
-                "selected_share": self.development_capacity.selected_share,
-                "threshold": self.development_capacity.threshold,
-                "tie_policy": self.development_capacity.tie_policy,
+            "operating_capacity": {
+                "requested_count": self.operating_capacity.requested_count,
+                "selected_count": self.operating_capacity.selected_count,
+                "selected_share": self.operating_capacity.selected_share,
+                "threshold": self.operating_capacity.threshold,
+                "tie_policy": self.operating_capacity.tie_policy,
             },
-            "holdout_prevalence": self.holdout_prevalence,
-            "holdout_n": self.holdout_n,
+            "evaluated_prevalence": self.evaluated_prevalence,
+            "evaluated_n": self.evaluated_n,
             "features": list(self.features),
-            "split": {
-                "strategy": self.split.strategy,
-                "development_n": self.split.development_n,
-                "holdout_n": self.split.holdout_n,
-                "development_group_count": len(self.split.development_groups),
-                "holdout_group_count": len(self.split.holdout_groups),
-                "threshold_source": self.split.threshold_source,
-                "random_state": self.split.random_state,
-            },
+            "split": asdict(self.split),
             "models": {name: asdict(metrics) for name, metrics in self.models.items()},
             "subgroups": {
                 dimension: [asdict(metric) for metric in metrics]
@@ -565,14 +559,14 @@ def _percentile_interval(
         raise FeatureValidationError("cluster bootstrap produced no valid replicates")
     caveats: list[str] = []
     if cluster_count < 20:
-        caveats.append(f"Only {cluster_count} holdout clusters; interval precision is limited.")
+        caveats.append(f"Only {cluster_count} clusters; interval precision is limited.")
     if len(valid) < max(20, int(0.8 * requested)):
         caveats.append(f"Only {len(valid)} of {requested} bootstrap replicates were estimable.")
     low, high = np.percentile(valid, [2.5, 97.5])
     return UncertaintyInterval(
         low=float(low),
         high=float(high),
-        method="holdout_cluster_bootstrap_percentile",
+        method="cluster_bootstrap_percentile",
         requested_replicates=requested,
         valid_replicates=int(len(valid)),
         cluster_count=cluster_count,
@@ -744,15 +738,15 @@ def _capacity_count(total: int, capacity: float | int) -> int:
 
 
 def select_operating_threshold(report: ModelComparison, capacity: float | int) -> float:
-    """Return the development boundary only when it uniquely encodes exact capacity.
+    """Return the out-of-fold boundary only when it uniquely encodes exact capacity.
 
     A scalar threshold cannot express a partial selection among equal probabilities.
     Call :func:`select_capacity_decision` when a deterministic exact-capacity mask is
     required.
     """
 
-    decision = select_capacity_decision(report.selection_probabilities, capacity)
-    values = np.asarray(report.selection_probabilities, dtype=float)
+    decision = select_capacity_decision(report.out_of_fold_probabilities, capacity)
+    values = np.asarray(report.out_of_fold_probabilities, dtype=float)
     scalar_selected_count = int((values >= decision.threshold).sum())
     if scalar_selected_count != decision.requested_count:
         raise CapacityBoundaryError(
@@ -763,7 +757,7 @@ def select_operating_threshold(report: ModelComparison, capacity: float | int) -
 
 
 def _subgroups(
-    holdout: pd.DataFrame,
+    evaluated: pd.DataFrame,
     y: np.ndarray,
     probabilities: np.ndarray,
     selected: np.ndarray,
@@ -773,7 +767,7 @@ def _subgroups(
     replicates: int,
     random_state: int,
 ) -> dict[str, tuple[SubgroupMetrics, ...]]:
-    age = pd.to_numeric(holdout["age_years"], errors="coerce")
+    age = pd.to_numeric(evaluated["age_years"], errors="coerce")
     dimensions: dict[str, pd.Series] = {
         "age_band": pd.cut(
             age,
@@ -781,7 +775,7 @@ def _subgroups(
             labels=["18-39", "40-59", "60+"],
             include_lowest=True,
         ).astype("string"),
-        "sex": holdout["sex"].astype("string"),
+        "sex": evaluated["sex"].astype("string"),
     }
     output: dict[str, tuple[SubgroupMetrics, ...]] = {}
     for dimension, values in dimensions.items():
@@ -802,7 +796,7 @@ def _subgroups(
             predicted = group_selected
             if int(predicted.sum()) == 0:
                 caveats.append(
-                    "No records were flagged by the holdout-specific exact-capacity "
+                    "No records were flagged by the exact-capacity "
                     "ranked mask; precision is undefined."
                 )
             subgroup_cluster_count = len(set(str(item) for item in group_clusters))
@@ -875,7 +869,7 @@ def _subgroup_metric_intervals(
     replicates: int,
     random_state: int,
 ) -> dict[str, UncertaintyInterval | None]:
-    """Bootstrap the full holdout, rerank capacity, then measure one subgroup."""
+    """Bootstrap the full evaluated set, rerank capacity, then measure one subgroup."""
 
     original_mask = subgroup_values == subgroup_value
     subgroup_clusters = len(set(str(item) for item in groups[original_mask]))
@@ -993,85 +987,66 @@ def _validated_grouped_splits(
 
 def _paired_metric_differences(
     y: np.ndarray,
-    logistic: np.ndarray,
-    forest: np.ndarray,
+    first: np.ndarray,
+    second: np.ndarray,
     groups: np.ndarray,
     *,
+    first_name: str,
+    second_name: str,
     replicates: int,
     random_state: int,
 ) -> dict[str, PairedDifference]:
-    specifications: dict[
-        str,
-        tuple[
-            float,
-            Callable[[np.ndarray, np.ndarray, np.ndarray], float],
-        ],
-    ] = {
-        "roc_auc": (
-            float(roc_auc_score(y, logistic) - roc_auc_score(y, forest)),
-            lambda truth, first, second: float(
-                roc_auc_score(truth, first) - roc_auc_score(truth, second)
-            ),
-        ),
-        "pr_auc": (
-            float(average_precision_score(y, logistic) - average_precision_score(y, forest)),
-            lambda truth, first, second: float(
-                average_precision_score(truth, first) - average_precision_score(truth, second)
-            ),
-        ),
-        "brier_score": (
-            float(brier_score_loss(y, logistic) - brier_score_loss(y, forest)),
-            lambda truth, first, second: float(
-                brier_score_loss(truth, first) - brier_score_loss(truth, second)
-            ),
-        ),
+    """Paired cluster-bootstrap differences ``first - second`` on the same predictions."""
+
+    metrics: dict[str, Callable[[np.ndarray, np.ndarray], float]] = {
+        "roc_auc": lambda truth, score: float(roc_auc_score(truth, score)),
+        "pr_auc": lambda truth, score: float(average_precision_score(truth, score)),
+        "brier_score": lambda truth, score: float(brier_score_loss(truth, score)),
     }
     bootstraps = _bootstrap_indices(groups, replicates=replicates, random_state=random_state)
+    cluster_count = len(set(str(value) for value in groups))
     output: dict[str, PairedDifference] = {}
-    for metric, (estimate, calculate) in specifications.items():
-        values: list[float] = []
-        for positions in bootstraps:
-            sample_y = y[positions]
-            if len(np.unique(sample_y)) != 2:
-                continue
-            values.append(calculate(sample_y, logistic[positions], forest[positions]))
-        interval = _percentile_interval(
-            values,
-            requested=replicates,
-            cluster_count=len(set(str(value) for value in groups)),
-        )
-        interval = UncertaintyInterval(
-            low=min(interval.low, estimate),
-            high=max(interval.high, estimate),
-            method=interval.method,
-            requested_replicates=interval.requested_replicates,
-            valid_replicates=interval.valid_replicates,
-            cluster_count=interval.cluster_count,
-            caveat=interval.caveat,
-        )
+    for metric, calculate in metrics.items():
+        estimate = calculate(y, first) - calculate(y, second)
+        values = [
+            calculate(y[positions], first[positions]) - calculate(y[positions], second[positions])
+            for positions in bootstraps
+            if len(np.unique(y[positions])) == 2
+        ]
+        interval = _percentile_interval(values, requested=replicates, cluster_count=cluster_count)
         if interval.low <= 0 <= interval.high:
-            interpretation = "Interval includes zero; no reliable model advantage is established."
+            interpretation = "Interval includes zero; no reliable difference is established."
         elif metric == "brier_score":
             interpretation = (
-                "Logistic regression has lower error."
+                f"{first_name} has lower error."
                 if interval.high < 0
-                else "Random forest has lower error."
+                else f"{second_name} has lower error."
             )
         else:
             interpretation = (
-                "Logistic regression has higher discrimination."
+                f"{first_name} has higher discrimination."
                 if interval.low > 0
-                else "Random forest has higher discrimination."
+                else f"{second_name} has higher discrimination."
             )
-        key = f"logistic_minus_random_forest_{metric}"
-        output[key] = PairedDifference(
+        output[metric] = PairedDifference(
             metric=metric,
-            comparison="logistic_regression minus random_forest",
-            estimate=estimate,
+            comparison=f"{first_name} minus {second_name}",
+            estimate=float(estimate),
             interval=interval,
             interpretation=interpretation,
         )
     return output
+
+
+def _validated_sensitivity_target(train: pd.DataFrame, name: str) -> np.ndarray | None:
+    if name not in train:
+        return None
+    values = pd.to_numeric(train[name], errors="coerce")
+    if values.isna().any():
+        raise FeatureValidationError("cohort sensitivity must use the common complete-case domain")
+    if not set(values.unique()).issubset({0, 1}):
+        raise FeatureValidationError("sensitivity outcomes must be binary")
+    return values.astype(int).to_numpy()
 
 
 def train_patient_finding_models(
@@ -1082,8 +1057,18 @@ def train_patient_finding_models(
     random_state: int = 20260910,
     target_column: str = "ckd_indicator",
     bootstrap_replicates: int = 200,
+    n_splits: int = 5,
 ) -> ModelComparison:
-    """Compare no-skill, logistic, and tree models with a group-isolated holdout."""
+    """Compare a no-skill reference, logistic regression and a random forest.
+
+    Evaluation uses grouped K-fold cross-validation: survey clusters never appear in
+    both the fitting and the scoring folds, and every person receives exactly one
+    out-of-fold prediction. Metrics and cluster-bootstrap intervals are computed on
+    the pooled out-of-fold predictions. Logistic regression is pre-specified as the
+    reported model; the deployable scorer is refit on the full cohort. When the
+    cohort contains clinical predictors beyond demographics, a demographics-only
+    logistic model is evaluated on the same folds to show their incremental value.
+    """
 
     if target_column != "ckd_indicator":
         raise LeakageError("target is the fixed laboratory indicator documented for this task")
@@ -1096,194 +1081,148 @@ def train_patient_finding_models(
         raise FeatureValidationError("target must be complete and binary")
     if y_series.nunique() < 2:
         raise FeatureValidationError("target must contain both outcome classes")
-    for alternative in ("sensitivity_egfr_only", "sensitivity_albuminuria_only"):
-        if alternative in train:
-            values = pd.to_numeric(train[alternative], errors="coerce")
-            if values.isna().any():
-                raise FeatureValidationError(
-                    "cohort sensitivity must use the common complete-case domain"
-                )
-            if not set(values.unique()).issubset({0, 1}):
-                raise FeatureValidationError("sensitivity outcomes must be binary")
+    sensitivity_targets = {
+        name: _validated_sensitivity_target(train, name)
+        for name in ("sensitivity_egfr_only", "sensitivity_albuminuria_only")
+    }
     group_series = pd.Series(groups, index=train.index, dtype="string")
     if group_series.isna().any() or group_series.nunique() < 10:
         raise FeatureValidationError("at least ten complete groups are required")
 
     features = _validate_training_features(build_pre_lab_features(train))
-    if not {"age_years", "sex", "race_ethnicity"}.issubset(features.columns):
+    if not set(DEMOGRAPHIC_FEATURES).issubset(features.columns):
         raise FeatureValidationError("age_years, sex, and race_ethnicity are required")
+    feature_names = list(features.columns)
     y = y_series.astype(int).to_numpy()
-    split_cv = StratifiedGroupKFold(n_splits=5, shuffle=True, random_state=random_state)
-    outer_splits = _validated_grouped_splits(split_cv, features, y, group_series, context="outer")
-    development_index, holdout_index = outer_splits[0]
-    development = features.iloc[development_index].reset_index(drop=True)
-    holdout = features.iloc[holdout_index].reset_index(drop=True)
-    y_development = y[development_index]
-    y_holdout = y[holdout_index]
-    development_groups = group_series.iloc[development_index].reset_index(drop=True)
-    holdout_groups = group_series.iloc[holdout_index].reset_index(drop=True)
+    group_array = group_series.astype(str).to_numpy()
 
-    oof_cv = StratifiedGroupKFold(n_splits=4, shuffle=True, random_state=random_state + 1)
-    inner_splits = _validated_grouped_splits(
-        oof_cv,
-        development,
-        y_development,
-        development_groups,
-        context="development",
-    )
-    models: dict[str, Pipeline] = {
-        name: _pipeline(name, list(features.columns), random_state)
-        for name in ("logistic_regression", "random_forest")
-    }
-    oof: dict[str, np.ndarray] = {}
-    fitted: dict[str, Pipeline] = {}
-    for name, pipeline in models.items():
-        oof[name] = cross_val_predict(
-            clone(pipeline),
-            development,
-            y_development,
-            groups=development_groups,
-            cv=inner_splits,
-            method="predict_proba",
-            n_jobs=1,
-        )[:, 1]
-        fitted[name] = clone(pipeline).fit(development, y_development)
+    splitter = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    folds = _validated_grouped_splits(splitter, features, y, group_series, context="outer")
 
-    scorer = _portable_scorer(fitted["logistic_regression"], list(features.columns))
-    selection_probabilities = tuple(float(value) for value in oof["logistic_regression"])
-    development_decision = select_capacity_decision(selection_probabilities, capacity)
-    holdout_probability_map = {
-        name: pipeline.predict_proba(holdout)[:, 1] for name, pipeline in fitted.items()
+    specifications: dict[str, tuple[str, list[str]]] = {
+        "logistic_regression": ("logistic_regression", feature_names),
+        "random_forest": ("random_forest", feature_names),
     }
-    logistic_holdout = holdout_probability_map["logistic_regression"]
-    forest_holdout = holdout_probability_map["random_forest"]
-    logistic_decision = select_capacity_decision(logistic_holdout, capacity)
-    temporary = ModelComparison(
-        models={},
-        selected_model="logistic_regression",
-        selection_policy="logistic_prespecified_before_holdout",
-        selection_probabilities=selection_probabilities,
-        holdout_probabilities=tuple(float(value) for value in logistic_holdout),
-        selected_threshold=development_decision.threshold,
-        threshold_capacity=capacity,
-        development_capacity=development_decision,
-        holdout_prevalence=float(y_holdout.mean()),
-        holdout_n=int(len(y_holdout)),
-        split=SplitSummary(
-            strategy="stratified grouped 5-fold partition; one fold untouched as holdout",
-            development_n=int(len(development_index)),
-            holdout_n=int(len(holdout_index)),
-            development_groups=frozenset(development_groups.astype(str)),
-            holdout_groups=frozenset(group_series.iloc[holdout_index].astype(str)),
-            threshold_source="out_of_fold_development_predictions",
-            random_state=random_state,
-        ),
-        subgroups={},
-        cohort_sensitivity={},
-        paired_differences={},
-        scorer=scorer,
-        features=tuple(features.columns),
-        intended_use=(
-            "Educational comparison of population-level screening opportunity; "
-            "not a diagnosis or clinical decision tool."
-        ),
-        limitations=(),
-    )
-    prevalence = float(y_development.mean())
-    no_skill_probabilities = np.full(len(y_holdout), prevalence, dtype=float)
-    holdout_group_array = holdout_groups.astype(str).to_numpy()
-    metrics: dict[str, ModelMetrics] = {
-        "prevalence_no_skill": _metrics(
-            y_holdout,
-            no_skill_probabilities,
-            holdout_group_array,
+    has_clinical_features = set(feature_names) != set(DEMOGRAPHIC_FEATURES)
+    if has_clinical_features:
+        specifications[DEMOGRAPHICS_MODEL] = (
+            "logistic_regression",
+            [name for name in feature_names if name in DEMOGRAPHIC_FEATURES],
+        )
+    out_of_fold = {name: np.zeros(len(y), dtype=float) for name in specifications}
+    for fit_index, score_index in folds:
+        for name, (kind, columns) in specifications.items():
+            pipeline = _pipeline(kind, columns, random_state)
+            pipeline.fit(features.iloc[fit_index][columns], y[fit_index])
+            out_of_fold[name][score_index] = pipeline.predict_proba(
+                features.iloc[score_index][columns]
+            )[:, 1]
+
+    final_logistic = _pipeline("logistic_regression", feature_names, random_state)
+    final_logistic.fit(features, y)
+    scorer = _portable_scorer(final_logistic, feature_names)
+
+    logistic = out_of_fold["logistic_regression"]
+    operating = select_capacity_decision(logistic.tolist(), capacity)
+    # A constant score at the cohort prevalence: ROC-AUC 0.5, PR-AUC equal to prevalence
+    # and Brier score p(1 - p) by construction.
+    no_skill = np.full(len(y), float(y.mean()), dtype=float)
+    evaluated = {"prevalence_no_skill": no_skill, **out_of_fold}
+    metrics = {
+        name: _metrics(
+            y,
+            probabilities,
+            group_array,
             capacity,
             replicates=bootstrap_replicates,
-            random_state=random_state + 10,
-        ),
-        "logistic_regression": _metrics(
-            y_holdout,
-            logistic_holdout,
-            holdout_group_array,
-            capacity,
-            replicates=bootstrap_replicates,
-            random_state=random_state + 20,
-        ),
-        "random_forest": _metrics(
-            y_holdout,
-            forest_holdout,
-            holdout_group_array,
-            capacity,
-            replicates=bootstrap_replicates,
-            random_state=random_state + 30,
-        ),
+            random_state=random_state + 10 * (position + 1),
+        )
+        for position, (name, probabilities) in enumerate(evaluated.items())
     }
 
     sensitivity: dict[str, Mapping[str, float | int | str]] = {
         "primary_definition": {
             "target": target_column,
-            "holdout_n": int(len(y_holdout)),
-            "holdout_prevalence": float(y_holdout.mean()),
+            "evaluated_n": int(len(y)),
+            "evaluated_prevalence": float(y.mean()),
         }
     }
-    for alternative in ("sensitivity_egfr_only", "sensitivity_albuminuria_only"):
-        if alternative in train:
-            values = pd.to_numeric(train.iloc[holdout_index][alternative], errors="coerce")
-            if values.isna().any():
-                raise FeatureValidationError(
-                    "cohort sensitivity must use the common complete-case domain"
-                )
-            if not set(values.unique()).issubset({0, 1}):
-                raise FeatureValidationError("sensitivity outcomes must be binary")
-            alternative_y = values.astype(int).to_numpy()
-            if len(np.unique(alternative_y)) == 2:
-                sensitivity[alternative] = {
-                    "holdout_n": int(len(alternative_y)),
-                    "holdout_prevalence": float(alternative_y.mean()),
-                    "roc_auc": float(roc_auc_score(alternative_y, logistic_holdout)),
-                    "pr_auc": float(average_precision_score(alternative_y, logistic_holdout)),
-                }
+    for name, alternative in sensitivity_targets.items():
+        if alternative is not None and len(np.unique(alternative)) == 2:
+            sensitivity[name] = {
+                "evaluated_n": int(len(alternative)),
+                "evaluated_prevalence": float(alternative.mean()),
+                "roc_auc": float(roc_auc_score(alternative, logistic)),
+                "pr_auc": float(average_precision_score(alternative, logistic)),
+            }
+
+    paired: dict[str, PairedDifference] = {}
+    comparisons = [("random_forest", "logistic_minus_random_forest")]
+    if has_clinical_features:
+        comparisons.append((DEMOGRAPHICS_MODEL, "logistic_minus_demographics_only"))
+    for offset, (other, prefix) in enumerate(comparisons):
+        differences = _paired_metric_differences(
+            y,
+            logistic,
+            out_of_fold[other],
+            group_array,
+            first_name="logistic_regression",
+            second_name=other,
+            replicates=bootstrap_replicates,
+            random_state=random_state + 50 + offset,
+        )
+        paired.update({f"{prefix}_{metric}": value for metric, value in differences.items()})
 
     return ModelComparison(
         models=metrics,
         selected_model="logistic_regression",
-        selection_policy=temporary.selection_policy,
-        selection_probabilities=temporary.selection_probabilities,
-        holdout_probabilities=temporary.holdout_probabilities,
-        selected_threshold=temporary.selected_threshold,
+        selection_policy="logistic_prespecified_before_evaluation",
+        out_of_fold_probabilities=tuple(float(value) for value in logistic),
+        selected_threshold=operating.threshold,
         threshold_capacity=capacity,
-        development_capacity=temporary.development_capacity,
-        holdout_prevalence=float(y_holdout.mean()),
-        holdout_n=int(len(y_holdout)),
-        split=temporary.split,
+        operating_capacity=operating,
+        evaluated_prevalence=float(y.mean()),
+        evaluated_n=int(len(y)),
+        split=CrossValidationSummary(
+            strategy=(
+                f"stratified grouped {n_splits}-fold cross-validation; survey clusters "
+                "never shared between fitting and scoring folds; pooled out-of-fold "
+                "predictions"
+            ),
+            folds=n_splits,
+            evaluated_n=int(len(y)),
+            group_count=int(group_series.nunique()),
+            scoring_fold_sizes=tuple(int(len(score)) for _, score in folds),
+            scoring_fold_group_counts=tuple(
+                int(group_series.iloc[score].nunique()) for _, score in folds
+            ),
+            threshold_source="pooled_out_of_fold_logistic_predictions",
+            random_state=random_state,
+        ),
         subgroups=_subgroups(
-            holdout,
-            y_holdout,
-            logistic_holdout,
-            np.asarray(logistic_decision.selected, dtype=bool),
-            holdout_group_array,
+            features,
+            y,
+            logistic,
+            np.asarray(operating.selected, dtype=bool),
+            group_array,
             capacity,
             replicates=bootstrap_replicates,
             random_state=random_state + 40,
         ),
         cohort_sensitivity=sensitivity,
-        paired_differences=_paired_metric_differences(
-            y_holdout,
-            logistic_holdout,
-            forest_holdout,
-            holdout_group_array,
-            replicates=bootstrap_replicates,
-            random_state=random_state + 50,
+        paired_differences=paired,
+        scorer=scorer,
+        features=tuple(feature_names),
+        intended_use=(
+            "Educational comparison of population-level screening opportunity; "
+            "not a diagnosis or clinical decision tool."
         ),
-        scorer=temporary.scorer,
-        features=tuple(features.columns),
-        intended_use=temporary.intended_use,
         limitations=(
             "Cross-sectional NHANES laboratory indicators cannot confirm chronic disease.",
-            "Performance metrics are unweighted and describe this held-out analytic sample, "
+            "Performance metrics are unweighted and describe this analytic cohort, "
             "not U.S. population performance.",
-            "Demographics-only predictors omit clinical context and must not be used for "
-            "care decisions.",
+            "Intervals resample survey clusters with the fitted fold models held fixed; "
+            "they do not include model-refitting variability.",
             "Subgroup metrics are descriptive; small event counts can be unstable.",
         ),
     )

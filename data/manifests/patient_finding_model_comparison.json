@@ -1,6 +1,6 @@
 {
   "artifact_path": "data/processed/patient_finding_model_comparison.json",
-  "artifact_sha256": "d21b9405fd7d9f76edc1ebe2fe354df18a66b741dbf42ee86f25954f5a0c551e",
+  "artifact_sha256": "5ebcffcfb20e5f4f14aa7c652cb1b804f19ad3f712ef0508f87efef6ad2dd5ea",
   "evidence_type": "public_observed",
   "source": "CDC/NCHS NHANES",
   "release": "2017-2018",

@@ -62,3 +62,12 @@ Official public-observed and fixture-only outputs are written to separate paths.
 Running the notebook without the raw CDC cache therefore cannot overwrite the
 committed official aggregate. The root-runnable checksum names the full processed
 artifact path.
+
+## Analysis snapshot
+
+The committed analysis reads eight 2017-2018 component files listed with SHA-256
+digests in `data/manifests/nhanes-2017-2018-patient-need.json`: `DEMO_J`,
+`BIOPRO_J`, `ALB_CR_J`, `BMX_J`, `BPX_J`, `DIQ_J`, `BPQ_J` and `SMQ_J`. Retrieve them
+with `python scripts/retrieve_surveys.py`; `ckd_intelligence.cohorts.nhanes_2017_2018`
+joins them one-to-one on `SEQN`.
+

@@ -1,6 +1,6 @@
 {
   "artifact_path": "data/processed/patient_need_summary.json",
-  "artifact_sha256": "e75517dcd31b632a32d43900e5bd26e1cbc731e9cc7db2500eec87bd13cb1356",
+  "artifact_sha256": "943fefd90a912ccd604de19ae73d78509d971c78538eaa95335c405cc0ee84cc",
   "evidence_type": "public_observed",
   "source": "CDC/NCHS NHANES",
   "release": "2017-2018",

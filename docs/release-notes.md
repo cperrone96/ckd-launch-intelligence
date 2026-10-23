@@ -1,6 +1,28 @@
 # Release notes
 
-## CKD Launch Intelligence 0.1.0 review — 2026-09-11
+## 0.2.0 — 2026-10-23
+
+### Changed results
+
+- **Patient-finding model.** Added five pre-laboratory predictors from public NHANES
+  files (BMI, mean systolic blood pressure, self-reported diabetes and hypertension,
+  smoking status). Replaced the single 6-PSU holdout with stratified grouped 5-fold
+  cross-validation over all 30 PSUs, with 1,000-replicate cluster-bootstrap
+  intervals. Logistic ROC-AUC is 0.772 (95% CI 0.759–0.784) on 4,741 out-of-fold
+  predictions; the clinical predictors add +0.031 (0.018–0.045) over demographics
+  alone. The earlier 0.755 came from one fold whose 6-cluster interval understated
+  uncertainty.
+- **MEPS variance.** The Diabetes Care Survey population is now a domain of the full
+  HC-243 design instead of a subset, which had dropped PSUs and understated standard
+  errors by about 3-5%. Estimates match R `survey`. Added spending and utilization by
+  kidney-problem status: proxy-positive respondents average USD 10,974 more total
+  expenditure per person-year (95% CI 6,172–15,775).
+- **Reproducibility.** `scripts/retrieve_surveys.py` downloads and checksum-verifies
+  the NHANES and MEPS files; `python -m ckd_intelligence.analysis.nhanes_pipeline`
+  rebuilds both NHANES artifacts and their manifests, and notebooks 01-02 call the
+  same code.
+
+## 0.1.0 — 2026-09-11
 
 This portfolio release packages public-data analysis as a reproducible, offline
 API and evidence-led dashboard. It is educational and contains no customer,
@@ -29,7 +51,8 @@ employer, client, or proprietary business data.
 - NHANES primary cross-sectional indicator: 13.9% (95% CI 12.5–15.3%), denominator
   5,016 complete-case records.
 - Logistic held-out ROC-AUC 0.755 (95% CI 0.708–0.781) and PR-AUC 0.462
-  (95% CI 0.390–0.513); paired model differences include zero.
+  (95% CI 0.390–0.513); paired model differences include zero. (Superseded in
+  0.2.0.)
 - MEPS diabetes-care proxy-positive prevalence 11.2% among denominator 1,063;
   this is not confirmed CKD.
 - ClinicalTrials.gov snapshot: 3,706 registered CKD studies, including 419

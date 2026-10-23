@@ -198,9 +198,9 @@ class CKDAnalyticsService:
                 "selection_policy",
                 "selected_threshold",
                 "threshold_capacity",
-                "development_capacity",
-                "holdout_prevalence",
-                "holdout_n",
+                "operating_capacity",
+                "evaluated_prevalence",
+                "evaluated_n",
                 "features",
                 "split",
                 "models",
@@ -225,19 +225,19 @@ class CKDAnalyticsService:
 
     def opportunity(self) -> dict[str, Any]:
         prescribing = self.complete_collection(
-                "partd",
-                "aggregates",
-                population="Medicare Part D prescriber-drug aggregates",
-                grain="provider-drug-state aggregate",
-                window="2024",
-            )
+            "partd",
+            "aggregates",
+            population="Medicare Part D prescriber-drug aggregates",
+            grain="provider-drug-state aggregate",
+            window="2024",
+        )
         trials = self.complete_collection(
-                "trials",
-                "geography",
-                population="registered CKD studies",
-                grain="registered study-country mention",
-                window="API release snapshot",
-            )
+            "trials",
+            "geography",
+            population="registered CKD studies",
+            grain="registered study-country mention",
+            window="API release snapshot",
+        )
         panels = {
             "prescribing_provider_state": {
                 "items": prescribing["items"],

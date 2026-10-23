@@ -1,229 +1,154 @@
 # Patient-finding model card
 
+All numbers below come from `data/processed/patient_finding_model_comparison.json`,
+built by `python -m ckd_intelligence.analysis.nhanes_pipeline` (or notebook 02).
+
 ## Summary
 
-This is a leakage-safe, educational comparison of screening-opportunity methods on
-the CDC/NCHS NHANES 2017–2018 public-use cycle. It is not a diagnostic model, a
-clinical decision tool, or a patient-targeting system. The outcome is a
-cross-sectional laboratory indicator, not confirmed chronic kidney disease (CKD),
-because NHANES cannot demonstrate persistence for at least three months.
+The model ranks NHANES 2017-2018 adults by their probability of a cross-sectional
+CKD laboratory indicator (eGFR <60 or UACR ≥30 mg/g) using only information that is
+available before kidney labs are drawn. It estimates screening yield for a
+population, not a diagnosis for a person.
 
-Logistic regression is the pre-specified primary model because interpretability is
-the appropriate default for this educational use case. This choice was fixed before
-holdout evaluation. The random forest is a comparator, not a candidate selected by
-looking at the holdout. Paired cluster-bootstrap intervals include zero for every
-logistic-versus-forest difference, so no reliable advantage between those two models
-is established.
+Logistic regression was pre-specified as the reported model before any evaluation.
+On pooled out-of-fold predictions it reaches ROC-AUC 0.772 (95% CI 0.759–0.784).
+The clinical predictors add 0.031 ROC-AUC (0.018–0.045) over a demographics-only
+model. A random forest is 0.008 ROC-AUC higher (0.003–0.014); logistic regression
+remains the reported model because it was pre-specified, is well calibrated and
+exports as a small, validated JSON scorer.
 
 ## Data and cohort
 
-- Source: exact, checksummed CDC/NCHS `DEMO_J`, `BIOPRO_J`, and `ALB_CR_J` public-use
-  files listed in `data/manifests/nhanes-2017-2018-patient-need.json`.
-- Population represented by the analytic source: NHANES 2017–2018 MEC-examined
-  U.S. civilian, noninstitutionalized adults, excluding known pregnancy.
-- Model analytic sample: 5,016 adults with evaluable eGFR and UACR.
-- Primary outcome: race-free 2021 CKD-EPI creatinine eGFR below 60
-  mL/min/1.73 m² or UACR at least 30 mg/g, with both measures required.
-- Model evaluation is unweighted. It describes the held-out analytic sample and is
-  not a U.S. population-performance estimate. Task 3 contains survey-weighted
-  patient-need estimates.
-- No source is linked to another source at person level. No raw participant row,
-  `SEQN`, or other row identifier is committed in the model artifact.
+- Source: checksummed CDC/NCHS public-use files `DEMO_J`, `BIOPRO_J`, `ALB_CR_J`,
+  `BMX_J`, `BPX_J`, `DIQ_J`, `BPQ_J` and `SMQ_J`, listed in
+  `data/manifests/nhanes-2017-2018-patient-need.json` and joined one-to-one on `SEQN`.
+- Indicator domain: 5,016 MEC-examined adults (18+, excluding known pregnancy) with
+  both eGFR and UACR.
+- Model cohort: 4,741 adults with every predictor present (275 excluded; systolic
+  blood pressure is the main gap with 219 missing). Indicator prevalence 18.4%.
+- Outcome: race-free CKD-EPI 2021 creatinine eGFR <60 mL/min/1.73 m² or UACR
+  ≥30 mg/g. One visit cannot show 3-month persistence, so this is an indicator,
+  not confirmed CKD.
+- Metrics are unweighted and describe this analytic cohort. The survey-weighted
+  population estimate is in `patient_need_summary.json`.
 
-## Leakage controls and inputs
+## Predictors and leakage controls
 
-The locally available verified source provides only three defensible
-pre-laboratory predictors for this task:
+| Predictor | NHANES source | Coding |
+|---|---|---|
+| Age | `RIDAGEYR` | years |
+| Sex | `RIAGENDR` | Female, Male |
+| Race/ethnicity | `RIDRETH3` | six NHANES categories |
+| Body mass index | `BMXBMI` | kg/m² |
+| Systolic blood pressure | `BPXSY1`-`BPXSY4` | mean of available readings |
+| Diabetes history | `DIQ010` | Yes, No, Borderline |
+| Hypertension history | `BPQ020` | Yes, No |
+| Smoking status | `SMQ020`, `SMQ040` | Never, Former, Current |
 
-- age in years;
-- sex recorded in NHANES;
-- race/ethnicity category recorded in NHANES.
+Refused or don't-know answers are missing, never "No". The feature builder enforces
+an allowlist and rejects any column whose name refers to creatinine, eGFR, albumin,
+UACR, cystatin, urea, proteinuria, dialysis or the indicator itself. Scaling and
+one-hot encoding are fit inside each training fold.
 
-The implementation uses a strict allowlist. It rejects creatinine, eGFR, UACR,
-urine albumin, urine creatinine, the CKD indicator, renal-function fields,
-cystatin C, proteinuria, blood urea nitrogen, dialysis history, and names suggesting
-transformed versions of those variables. Identifier and weight fields are also not
-eligible predictors.
-
-Race/ethnicity is a social and administrative category, not a biological cause.
-Its inclusion demonstrates categorical preprocessing and should not be interpreted
-as justification for race-based care. No subgroup assessment in this small,
-single-cycle analysis constitutes fairness certification.
-
-Numeric scaling and categorical one-hot encoding are fit inside each development
-fold. The final preprocessing and model are fit on the development sample only.
-Missing values are rejected consistently during training and scoring; the artifact
-does not claim or perform imputation. It also rejects unexpected, forbidden,
-nonfinite, unknown-category, and out-of-range values.
+Race/ethnicity is a social category, not a biological cause; it is included as a
+recorded demographic and its coefficient should not be read as biology.
 
 ## Validation design
 
-- Unit of grouping: the combination of NHANES masked variance stratum and PSU.
-- Final split: one fold from a shuffled, stratified, grouped five-fold partition is
-  held out; no survey cluster appears in both development and holdout samples.
-- Development: 4,023 observations across 24 grouped survey clusters.
-- Untouched holdout: 993 observations across 6 grouped survey clusters, including
-  185 indicator-positive observations (18.63%).
-- Development operating reference: 0.39835, selected only from grouped out-of-fold
-  logistic-regression predictions. The deterministic policy selects exactly 402 of
-  4,023 development observations (9.99%) and never exceeds capacity.
-- The recorded scalar value is only a probability boundary. If equal scores cross
-  the capacity boundary, a scalar cannot encode exact selection and the API raises;
-  callers must use the deterministic ranked-mask interface.
-- Capacity-matched holdout comparison: each model ranks holdout probabilities
-  without using holdout labels, then selects exactly 99 of 993 observations. Ties
-  resolve by descending probability followed by stable row order, so capacity is
-  never exceeded. Realized probability boundaries differ by model.
-- Holdout use: the holdout is evaluated once after preprocessing, model fitting,
-  pre-specifying the primary model, and creating the development operating reference.
-- Uncertainty: 1,000 deterministic percentile bootstrap replicates resample the full
-  holdout by its six survey clusters with replacement. Within every replicate, each
-  model is reranked and a new exact-capacity mask is computed before overall and
-  subgroup metrics are measured. Fractional capacity is rounded to the nearest whole
-  observation for that replicate (minimum one), and selected count always equals the
-  resulting requested count. These intervals quantify sampling variation within this
-  split but remain imprecise because only six holdout clusters are available.
+- Stratified grouped 5-fold cross-validation. The 30 NHANES masked variance PSUs
+  (stratum × PSU) are the groups, so no PSU is in both a fitting and a scoring fold.
+  Each fold scores 6 PSUs (919–979 people); every person receives one
+  out-of-fold prediction.
+- All models use the same folds. The no-skill reference is a constant score at the
+  cohort prevalence.
+- Uncertainty: 1,000 cluster-bootstrap replicates resample the 30 PSUs. Model
+  differences are computed on the same replicates (paired). Fold models are held
+  fixed, so intervals exclude refitting variability.
+- Operating point: the top 10% of out-of-fold scores (474 of 4,741), ranked without
+  labels; ties break by stable row order. The resulting score boundary (0.431) is
+  the API's flag threshold for the final model, which is refit on all 4,741 people.
+- An earlier version evaluated one untouched fold of 6 PSUs (993 people) with a
+  demographics-only model. Re-running that model across the five folds of four
+  random seeds gave single-fold ROC-AUCs from 0.73 to 0.76, and a 6-cluster
+  bootstrap understates uncertainty, so pooled cross-validation replaced it.
 
-This grouped approach reduces direct cluster leakage. With only 30 public survey
-clusters, one split can still be variable and should not be treated as external
-validation.
+## Performance (pooled out-of-fold, n = 4,741)
 
-## Held-out performance
+| Model | ROC-AUC (95% CI) | PR-AUC (95% CI) | Brier (95% CI) | Precision at top 10% | Recall at top 10% |
+|---|---|---|---|---|---|
+| Logistic regression, all predictors (reported) | 0.772 (0.759–0.784) | 0.464 (0.436–0.494) | 0.124 (0.118–0.131) | 0.557 (0.504–0.595) | 0.303 (0.280–0.320) |
+| Random forest, all predictors | 0.780 (0.768–0.791) | 0.471 (0.442–0.502) | 0.123 (0.117–0.130) | 0.551 (0.515–0.589) | 0.300 (0.279–0.332) |
+| Logistic regression, demographics only | 0.741 (0.725–0.756) | 0.412 (0.381–0.442) | 0.131 (0.124–0.138) | 0.511 (0.465–0.553) | 0.278 (0.257–0.302) |
+| No-skill reference (constant prevalence) | 0.500 | 0.184 (0.170–0.196) | 0.150 (0.141–0.158) | not meaningful (tied scores) | not meaningful |
 
-PR-AUC is interpreted against the held-out prevalence reference of 0.1863.
+At the 10% operating point the logistic model flags people with the indicator at
+3.0 times the base rate (precision 0.557 vs prevalence 0.184) and finds 30% of them
+(264 true positives, 210 false positives, 606 false negatives).
 
-| Model | ROC-AUC (95% CI) | PR-AUC (95% CI) | Brier (95% CI) | Precision (95% CI) | Recall (95% CI) |
-|---|---:|---:|---:|---:|---:|
-| Prevalence/no-skill | 0.5000 (0.5000–0.5000) | 0.1863 (0.1617–0.2100) | 0.1516 (0.1362–0.1664) | 0.2222 (0.1327–0.2604) | 0.1189 (0.0726–0.1412) |
-| Logistic regression | 0.7550 (0.7081–0.7809) | 0.4625 (0.3903–0.5135) | 0.1300 (0.1196–0.1388) | 0.5354 (0.4811–0.5914) | 0.2865 (0.2605–0.3200) |
-| Random forest | 0.7433 (0.7065–0.7723) | 0.4505 (0.3713–0.5155) | 0.1293 (0.1188–0.1372) | 0.5455 (0.4395–0.6344) | 0.2919 (0.2611–0.3155) |
+### Paired differences (logistic regression minus comparator)
 
-Precision, recall, and confusion matrices use the same exact 99-observation capacity
-for every model. The no-skill scores are all tied, so its selected set is an explicit,
-deterministic ordering reference rather than a meaningful ranking. Its capacity
-precision and recall depend on arbitrary stable row order; they are not estimates of
-expected random-ranking performance.
+| Comparison | Estimate | 95% CI |
+|---|---|---|
+| vs demographics only, ROC-AUC | +0.031 | +0.018 to +0.045 |
+| vs demographics only, PR-AUC | +0.052 | +0.024 to +0.082 |
+| vs demographics only, Brier | −0.007 | −0.010 to −0.004 |
+| vs random forest, ROC-AUC | −0.008 | −0.014 to −0.003 |
+| vs random forest, PR-AUC | −0.007 | −0.014 to +0.001 |
+| vs random forest, Brier | +0.001 | +0.000 to +0.002 |
 
-At the capacity-matched boundary of 0.38224, logistic regression flags exactly 99 of
-993 held-out observations (9.97%):
+### Calibration (logistic, out-of-fold quintiles)
 
-| | Not selected | Selected by exact-capacity rank |
-|---|---:|---:|
-| Indicator negative | 762 | 46 |
-| Indicator positive | 132 | 53 |
+| n | Mean predicted | Observed |
+|---|---|---|
+| 949 | 0.035 | 0.057 |
+| 948 | 0.066 | 0.062 |
+| 948 | 0.129 | 0.103 |
+| 948 | 0.237 | 0.236 |
+| 948 | 0.451 | 0.459 |
 
-The development threshold remains separately recorded for future fixed-threshold
-demonstrations. The table above instead uses the fair, exact-capacity policy so ties
-and different model score scales cannot silently exceed the operating limit.
+Predicted and observed rates agree closely in the upper three quintiles, where the
+screening decisions are made.
 
-Paired logistic-minus-random-forest differences are small and uncertain:
+### Subgroups at the 10% operating point
 
-- ROC-AUC: 0.0117 (95% CI −0.0096 to 0.0325).
-- PR-AUC: 0.0120 (95% CI −0.0053 to 0.0255).
-- Brier score: 0.0007 (95% CI −0.0021 to 0.0032; lower is better).
+| Group | n | Positives | Prevalence | Precision | Recall |
+|---|---|---|---|---|---|
+| Age 18-39 | 1,552 | 107 | 0.069 | undefined (none flagged) | 0.000 |
+| Age 40-59 | 1,453 | 186 | 0.128 | 0.500 | 0.070 |
+| Age 60+ | 1,736 | 577 | 0.332 | 0.560 | 0.435 |
+| Female | 2,423 | 442 | 0.182 | 0.534 | 0.287 |
+| Male | 2,318 | 428 | 0.185 | 0.581 | 0.320 |
 
-Every interval includes zero. The holdout therefore supports the pre-specified
-interpretability decision, not a performance-superiority claim.
+Age drives the ranking. A single 10% capacity selects no adult under 40, so the
+107 indicator-positive young adults in the cohort are all missed. Serving that
+group would need a separate threshold or a different screening policy.
 
-## Calibration
+### Indicator-definition sensitivity (same out-of-fold scores)
 
-The logistic Brier score is 0.1300 versus 0.1516 for the prevalence reference. Five
-equal-count holdout bins show the following mean predicted and observed rates:
+| Definition | Prevalence | ROC-AUC | PR-AUC |
+|---|---|---|---|
+| eGFR <60 or UACR ≥30 (primary) | 0.184 | 0.772 | 0.464 |
+| eGFR <60 only | 0.081 | 0.848 | 0.310 |
+| UACR ≥30 only | 0.133 | 0.724 | 0.334 |
 
-| Bin n | Mean predicted | Observed |
-|---:|---:|---:|
-| 200 | 0.0417 | 0.0450 |
-| 199 | 0.0802 | 0.0905 |
-| 197 | 0.1454 | 0.1574 |
-| 199 | 0.2347 | 0.1859 |
-| 198 | 0.3825 | 0.4545 |
+Low eGFR is easier to rank from age and blood pressure than albuminuria is.
 
-The middle and highest bins show miscalibration that is material for probability
-interpretation. No post-hoc calibration was fit because this single-cycle sample is
-better used to demonstrate honest diagnostics than to imply clinical readiness.
+## Scoring artifact
 
-## Subgroup diagnostics
+The deployable scorer is strict JSON, not pickle: ordered features, category
+levels, full-cohort scaling parameters, 19 coefficients and an intercept, with
+explicit reject policies for missing, unknown and out-of-range inputs. The API's
+`/api/v1/patient-finding/score` endpoint validates every field before scoring. A
+test checks that the JSON scorer reproduces the fitted scikit-learn pipeline to
+1e-12.
 
-These are descriptive checks of the logistic model's holdout-specific,
-exact-capacity ranked mask, not applications of the development boundary.
+## Limitations
 
-| Dimension | Group | n | Events | Precision | Recall | Brier |
-|---|---|---:|---:|---:|---:|---:|
-| Age | 18–39 | 344 | 18 | undefined (no flags) | 0.0000 | 0.0496 |
-| Age | 40–59 | 316 | 51 | undefined (no flags) | 0.0000 | 0.1374 |
-| Age | 60+ | 333 | 116 | 0.5354 | 0.4569 | 0.2060 |
-| Sex | Female | 515 | 98 | 0.5000 | 0.2857 | 0.1312 |
-| Sex | Male | 478 | 87 | 0.5814 | 0.2874 | 0.1287 |
-
-Cluster-bootstrap uncertainty is included where estimable for subgroup precision,
-recall, and Brier score in the JSON artifact. Each full-holdout replicate is reranked
-at exact capacity before its subgroup is measured. Sparse, one-cluster, and undefined
-metric intervals are `null` and carry an explicit caveat instead of a degenerate
-interval. In particular, the 18-event age 18–39 subgroup is treated as sparse, so
-all three of its uncertainty intervals are unavailable rather than reported as
-zero-width estimates.
-The model flags no one in either younger age band at this capacity threshold. That
-is an important operational limitation, not evidence that screening is unnecessary
-in those groups. Age is the strongest available signal, so the model largely
-concentrates capacity among adults aged 60 or older.
-
-## Outcome-definition sensitivity
-
-Applying the same primary-outcome model probabilities to alternative laboratory
-definitions changes both prevalence and apparent discrimination:
-
-| Holdout definition | n | Prevalence | ROC-AUC | PR-AUC |
-|---|---:|---:|---:|---:|---:|
-| Primary eGFR or albuminuria | 993 | 0.1863 | 0.7550 | 0.4625 |
-| eGFR only | 993 | 0.0806 | 0.8782 | 0.4258 |
-| Albuminuria only | 993 | 0.1450 | 0.6957 | 0.3072 |
-
-This is a sensitivity analysis, not retraining or independent validation. The
-stronger eGFR-only ranking is consistent with age being an input and a component of
-the eGFR equation; it is another reason not to interpret this model causally.
-
-## Scoring artifact and reproducibility
-
-The committed artifact is deterministic, strict JSON rather than pickle. It contains
-a semantic version, required-field types/ranges/categories, explicit reject policies
-for missing and unknown inputs, float64 coefficient precision, ordered features and
-categories, the logistic intercept and coefficients, development-fitted scaling,
-aggregate metrics, uncertainty, split counts, limitations, and subgroup diagnostics.
-For public-observed execution, it embeds the Task 3 source-manifest path, release,
-retrieval date, URLs, byte counts, and SHA-256 digests. Fixture execution instead
-identifies and hashes the actual fixture CSV. Required numeric inputs and numeric
-artifact fields must be JSON numbers; numeric strings are rejected. A validated
-loader rejects inconsistent or tampered contracts, and full-vector tests reproduce
-the fitted pipeline's holdout probabilities to numerical tolerance. It contains no
-participant rows or identifiers.
-
-Run:
-
-```bash
-.venv/bin/jupyter-nbconvert --to notebook --execute --inplace \
-  --ClearMetadataPreprocessor.enabled=True notebooks/02_patient_finding.ipynb \
-  --ExecutePreprocessor.timeout=240
-shasum -a 256 -c data/processed/patient_finding_model_comparison.sha256
-```
-
-If the verified raw cache is unavailable, the notebook uses a deterministic,
-expanded fixture and writes only to
-`data/processed/fixture/patient_finding_model_comparison_fixture.json`. Fixture
-execution cannot overwrite the official aggregate artifact and is never presented
-as a population finding.
-
-## Prohibited uses and limitations
-
-- Do not use for diagnosis, treatment, outreach, eligibility, coverage, or any
-  decision about an individual.
-- Do not interpret associations as causal or race/ethnicity as biological risk.
-- Do not generalize beyond the documented public-use cycle and analytic cohort.
-- A single serum-creatinine result and spot UACR cannot confirm chronic CKD.
-- Complete-case selection can bias performance if missing laboratory measures are
-  systematic.
-- Survey weights are not used in model training or performance metrics.
-- Grouped internal holdout evaluation is not temporal, geographic, prospective, or
-  external validation.
-- Small event counts, especially in younger age bands, limit subgroup inference.
-- The available pre-lab feature set is deliberately narrow and omits medical
-  history, symptoms, medications, and care context.
+- Cross-sectional indicator, not chronic CKD; a single creatinine and spot UACR
+  carry biological and measurement variability.
+- Complete-case cohort; the 5.5% excluded for missing predictors (mostly blood
+  pressure) may differ systematically.
+- Unweighted metrics; internal cross-validation on one survey cycle is not
+  temporal or external validation.
+- Self-reported diabetes and hypertension depend on prior diagnosis and access to
+  care.

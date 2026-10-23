@@ -19,35 +19,46 @@ complete-case domain so definition sensitivity is not confused with availability
 
 ## Patient finding model comparison
 
-The primary model is pre-specified logistic regression using age, sex, and
-race/ethnicity. A grouped survey-cluster split holds out 993 observations from the
-5,016-person analytic cohort. The held-out outcome prevalence is 18.63%.
+Logistic regression (pre-specified) on eight pre-laboratory predictors: age, sex,
+race/ethnicity, BMI, mean systolic blood pressure, self-reported diabetes,
+self-reported hypertension and smoking status. Evaluated with stratified grouped
+5-fold cross-validation over the 30 NHANES masked variance PSUs on a 4,741-person
+complete-case cohort (indicator prevalence 18.35%). Every person receives one
+out-of-fold prediction.
 
-- Logistic ROC-AUC: 0.7550 (95% CI 0.7081–0.7809).
-- Logistic PR-AUC: 0.4625 (95% CI 0.3903–0.5135).
-- Logistic Brier score: 0.1300 (95% CI 0.1196–0.1388).
-- Exact-capacity holdout review: 99 of 993 ranked observations selected; precision
-  0.5354 and recall 0.2865 in the stored comparison.
-- Uncertainty: 1,000 deterministic holdout cluster-bootstrap replicates; only six
-  holdout clusters, so interval precision is limited.
+- Logistic ROC-AUC: 0.772 (95% CI 0.759–0.784).
+- Logistic PR-AUC: 0.464 (95% CI 0.436–0.494); no-skill reference 0.184.
+- Logistic Brier score: 0.124 (95% CI 0.118–0.131); no-skill reference 0.150.
+- Top-10% operating point: 474 of 4,741 flagged; precision 0.557, recall 0.303.
+- Gain over demographics only: +0.031 ROC-AUC (95% CI 0.018–0.045).
+- Random forest comparator: 0.780 ROC-AUC; difference vs logistic −0.008
+  (95% CI −0.014 to −0.003).
+- Uncertainty: 1,000 cluster-bootstrap replicates over the 30 PSUs, paired across
+  models; fold models are held fixed.
 
-The random forest is a comparator and prevalence/no-skill is a reference. Every
-paired model difference interval includes zero, so the release does not claim model
-superiority. The score endpoint is a non-diagnostic educational scorer and does not
-return a patient list or support care decisions or targeting.
+Metrics are unweighted analytic-cohort performance, not population performance.
+See the [model card](models/patient-finding-model-card.md) for calibration,
+subgroups and definitions.
 
 ## Care and prescribing context
 
-MEPS reports a diabetes-care proxy domain, not confirmed CKD:
+MEPS reports a diabetes-care proxy domain, not confirmed CKD. The Diabetes Care
+Survey population is estimated as a domain of the full HC-243 design (22,431
+records, 364 PSUs, 105 strata).
 
-- Proxy-positive prevalence: 11.18% (displayed as 11.2%), denominator 1,063.
-- Average office visits: 12.25 per person-year.
-- Average total expenditure: USD 16,746 per person-year.
+- Proxy-positive prevalence: 11.18% (95% CI 8.97%–13.39%), denominator 1,063.
+- Average total expenditure, all DCS diabetes respondents: USD 16,746 per
+  person-year (95% CI 15,192–18,301).
+- Proxy-positive vs proxy-negative total expenditure: USD 26,494 vs USD 15,520;
+  difference USD 10,974 (95% CI 6,172–15,775).
+- Proxy-positive vs proxy-negative inpatient stays: 0.39 vs 0.13 per person-year;
+  office visits: 21.5 vs 11.1.
 
-These are descriptive HC-243 person-year estimates with MEPS design variables and
-Taylor uncertainty. Part D is a selected-generic, provider/drug/provider-state
-aggregate. It cannot establish CKD indication, beneficiary residence, adherence,
-outcomes, or a patient journey.
+These are descriptive HC-243 person-year estimates with Taylor-linearized
+uncertainty; the contrast is an association, not a causal effect of kidney
+problems. Part D is a selected-generic, provider/drug/provider-state aggregate. It
+cannot establish CKD indication, beneficiary residence, adherence, outcomes, or a
+patient journey.
 
 ## Trial landscape
 

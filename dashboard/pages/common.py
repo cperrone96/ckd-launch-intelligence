@@ -12,7 +12,12 @@ _EVIDENCE_FIELDS = (
     "join_policy",
 )
 _PROVENANCE_FIELDS = ("artifact", "sha256", "manifest")
-_MODEL_LABELS = {"logistic_regression": "Logistic Regression"}
+_MODEL_LABELS = {
+    "logistic_regression": "Logistic regression (all pre-lab predictors)",
+    "logistic_demographics_only": "Logistic regression (demographics only)",
+    "random_forest": "Random forest (all pre-lab predictors)",
+    "prevalence_no_skill": "No-skill reference (prevalence)",
+}
 
 
 def has_structured_evidence(evidence: object) -> bool:

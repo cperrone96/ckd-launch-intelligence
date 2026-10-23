@@ -77,12 +77,12 @@ def test_patient_finding_page_has_non_diagnostic_label(dash_client: FlaskClient)
     body = rendered_json("/patient-finding")
     assert "not a clinical diagnostic tool" in body
     assert "Not stated" not in body
-    assert "Logistic Regression" in body
+    assert "Logistic regression" in body
     assert "logistic_regression" not in body
     assert "subgroup-metric-grid" in body
     assert "Subgroup note" in body
     assert body.index("Cohort n") < body.index("Subgroup note")
-    assert "5.2%" in body
+    assert "6.9%" in body
     assert "None" not in body
 
 

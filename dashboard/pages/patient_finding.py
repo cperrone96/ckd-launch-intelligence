@@ -96,12 +96,12 @@ def _subgroup_cards(subgroups: dict[str, Any]) -> list[html.Article]:
                                     metric(
                                         "Precision",
                                         _rate_label(group.get("precision")),
-                                        "Holdout performance",
+                                        "Out-of-fold performance",
                                     ),
                                     metric(
                                         "Recall",
                                         _rate_label(group.get("recall")),
-                                        "Holdout performance",
+                                        "Out-of-fold performance",
                                     ),
                                 ],
                                 className="subgroup-metric-grid",
@@ -126,7 +126,7 @@ def render(data: dict[str, Any]) -> html.Main:
         and bool(models)
         and isinstance(comparison.get("selected_model"), str)
         and comparison.get("selected_threshold") is not None
-        and comparison.get("holdout_n") is not None
+        and comparison.get("evaluated_n") is not None
     )
     if not is_complete:
         return page_shell(
@@ -182,12 +182,12 @@ def render(data: dict[str, Any]) -> html.Main:
                             if comparison.get("selected_threshold") is not None
                             else ""
                         ),
-                        "Holdout threshold",
+                        "Out-of-fold capacity boundary",
                     ),
                     metric(
-                        "Holdout n",
-                        str(comparison["holdout_n"]),
-                        "Reviewed observations",
+                        "Evaluated n",
+                        _count_label(comparison["evaluated_n"]),
+                        "Out-of-fold predictions",
                     ),
                 ],
                 className="metric-grid",

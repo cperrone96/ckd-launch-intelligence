@@ -26,6 +26,11 @@ def score_request() -> dict[str, object]:
         "age_years": 55,
         "sex": "Female",
         "race_ethnicity": "Non-Hispanic White",
+        "body_mass_index": 29.5,
+        "systolic_blood_pressure": 128.0,
+        "diabetes_history": "No",
+        "hypertension_history": "Yes",
+        "smoking_status": "Former",
     }
 
 
@@ -118,6 +123,9 @@ def test_scoring_rejects_out_of_range_age(
         lambda x: x.update(egfr=30),
         lambda x: x.pop("sex"),
         lambda x: x.update(race_ethnicity="unknown"),
+        lambda x: x.pop("systolic_blood_pressure"),
+        lambda x: x.update(smoking_status="Occasional"),
+        lambda x: x.update(body_mass_index=5.0),
     ],
 )
 def test_scoring_rejects_leakage_missing_and_unknown(
@@ -272,7 +280,7 @@ def test_api_fails_closed_on_tampered_committed_artifact(tmp_path: Path) -> None
     }
 
 
-@pytest.mark.parametrize("replacement", ["[]", "{\"waterfall\": [1]}"])
+@pytest.mark.parametrize("replacement", ["[]", '{"waterfall": [1]}'])
 def test_api_fails_closed_on_non_object_or_invalid_artifact_member(
     tmp_path: Path, replacement: str
 ) -> None:
@@ -495,9 +503,7 @@ def test_repository_rejects_resealed_artifact_with_substituted_embedded_file_lis
     if key == "patient_need":
         artifact[provenance_key] = list(reversed(artifact[provenance_key]))
     else:
-        artifact[provenance_key]["files"] = list(
-            reversed(artifact[provenance_key]["files"])
-        )
+        artifact[provenance_key]["files"] = list(reversed(artifact[provenance_key]["files"]))
     artifact_path.write_text(json.dumps(artifact), encoding="utf-8")
     reseal_artifact(root, artifact_name)
     with pytest.raises(ArtifactIntegrityError, match="embedded provenance"):
@@ -514,9 +520,7 @@ def test_repository_rejects_resealed_artifact_with_substituted_embedded_file_lis
         ("change_over_time", "update_year"),
     ],
 )
-def test_trial_dimension_requires_semantic_key(
-    tmp_path: Path, dimension: str, field: str
-) -> None:
+def test_trial_dimension_requires_semantic_key(tmp_path: Path, dimension: str, field: str) -> None:
     source = Path(__file__).resolve().parents[2] / "data"
     root = tmp_path / "data"
     copy_api_data(source, root)

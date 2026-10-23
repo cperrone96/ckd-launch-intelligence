@@ -70,6 +70,11 @@ class ScoringRequest(APIModel):
         "Other Hispanic",
         "Other Race - Including Multi-Racial",
     ]
+    body_mass_index: StrictFloat = Field(ge=10, le=80)
+    systolic_blood_pressure: StrictFloat = Field(ge=60, le=260)
+    diabetes_history: Literal["Borderline", "No", "Yes"]
+    hypertension_history: Literal["No", "Yes"]
+    smoking_status: Literal["Current", "Former", "Never"]
 
 
 class ScoreResponse(APIModel):
@@ -204,7 +209,7 @@ class SourcesResponse(APIModel):
 
 
 class MetricInterval(APIModel):
-    caveat: StrictStr
+    caveat: StrictStr | None = None
     cluster_count: StrictInt
     high: StrictFloat
     low: StrictFloat
@@ -270,14 +275,14 @@ class Subgroups(APIModel):
 
 
 class CohortDefinition(APIModel):
-    holdout_n: StrictInt
-    holdout_prevalence: StrictFloat
+    evaluated_n: StrictInt
+    evaluated_prevalence: StrictFloat
     target: StrictStr
 
 
 class CohortSensitivityItem(APIModel):
-    holdout_n: StrictInt
-    holdout_prevalence: StrictFloat
+    evaluated_n: StrictInt
+    evaluated_prevalence: StrictFloat
     pr_auc: StrictFloat
     roc_auc: StrictFloat
 
@@ -296,12 +301,13 @@ class Capacity(APIModel):
     tie_policy: StrictStr | None = None
 
 
-class Split(APIModel):
-    development_group_count: StrictInt
-    development_n: StrictInt
-    holdout_group_count: StrictInt
-    holdout_n: StrictInt
+class CrossValidation(APIModel):
+    evaluated_n: StrictInt
+    folds: StrictInt
+    group_count: StrictInt
     random_state: StrictInt
+    scoring_fold_group_counts: list[StrictInt]
+    scoring_fold_sizes: list[StrictInt]
     strategy: StrictStr
     threshold_source: StrictStr
 
@@ -318,12 +324,16 @@ class PairedDifferences(APIModel):
     logistic_minus_random_forest_brier_score: PairedDifference
     logistic_minus_random_forest_pr_auc: PairedDifference
     logistic_minus_random_forest_roc_auc: PairedDifference
+    logistic_minus_demographics_only_brier_score: PairedDifference | None = None
+    logistic_minus_demographics_only_pr_auc: PairedDifference | None = None
+    logistic_minus_demographics_only_roc_auc: PairedDifference | None = None
 
 
 class ModelSet(APIModel):
     logistic_regression: ModelMetrics
     prevalence_no_skill: ModelMetrics
     random_forest: ModelMetrics
+    logistic_demographics_only: ModelMetrics | None = None
 
 
 class PerformanceComparison(APIModel):
@@ -334,11 +344,11 @@ class PerformanceComparison(APIModel):
     selection_policy: StrictStr
     selected_threshold: StrictFloat
     threshold_capacity: StrictFloat
-    development_capacity: Capacity
-    holdout_prevalence: StrictFloat
-    holdout_n: StrictInt
+    operating_capacity: Capacity
+    evaluated_prevalence: StrictFloat
+    evaluated_n: StrictInt
     features: list[StrictStr]
-    split: Split
+    split: CrossValidation
     models: ModelSet
     subgroups: Subgroups
     cohort_sensitivity: CohortSensitivity

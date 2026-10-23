@@ -14,11 +14,13 @@ from ckd_intelligence.analysis.artifacts import (
     patient_finding_source_provenance,
 )
 from ckd_intelligence.modeling.patient_finding import (
+    PRE_LAB_FEATURES,
     CapacityBoundaryError,
     FeatureValidationError,
     LeakageError,
     LogisticScorer,
     _metric_intervals,
+    _pipeline,
     _subgroup_metric_intervals,
     build_pre_lab_features,
     select_capacity_decision,
@@ -61,20 +63,40 @@ def test_official_model_artifact_is_aggregate_checksummed_and_nonclinical() -> N
     assert sha256(artifact_path.read_bytes()).hexdigest() == expected_digest
     assert checksum_parts[1] == artifact_path.as_posix()
     assert artifact["evidence_type"] == "public_observed"
-    assert artifact["split"]["threshold_source"] == "out_of_fold_development_predictions"
+    assert artifact["split"]["threshold_source"] == "pooled_out_of_fold_logistic_predictions"
     assert "not a diagnosis" in artifact["intended_use"].casefold()
-    assert artifact["features"] == ["age_years", "sex", "race_ethnicity"]
-    assert artifact["selection_policy"] == "logistic_prespecified_before_holdout"
+    assert artifact["features"] == list(PRE_LAB_FEATURES)
+    assert artifact["selection_policy"] == "logistic_prespecified_before_evaluation"
     assert artifact["source_provenance"]["path"] == (
         "data/manifests/nhanes-2017-2018-patient-need.json"
     )
-    assert len(artifact["source_provenance"]["files"]) == 3
-    sparse_age = next(row for row in artifact["subgroups"]["age_band"] if row["value"] == "18-39")
-    assert sparse_age["positives"] == 18
-    assert sparse_age["precision_interval"] is None
-    assert sparse_age["recall_interval"] is None
-    assert sparse_age["brier_interval"] is None
-    assert "sparse" in sparse_age["caveat"].casefold()
+    assert len(artifact["source_provenance"]["files"]) == 8
+    # Every NHANES masked variance cluster is scored exactly once across the folds.
+    split = artifact["split"]
+    assert split["group_count"] == 30
+    assert sum(split["scoring_fold_group_counts"]) == split["group_count"]
+    assert sum(split["scoring_fold_sizes"]) == split["evaluated_n"] == artifact["evaluated_n"]
+    assert artifact["evaluated_n"] == artifact["cohort_attrition"]["model_cohort"]
+    models = artifact["models"]
+    assert set(models) == {
+        "prevalence_no_skill",
+        "logistic_regression",
+        "random_forest",
+        "logistic_demographics_only",
+    }
+    assert models["prevalence_no_skill"]["roc_auc"] == 0.5
+    assert models["prevalence_no_skill"]["pr_auc"] == pytest.approx(
+        artifact["evaluated_prevalence"]
+    )
+    for name in ("logistic_regression", "random_forest", "logistic_demographics_only"):
+        interval = models[name]["roc_auc_interval"]
+        assert interval["cluster_count"] == 30
+        assert interval["valid_replicates"] == interval["requested_replicates"] == 1000
+        assert interval["low"] <= models[name]["roc_auc"] <= interval["high"]
+    for difference in artifact["paired_differences"].values():
+        interval = difference["interval"]
+        includes_zero = interval["low"] <= 0 <= interval["high"]
+        assert includes_zero == difference["interpretation"].startswith("Interval includes zero")
     payload = artifact_path.read_text(encoding="utf-8").casefold()
     assert "seqn" not in payload
     assert "respondent_id" not in payload
@@ -156,26 +178,27 @@ def test_feature_builder_uses_only_documented_pre_lab_allowlist() -> None:
         build_pre_lab_features(frame, requested=["sample_weight"])
 
 
-def test_development_capacity_uses_validation_predictions_and_respects_capacity() -> None:
+def test_operating_capacity_uses_out_of_fold_predictions_and_respects_capacity() -> None:
     cohort, groups = _modeling_cohort()
     comparison = train_patient_finding_models(
         cohort, groups, capacity=0.12, bootstrap_replicates=20
     )
 
-    decision = select_capacity_decision(comparison.selection_probabilities, capacity=0.12)
+    decision = select_capacity_decision(comparison.out_of_fold_probabilities, capacity=0.12)
 
-    assert decision.threshold == comparison.development_capacity.threshold
+    assert decision.threshold == comparison.operating_capacity.threshold
     assert sum(decision.selected) == decision.requested_count
     assert decision.selected_count == decision.requested_count
     assert decision.selected_share == pytest.approx(
-        decision.requested_count / len(comparison.selection_probabilities)
+        decision.requested_count / len(comparison.out_of_fold_probabilities)
     )
     assert decision.tie_policy == "descending_probability_then_stable_row_order"
-    assert comparison.development_capacity.requested_count == decision.requested_count
-    assert comparison.development_capacity.selected_count == decision.selected_count
-    assert comparison.development_capacity.selected_share == decision.selected_share
-    assert comparison.split.holdout_groups.isdisjoint(comparison.split.development_groups)
-    assert comparison.split.threshold_source == "out_of_fold_development_predictions"
+    assert comparison.operating_capacity.requested_count == decision.requested_count
+    assert comparison.operating_capacity.selected_count == decision.selected_count
+    assert comparison.operating_capacity.selected_share == decision.selected_share
+    assert comparison.split.threshold_source == "pooled_out_of_fold_logistic_predictions"
+    assert len(comparison.out_of_fold_probabilities) == len(cohort)
+    assert sum(comparison.split.scoring_fold_group_counts) == groups.nunique()
 
 
 def test_comparison_reports_baselines_calibration_subgroups_and_denominators() -> None:
@@ -187,13 +210,16 @@ def test_comparison_reports_baselines_calibration_subgroups_and_denominators() -
 
     assert set(comparison.models) == {"prevalence_no_skill", "logistic_regression", "random_forest"}
     assert comparison.models["logistic_regression"].roc_auc > 0.5
-    assert comparison.models["logistic_regression"].pr_auc > comparison.holdout_prevalence
+    assert comparison.models["logistic_regression"].pr_auc > comparison.evaluated_prevalence
     assert comparison.models["logistic_regression"].brier_score >= 0
     assert comparison.models["logistic_regression"].calibration_bins
     assert len(comparison.models["prevalence_no_skill"].calibration_bins) == 1
     assert set(comparison.subgroups) >= {"age_band", "sex"}
-    assert comparison.holdout_n == sum(
-        comparison.models["logistic_regression"].confusion_matrix.values()
+    assert comparison.models["prevalence_no_skill"].roc_auc == 0.5
+    assert (
+        comparison.evaluated_n
+        == len(cohort)
+        == sum(comparison.models["logistic_regression"].confusion_matrix.values())
     )
     assert "not a diagnosis" in comparison.intended_use.casefold()
     assert comparison.cohort_sensitivity
@@ -212,7 +238,7 @@ def test_comparison_reports_cluster_aware_uncertainty_and_paired_differences() -
     )
 
     logistic = comparison.models["logistic_regression"]
-    assert logistic.roc_auc_interval.method == "holdout_cluster_bootstrap_percentile"
+    assert logistic.roc_auc_interval.method == "cluster_bootstrap_percentile"
     assert logistic.roc_auc_interval.cluster_count > 1
     assert logistic.roc_auc_interval.low <= logistic.roc_auc <= logistic.roc_auc_interval.high
     assert logistic.pr_auc_interval.low <= logistic.pr_auc <= logistic.pr_auc_interval.high
@@ -226,13 +252,12 @@ def test_comparison_reports_cluster_aware_uncertainty_and_paired_differences() -
                 assert metric.brier_interval.cluster_count > 1
 
 
-def test_model_selection_is_prespecified_and_not_based_on_holdout_advantage() -> None:
+def test_model_selection_is_prespecified_and_not_based_on_evaluation_advantage() -> None:
     cohort, groups = _modeling_cohort()
     comparison = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
 
     assert comparison.selected_model == "logistic_regression"
-    assert comparison.selection_policy == "logistic_prespecified_before_holdout"
-    assert "holdout" not in comparison.selection_policy.replace("before_holdout", "")
+    assert comparison.selection_policy == "logistic_prespecified_before_evaluation"
 
 
 def test_capacity_policy_never_exceeds_limit_when_probabilities_tie() -> None:
@@ -248,7 +273,7 @@ def test_capacity_policy_never_exceeds_limit_when_probabilities_tie() -> None:
 def test_scalar_threshold_rejects_boundary_ties_that_cannot_encode_exact_capacity() -> None:
     cohort, groups = _modeling_cohort()
     comparison = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
-    tied = replace(comparison, selection_probabilities=(0.8, 0.8, 0.8, 0.2))
+    tied = replace(comparison, out_of_fold_probabilities=(0.8, 0.8, 0.8, 0.2))
 
     with pytest.raises(CapacityBoundaryError, match="select_capacity_decision"):
         select_operating_threshold(tied, capacity=2)
@@ -334,7 +359,8 @@ def test_subgroup_with_no_capacity_flags_explains_undefined_precision() -> None:
 def test_one_cluster_subgroup_uncertainty_is_unavailable_with_caveat() -> None:
     cohort, groups = _modeling_cohort()
     initial = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
-    rare_group = sorted(initial.split.holdout_groups)[0]
+    assert initial.evaluated_n == len(cohort)
+    rare_group = sorted(groups.astype(str).unique())[0]
     cohort["age_years"] = 60
     cohort.loc[groups.astype(str).eq(rare_group), "age_years"] = 25
 
@@ -377,12 +403,15 @@ def test_scoring_artifact_rejects_incomplete_out_of_range_and_extra_input() -> N
         )
 
 
-def test_portable_json_scorer_reproduces_fitted_logistic_holdout_probabilities() -> None:
+def test_portable_json_scorer_reproduces_the_full_cohort_logistic_fit() -> None:
     cohort, groups = _modeling_cohort()
     comparison = train_patient_finding_models(
         cohort, groups, capacity=0.15, bootstrap_replicates=20
     )
-    holdout = cohort.loc[groups.astype(str).isin(comparison.split.holdout_groups)]
+    features = list(comparison.features)
+    refit = _pipeline("logistic_regression", features, 20260910).fit(
+        cohort[features], cohort["ckd_indicator"]
+    )
 
     probabilities = [
         comparison.scorer.score_one(
@@ -392,10 +421,32 @@ def test_portable_json_scorer_reproduces_fitted_logistic_holdout_probabilities()
                 "race_ethnicity": row.race_ethnicity,
             }
         )
-        for row in holdout.itertuples(index=False)
+        for row in cohort.itertuples(index=False)
     ]
 
-    assert probabilities == pytest.approx(comparison.holdout_probabilities, abs=1e-12)
+    assert probabilities == pytest.approx(
+        refit.predict_proba(cohort[features])[:, 1].tolist(), abs=1e-12
+    )
+
+
+def test_clinical_predictors_add_a_demographics_only_comparator_on_the_same_folds() -> None:
+    cohort, groups = _modeling_cohort()
+    cohort["body_mass_index"] = 22.0 + (cohort.index % 17).astype(float)
+    cohort["diabetes_history"] = np.where(cohort["ckd_indicator"].eq(1), "Yes", "No")
+    comparison = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
+
+    assert "logistic_demographics_only" in comparison.models
+    assert comparison.features == (
+        "age_years",
+        "sex",
+        "race_ethnicity",
+        "body_mass_index",
+        "diabetes_history",
+    )
+    gain = comparison.paired_differences["logistic_minus_demographics_only_roc_auc"]
+    assert gain.estimate > 0
+    assert gain.comparison == "logistic_regression minus logistic_demographics_only"
+    assert comparison.scorer.feature_order == comparison.features
 
 
 def test_portable_scorer_round_trip_is_validated_and_numerically_stable() -> None:
@@ -484,7 +535,7 @@ def test_training_rejects_grouped_folds_without_both_classes() -> None:
         train_patient_finding_models(cohort, groups)
 
 
-def test_sensitivity_targets_must_use_the_same_complete_holdout_domain() -> None:
+def test_sensitivity_targets_must_use_the_same_complete_case_domain() -> None:
     cohort, groups = _modeling_cohort()
     cohort["sensitivity_egfr_only"] = cohort["ckd_indicator"]
     cohort.loc[0, "sensitivity_egfr_only"] = pd.NA
