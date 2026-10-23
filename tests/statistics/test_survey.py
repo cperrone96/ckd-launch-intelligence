@@ -5,7 +5,11 @@ import math
 import pandas as pd
 import pytest
 
-from ckd_intelligence.statistics.survey import weighted_mean, weighted_prevalence
+from ckd_intelligence.statistics.survey import (
+    weighted_mean,
+    weighted_mean_difference,
+    weighted_prevalence,
+)
 
 
 def test_weighted_estimate_differs_from_unweighted_when_weights_differ() -> None:
@@ -125,3 +129,64 @@ def test_excluded_missing_counts_only_missing_outcomes_inside_domain() -> None:
 
     assert estimate.denominator == 2
     assert estimate.excluded_missing == 1
+
+
+def test_zero_weight_rows_outside_domain_keep_their_psus_in_the_design() -> None:
+    # Stratum 2 has one PSU with domain members and one PSU with only zero-weight,
+    # out-of-domain rows. Subsetting would leave stratum 2 with a lonely PSU and drop
+    # its variance contribution; the domain estimator keeps the PSU with a zero total.
+    values = [10.0, 20.0, 30.0, 99.0]
+    weights = [1.0, 1.0, 2.0, 0.0]
+    strata = [1, 1, 2, 2]
+    psu = [1, 2, 1, 2]
+    domain = [True, True, True, False]
+
+    full = weighted_mean(values, weights, strata, psu, domain=domain)
+    subset = weighted_mean(values[:3], weights[:3], strata[:3], psu[:3], lonely_psu="certainty")
+
+    assert full.point == pytest.approx(subset.point) == pytest.approx(22.5)
+    assert full.degrees_freedom == 2
+    assert subset.degrees_freedom == 1
+    assert full.standard_error > subset.standard_error
+
+
+def test_zero_weight_inside_domain_is_rejected() -> None:
+    with pytest.raises(ValueError, match="strictly positive"):
+        weighted_mean([1.0, 2.0], [1.0, 0.0], [1, 1], [1, 2])
+    with pytest.raises(ValueError, match="nonnegative"):
+        weighted_mean([1.0, 2.0], [1.0, -1.0], [1, 1], [1, 2])
+
+
+def test_domain_difference_matches_component_means_and_shared_psu_covariance() -> None:
+    values = [10.0, 20.0, 30.0, 40.0, 50.0, 60.0, 70.0, 80.0]
+    weights = [1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 1.0, 2.0]
+    strata = [1, 1, 1, 1, 2, 2, 2, 2]
+    psu = [1, 1, 2, 2, 1, 1, 2, 2]
+    first = [True, False, True, False, True, False, True, False]
+    second = [not item for item in first]
+
+    difference = weighted_mean_difference(
+        values, weights, strata, psu, domain=first, comparison_domain=second
+    )
+    mean_first = weighted_mean(values, weights, strata, psu, domain=first)
+    mean_second = weighted_mean(values, weights, strata, psu, domain=second)
+
+    assert difference.point == pytest.approx(mean_first.point - mean_second.point)
+    assert difference.denominator == 8
+    # Within every PSU the two domains differ by exactly 10, so the shared-PSU covariance
+    # cancels all between-PSU variation. Treating the means as independent would not.
+    independent_se = math.sqrt(mean_first.standard_error**2 + mean_second.standard_error**2)
+    assert independent_se > 1.0
+    assert difference.standard_error == pytest.approx(0.0, abs=1e-9)
+
+
+def test_domain_difference_requires_disjoint_domains() -> None:
+    with pytest.raises(ValueError, match="disjoint"):
+        weighted_mean_difference(
+            [1.0, 2.0],
+            [1.0, 1.0],
+            [1, 1],
+            [1, 2],
+            domain=[True, True],
+            comparison_domain=[True, False],
+        )

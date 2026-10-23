@@ -80,6 +80,7 @@ def test_meps_rebuild_preserves_acquisition_metadata_and_bytes(
     monkeypatch.setattr(build, "ingest_meps", lambda *_args, **_kwargs: result)
     monkeypatch.setattr(build, "weighted_prevalence", lambda *_args, **_kwargs: estimate)
     monkeypatch.setattr(build, "weighted_mean", lambda *_args, **_kwargs: estimate)
+    monkeypatch.setattr(build, "weighted_mean_difference", lambda *_args, **_kwargs: estimate)
     monkeypatch.setattr(build, "_now", lambda: "2026-01-01T00:00:00Z")
 
     build.build_meps()

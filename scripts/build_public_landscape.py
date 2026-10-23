@@ -25,7 +25,11 @@ from ckd_intelligence.analysis.trials import (
 )
 from ckd_intelligence.ingestion.meps import ingest_meps
 from ckd_intelligence.ingestion.trials import ingest_trials
-from ckd_intelligence.statistics.survey import weighted_mean, weighted_prevalence
+from ckd_intelligence.statistics.survey import (
+    weighted_mean,
+    weighted_mean_difference,
+    weighted_prevalence,
+)
 
 ROOT = Path(__file__).parents[1]
 MEPS_ZIP = ROOT / "data/raw/meps/HC-243-2022/h243dat.zip"
@@ -74,6 +78,7 @@ def _write(stem: str, artifact: dict[str, Any], manifest: dict[str, Any]) -> Non
     (processed / f"{stem}.sha256").write_text(f"{digest}  {artifact_path.name}\n", encoding="utf-8")
     manifest = {
         **manifest,
+        "evidence_type": artifact["evidence_type"],
         "artifact_sha256": digest,
         "artifact_path": f"data/processed/{artifact_path.name}",
     }
@@ -86,47 +91,92 @@ def _estimate_dict(estimate: Any, *, metric: str, unit: str) -> dict[str, Any]:
     return {"metric": metric, "unit": unit, **asdict(estimate)}
 
 
+MEPS_UTILIZATION_METRICS: tuple[tuple[str, str], ...] = (
+    ("office_visits", "visits per person-year"),
+    ("outpatient_visits", "visits per person-year"),
+    ("emergency_visits", "visits per person-year"),
+    ("inpatient_stays", "stays per person-year"),
+    ("prescription_medicines", "medicines per person-year"),
+    ("total_expenditure_usd", "USD per person-year"),
+)
+
+
 def build_meps() -> None:
     result = ingest_meps(MEPS_ZIP, cache_dir=None)
     rows = [dict(row) for row in result.valid]
     source_sha256 = _sha(MEPS_ZIP)
     retrieved_at = _preserved_meps_retrieved_at(source_sha256) or _now()
-    domain_rows = [
-        row
+    # The Diabetes Care Survey weight (DIABW22F) is zero outside the DCS sample. The full
+    # HC-243 design is retained and the DCS diabetes population is analysed as a domain,
+    # so PSUs without domain members still contribute to the variance estimate.
+    in_dcs_diabetes = [
+        bool(row["proxy_weight"]) and row["dcs_eligible"] == 1 and row["diabetes_reported"] == 1
         for row in rows
-        if row["proxy_weight"] and row["dcs_eligible"] == 1 and row["diabetes_reported"] == 1
     ]
-    complete = [row["kidney_problem_proxy"] in (1, 2) for row in domain_rows]
+    domain_rows = [row for row, keep in zip(rows, in_dcs_diabetes, strict=True) if keep]
+    complete = [
+        keep and row["kidney_problem_proxy"] in (1, 2)
+        for row, keep in zip(rows, in_dcs_diabetes, strict=True)
+    ]
+    proxy_positive = [
+        keep and row["kidney_problem_proxy"] == 1 for row, keep in zip(rows, complete, strict=True)
+    ]
+    proxy_negative = [
+        keep and row["kidney_problem_proxy"] == 2 for row, keep in zip(rows, complete, strict=True)
+    ]
     source_population = (
         "MEPS HC-243 2022 Diabetes Care Survey-eligible respondents with self-reported "
         "diabetes; DSKIDN53 is a diabetes-related kidney-problem proxy, not confirmed CKD"
     )
-    common = {
-        "weights": [row["proxy_weight"] for row in domain_rows],
-        "strata": [row["variance_stratum"] for row in domain_rows],
-        "psu": [row["variance_psu"] for row in domain_rows],
-        "domain": complete,
+    design = {
+        "weights": [row["proxy_weight"] for row in rows],
+        "strata": [row["variance_stratum"] for row in rows],
+        "psu": [row["variance_psu"] for row in rows],
         "lonely_psu": "certainty",
-        "source_population": source_population,
     }
     prevalence = weighted_prevalence(
         [
-            int(row["kidney_problem_proxy"] == 1) if is_complete else None
-            for row, is_complete in zip(domain_rows, complete, strict=True)
+            int(row["kidney_problem_proxy"] == 1) if ok else None
+            for row, ok in zip(rows, complete, strict=True)
         ],
-        **common,  # type: ignore[arg-type]
+        domain=complete,
+        source_population=source_population,
+        **design,  # type: ignore[arg-type]
     )
     estimates = [_estimate_dict(prevalence, metric="proxy_positive_prevalence", unit="proportion")]
-    for field, unit in (
-        ("office_visits", "visits per person-year"),
-        ("outpatient_visits", "visits per person-year"),
-        ("emergency_visits", "visits per person-year"),
-        ("inpatient_stays", "stays per person-year"),
-        ("prescription_medicines", "medicines per person-year"),
-        ("total_expenditure_usd", "USD per person-year"),
-    ):
-        estimate = weighted_mean([row[field] for row in domain_rows], **common)  # type: ignore[arg-type]
+    for field, unit in MEPS_UTILIZATION_METRICS:
+        estimate = weighted_mean(
+            [row[field] for row in rows],
+            domain=complete,
+            source_population=source_population,
+            **design,  # type: ignore[arg-type]
+        )
         estimates.append(_estimate_dict(estimate, metric=field, unit=unit))
+    for field, unit in MEPS_UTILIZATION_METRICS:
+        values = [row[field] for row in rows]
+        for label, domain, description in (
+            ("proxy_positive", proxy_positive, "reporting diabetes-related kidney problems"),
+            ("proxy_negative", proxy_negative, "not reporting diabetes-related kidney problems"),
+        ):
+            estimate = weighted_mean(
+                values,
+                domain=domain,
+                source_population=f"{source_population}; respondents {description}",
+                **design,  # type: ignore[arg-type]
+            )
+            estimates.append(_estimate_dict(estimate, metric=f"{field}__{label}", unit=unit))
+        difference = weighted_mean_difference(
+            values,
+            domain=proxy_positive,
+            comparison_domain=proxy_negative,
+            source_population=(
+                f"{source_population}; proxy-positive minus proxy-negative respondents"
+            ),
+            **design,  # type: ignore[arg-type]
+        )
+        estimates.append(
+            _estimate_dict(difference, metric=f"{field}__proxy_positive_minus_negative", unit=unit)
+        )
     artifact = {
         "artifact": "MEPS HC-243 2022 utilization and expenditure landscape",
         "evidence_type": "public_observed",
@@ -141,7 +191,15 @@ def build_meps() -> None:
             "proxy_domain": "DCSELIG=1 and DSDIA53=1; complete DSKIDN53 in {1,2}",
             "weight": "DIABW22F",
             "design": ["VARSTR", "VARPSU"],
-            "variance": "Taylor linearization with certainty treatment for lonely PSUs",
+            "variance": (
+                "Taylor linearization on the full HC-243 design with the DCS diabetes "
+                "population as a domain; certainty treatment for lonely PSUs"
+            ),
+            "contrast": (
+                "Metrics suffixed __proxy_positive and __proxy_negative are domain means by "
+                "DSKIDN53 response; __proxy_positive_minus_negative is their design-based "
+                "difference. Descriptive, not causal."
+            ),
         },
         "denominators": {
             "all_person_records": len(rows),
@@ -149,14 +207,8 @@ def build_meps() -> None:
             "dcs_eligible_records": sum(row["dcs_eligible"] == 1 for row in rows),
             "diabetes_reported_records": len(domain_rows),
             "proxy_complete_records": sum(complete),
-            "proxy_positive_records": sum(
-                row["kidney_problem_proxy"] == 1 and ok
-                for row, ok in zip(domain_rows, complete, strict=True)
-            ),
-            "proxy_negative_records": sum(
-                row["kidney_problem_proxy"] == 2 and ok
-                for row, ok in zip(domain_rows, complete, strict=True)
-            ),
+            "proxy_positive_records": sum(proxy_positive),
+            "proxy_negative_records": sum(proxy_negative),
             "proxy_missing_records": len(domain_rows) - sum(complete),
         },
         "estimates": estimates,

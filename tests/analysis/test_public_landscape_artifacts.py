@@ -97,6 +97,26 @@ def test_meps_public_artifact_is_hc243_2022_and_not_event_person_ambiguous() -> 
     assert all("person_id" not in json.dumps(row).lower() for row in artifact["estimates"])
 
 
+def test_meps_estimates_use_full_design_and_match_r_survey_reference() -> None:
+    artifact, _ = _verified_artifact("meps_hc243_2022_landscape")
+    estimates = {row["metric"]: row for row in artifact["estimates"]}
+    # Every estimate keeps all HC-243 records in the design (domain estimation, not subsetting).
+    assert {row["design_observations"] for row in estimates.values()} == {22431}
+    positive = estimates["total_expenditure_usd__proxy_positive"]
+    negative = estimates["total_expenditure_usd__proxy_negative"]
+    difference = estimates["total_expenditure_usd__proxy_positive_minus_negative"]
+    assert difference["point"] == pytest.approx(positive["point"] - negative["point"])
+    assert positive["denominator"] + negative["denominator"] == difference["denominator"]
+    # Reference values from R survey 4.x: svydesign(id=~VARPSU, strata=~VARSTR,
+    # weights=~DIABW22F, nest=TRUE) on all records, subset() to the domain, then
+    # svymean / svyby / svyttest.
+    assert estimates["total_expenditure_usd"]["standard_error"] == pytest.approx(789.2518, abs=1e-3)
+    assert estimates["office_visits"]["standard_error"] == pytest.approx(0.5904, abs=1e-4)
+    assert positive["standard_error"] == pytest.approx(2261.9263, abs=1e-3)
+    assert negative["standard_error"] == pytest.approx(832.0105, abs=1e-3)
+    assert difference["point"] / difference["standard_error"] == pytest.approx(4.5003, abs=1e-4)
+
+
 def test_partd_artifact_proves_pages_and_suppression_limit() -> None:
     artifact, manifest = _verified_artifact("partd_2024_ckd_therapy_landscape")
     assert artifact["evidence_type"] == "public_observed"

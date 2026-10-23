@@ -83,7 +83,7 @@ def render(data: dict[str, Any]) -> html.Main:
                 ),
                 tone="strong",
             ),
-            source_section("MEPS utilization", utilization, "HC-243 person-year estimates", 8),
+            source_section("MEPS utilization", utilization, "HC-243 person-year estimates", 25),
             source_section("Part D prescribing", prescribing, "Provider-state aggregates", 12),
         ],
     )
