@@ -100,17 +100,164 @@ def test_schema_valid_empty_input_returns_typed_empty_outputs(
     assert "evidence_type" in output.events
 
 
-def test_persistence_gap_is_inclusive_and_no_target_is_retained_as_censored(
+def _rows(*rows: tuple[str, str, str, str, str]) -> pd.DataFrame:
+    """Build claims from (beneficiary, claim, from, through, diagnosis) tuples."""
+
+    return pd.DataFrame(
+        [
+            {
+                "source_release": "2008-2010",
+                "beneficiary_id": beneficiary_id,
+                "claim_id": claim_id,
+                "claim_type": "outpatient",
+                "service_from_date": from_date,
+                "service_through_date": through_date,
+                "diagnosis_code": diagnosis,
+                "evidence_type": "public_synthetic",
+            }
+            for beneficiary_id, claim_id, from_date, through_date, diagnosis in rows
+        ]
+    )
+
+
+def _day(value: str) -> object:
+    return pd.Timestamp(value).date()
+
+
+def test_persistence_gap_is_inclusive_and_clock_starts_at_target(
     claims: pd.DataFrame,
 ) -> None:
     output = build_journey_output(claims, rules=JourneyRules(persistence_gap_days=90))
     summaries = output.summaries.set_index("synthetic_id")
+    # SYN001: target 2009-01-10, second CKD claim exactly 90 days later.
     assert bool(summaries.loc["SYN001", "event_observed"])
-    assert summaries.loc["SYN001", "persistence_date"] == pd.Timestamp("2009-04-10").date()
-    assert not bool(summaries.loc["SYN002", "event_observed"])
-    assert bool(summaries.loc["SYN002", "has_target"])
-    assert not bool(summaries.loc["SYN003", "event_observed"])
-    assert bool(summaries.loc["SYN003", "has_target"])
+    assert summaries.loc["SYN001", "persistence_date"] == _day("2009-04-10")
+    assert summaries.loc["SYN001", "duration_days"] == 90
+    # SYN003: nine event-free days before its target do not count as follow-up.
+    assert summaries.loc["SYN003", "index_date"] == _day("2009-01-01")
+    assert summaries.loc["SYN003", "target_date"] == _day("2009-05-01")
+    assert summaries.loc["SYN003", "observation_end"] == _day("2010-04-30")
+    for synthetic_id in ("SYN002", "SYN003"):
+        assert not bool(summaries.loc[synthetic_id, "event_observed"])
+        assert summaries.loc[synthetic_id, "duration_days"] == 364
+
+
+def test_durations_never_start_before_the_target_date(claims: pd.DataFrame) -> None:
+    extra = _rows(
+        ("LATE", "LATE-1", "2008-01-01", "2008-01-01", "4019"),
+        ("LATE", "LATE-2", "2010-06-01", "2010-06-01", "5853"),
+        ("LATE", "LATE-3", "2010-10-01", "2010-10-01", "5853"),
+        ("NONE", "NONE-1", "2008-02-01", "2008-02-01", "4019"),
+    )
+    output = build_journey_output(pd.concat([claims, extra], ignore_index=True))
+    summaries = output.summaries
+    assert (summaries["target_date"] >= summaries["index_date"]).all()
+    assert (summaries["duration_days"] >= 0).all()
+    ends = [
+        persistence if observed else end
+        for persistence, end, observed in zip(
+            summaries["persistence_date"],
+            summaries["observation_end"],
+            summaries["event_observed"],
+            strict=True,
+        )
+    ]
+    measured = [
+        (end - target).days for end, target in zip(ends, summaries["target_date"], strict=True)
+    ]
+    assert measured == list(summaries["duration_days"])
+    assert (summaries["duration_days"] <= 364).all()
+    follow_up = output.events.loc[output.events["event_kind"] == "follow_up"]
+    assert (follow_up["event_date"] >= follow_up["target_date"]).all()
+    assert (follow_up["event_date"] <= follow_up["follow_up_end"]).all()
+    # A target nearly 900 days after the first claim still gets a full clock.
+    late = summaries.set_index("synthetic_id").loc["LATE"]
+    assert bool(late["event_observed"])
+    assert late["duration_days"] == 122
+
+
+def test_people_without_a_target_are_excluded_from_kaplan_meier(
+    claims: pd.DataFrame,
+) -> None:
+    no_target = _rows(
+        ("NONE1", "N1", "2008-02-01", "2008-02-01", "4019"),
+        ("NONE2", "N2", "2010-12-30", "2010-12-31", "25000"),
+    )
+    with_none = build_journey_output(pd.concat([claims, no_target], ignore_index=True))
+    baseline = build_journey_output(claims)
+    assert with_none.excluded_without_target == ("NONE1", "NONE2")
+    assert set(with_none.events["synthetic_id"]) >= {"NONE1", "NONE2"}
+    assert with_none.events.loc[
+        with_none.events["synthetic_id"].isin(["NONE1", "NONE2"]), "follow_up_end"
+    ].isna().all()
+    assert "NONE1" not in set(with_none.summaries["synthetic_id"])
+    assert with_none.summaries["has_target"].all()
+    assert int(with_none.survival["at_risk"].max()) == len(with_none.summaries)
+    pd.testing.assert_frame_equal(with_none.survival, baseline.survival)
+
+    only_none = build_journey_output(no_target)
+    assert len(only_none.events) == 2
+    assert only_none.summaries.empty
+    assert only_none.survival.empty
+    assert only_none.median_survival is None
+
+
+def test_follow_up_window_is_365_calendar_days_from_target() -> None:
+    rows = _rows(
+        # 2008 is a leap year: day 364 after 2008-03-01 is 2009-02-28.
+        ("EDGE", "E1", "2008-03-01", "2008-03-01", "5853"),
+        ("EDGE", "E2", "2009-02-28", "2009-02-28", "5853"),
+        ("EDGE", "E3", "2009-03-01", "2009-03-01", "5853"),
+        ("OUT", "O1", "2008-03-01", "2008-03-01", "5853"),
+        ("OUT", "O2", "2009-03-01", "2009-03-01", "5853"),
+    )
+    output = build_journey_output(rows)
+    summaries = output.summaries.set_index("synthetic_id")
+    assert summaries.loc["EDGE", "observation_end"] == _day("2009-02-28")
+    assert summaries.loc["EDGE", "persistence_date"] == _day("2009-02-28")
+    assert summaries.loc["EDGE", "duration_days"] == 364
+    assert not bool(summaries.loc["OUT", "event_observed"])
+    assert summaries.loc["OUT", "duration_days"] == 364
+    assert list(output.events["claim_id"]) == ["E1", "E2", "O1"]
+
+
+def test_follow_up_is_cut_at_the_observation_end() -> None:
+    output = build_journey_output(_rows(("END", "X1", "2010-10-01", "2010-10-01", "5853")))
+    summary = output.summaries.iloc[0]
+    assert summary["observation_end"] == _day("2010-12-31")
+    assert summary["duration_days"] == 91
+
+
+def test_spanning_claims_are_dropped_before_index_without_losing_later_claims() -> None:
+    # Regression: an early long claim used to set a cutoff that removed C3 for good.
+    rows = _rows(
+        ("R", "C1", "2008-01-01", "2009-06-01", "4019"),
+        ("R", "C2", "2008-03-01", "2008-03-01", "5853"),
+        ("R", "C3", "2009-02-15", "2009-02-15", "5853"),
+    )
+    output = build_journey_output(rows)
+    assert list(output.events["claim_id"]) == ["C2", "C3"]
+    summary = output.summaries.iloc[0]
+    assert summary["index_date"] == _day("2008-03-01")
+    assert summary["persistence_date"] == _day("2009-02-15")
+    assert bool(summary["event_observed"])
+    assert summary["duration_days"] == 351
+
+
+def test_spanning_boundary_keeps_a_365_day_claim_and_drops_a_366_day_claim() -> None:
+    rows = _rows(
+        ("KEEP", "K1", "2009-01-01", "2009-12-31", "5853"),
+        ("DROP", "D1", "2009-01-01", "2010-01-01", "5853"),
+    )
+    output = build_journey_output(rows)
+    assert list(output.events["claim_id"]) == ["K1"]
+
+
+def test_rules_reject_non_positive_windows() -> None:
+    with pytest.raises(ValueError, match="positive"):
+        JourneyRules(follow_up_days=0)
+    with pytest.raises(ValueError, match="positive"):
+        JourneyRules(persistence_gap_days=0)
 
 
 def test_deterministic_tie_break_uses_claim_id(claims: pd.DataFrame) -> None:
@@ -181,38 +328,19 @@ def test_only_first_qualifying_persistence_claim_is_flagged() -> None:
     assert list(output.events["event_order"]) == [0, 2, 3, 3, 3]
 
 
-def test_post_follow_up_claims_never_define_target_or_persistence(
-    claims: pd.DataFrame,
-) -> None:
-    post_follow_up = pd.DataFrame(
-        [
-            {
-                "source_release": "2008-2010",
-                "beneficiary_id": "SYN005",
-                "claim_id": "L1",
-                "claim_type": "outpatient",
-                "service_from_date": "2009-01-01",
-                "service_through_date": "2009-01-01",
-                "diagnosis_code": "4019",
-                "evidence_type": "public_synthetic",
-            },
-            {
-                "source_release": "2008-2010",
-                "beneficiary_id": "SYN005",
-                "claim_id": "L2",
-                "claim_type": "outpatient",
-                "service_from_date": "2009-02-01",
-                "service_through_date": "2009-02-01",
-                "diagnosis_code": "5853",
-                "evidence_type": "public_synthetic",
-            },
-        ]
+def test_post_follow_up_claims_never_define_persistence() -> None:
+    rows = _rows(
+        ("SYN005", "L1", "2009-01-01", "2009-01-01", "4019"),
+        ("SYN005", "L2", "2009-02-01", "2009-02-01", "5853"),
+        ("SYN005", "L3", "2009-05-01", "2009-05-01", "5853"),
     )
-    output = build_journey_output(post_follow_up, rules=JourneyRules(follow_up_days=30))
-    assert list(output.events["claim_id"]) == ["L1"]
+    output = build_journey_output(rows, rules=JourneyRules(follow_up_days=30))
+    assert list(output.events["claim_id"]) == ["L1", "L2"]
     summary = output.summaries.iloc[0]
+    assert summary["target_date"] == _day("2009-02-01")
+    assert summary["observation_end"] == _day("2009-03-02")
     assert bool(summary["event_observed"]) is False
-    assert bool(summary["has_target"]) is False
+    assert summary["duration_days"] == 29
 
 
 def test_spanning_early_claim_is_removed_before_recomputing_index() -> None:
@@ -322,10 +450,11 @@ def test_python_outputs_include_reconciliable_summary_and_survival_tables(
     assert len(output.events) == len(claims)
     assert len(output.summaries) == claims["beneficiary_id"].nunique()
     assert set(output.survival["evidence_type"]) == {"public_synthetic"}
-    assert output.survival[["at_risk", "events", "censored"]].to_dict("records") == [
-        {"at_risk": 3, "events": 1, "censored": 0},
-        {"at_risk": 2, "events": 0, "censored": 2},
+    assert output.survival[["time", "at_risk", "events", "censored"]].to_dict("records") == [
+        {"time": 90.0, "at_risk": 3, "events": 1, "censored": 0},
+        {"time": 364.0, "at_risk": 2, "events": 0, "censored": 2},
     ]
+    assert list(output.survival["survival"].round(6)) == [0.666667, 0.666667]
 
 
 def test_kaplan_meier_matches_hand_calculation_and_is_monotone() -> None:

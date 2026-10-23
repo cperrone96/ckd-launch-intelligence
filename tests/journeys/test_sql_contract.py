@@ -127,6 +127,80 @@ def _spanning_only_claim() -> pd.DataFrame:
     return base
 
 
+def _custom(rows: list[tuple[str, str, str, str, str]]) -> pd.DataFrame:
+    """Build fixture-shaped claims from (beneficiary, claim, from, through, dx) tuples."""
+
+    base = _claims().iloc[0:0].copy()
+    for beneficiary_id, claim_id, from_date, through_date, diagnosis in rows:
+        base.loc[len(base)] = {
+            "source_release": "2008-2010",
+            "beneficiary_id": beneficiary_id,
+            "claim_id": claim_id,
+            "claim_type": "outpatient",
+            "service_from_date": from_date,
+            "service_through_date": through_date,
+            "diagnosis_code": diagnosis,
+            "provider_id": "PCUSTOM",
+            "payment_amount_usd": 1.0,
+            "year": int(from_date[:4]),
+            "evidence_type": "public_synthetic",
+        }
+    return base
+
+
+def _spanning_claim_hides_later_claim() -> pd.DataFrame:
+    # Regression: Python used to drop C3 after an early cutoff from C1.
+    return _custom(
+        [
+            ("R", "C1", "2008-01-01", "2009-06-01", "4019"),
+            ("R", "C2", "2008-03-01", "2008-03-01", "5853"),
+            ("R", "C3", "2009-02-15", "2009-02-15", "5853"),
+        ]
+    )
+
+
+def _late_target_no_target_and_window_edges() -> pd.DataFrame:
+    return pd.concat(
+        [
+            _claims(),
+            _custom(
+                [
+                    ("LATE", "LATE-1", "2008-01-01", "2008-01-01", "4019"),
+                    ("LATE", "LATE-2", "2010-06-01", "2010-06-01", "5853"),
+                    ("LATE", "LATE-3", "2010-10-01", "2010-10-01", "5853"),
+                    ("NONE", "NONE-1", "2008-02-01", "2008-02-01", "4019"),
+                    ("EDGE", "E1", "2008-03-01", "2008-03-01", "5853"),
+                    ("EDGE", "E2", "2009-02-28", "2009-02-28", "5853"),
+                    ("OUT", "O1", "2008-03-01", "2008-03-01", "5853"),
+                    ("OUT", "O2", "2009-03-01", "2009-03-01", "5853"),
+                    ("KEEP", "K1", "2009-01-01", "2009-12-31", "5853"),
+                    ("DROP", "D1", "2009-01-01", "2010-01-01", "5853"),
+                    ("END", "X1", "2010-10-01", "2010-10-01", "5853"),
+                ]
+            ),
+        ],
+        ignore_index=True,
+    )
+
+
+def _no_target_only() -> pd.DataFrame:
+    return _custom([("NONE", "NONE-1", "2008-02-01", "2008-02-01", "4019")])
+
+
+def _scenarios() -> tuple[pd.DataFrame, ...]:
+    return (
+        _claims(),
+        _claims().loc[lambda frame: frame["claim_id"] != "J003"],
+        _claims().iloc[0:0].copy(),
+        _adversarial_ties(),
+        _spanning_early_claim(),
+        _spanning_only_claim(),
+        _spanning_claim_hides_later_claim(),
+        _late_target_no_target_and_window_edges(),
+        _no_target_only(),
+    )
+
+
 def _normalize(frame: pd.DataFrame, columns: list[str]) -> pd.DataFrame:
     result = frame[columns].copy()
     for column in result.columns:
@@ -221,15 +295,7 @@ def test_duckdb_sql_reconciles_standard_all_censored_empty_and_ties() -> None:
     duckdb = pytest.importorskip("duckdb")
     connection = duckdb.connect()
     try:
-        scenarios = (
-            _claims(),
-            _claims().loc[lambda frame: frame["claim_id"] != "J003"],
-            _claims().iloc[0:0].copy(),
-            _adversarial_ties(),
-            _spanning_early_claim(),
-            _spanning_only_claim(),
-        )
-        for claims in scenarios:
+        for claims in _scenarios():
             _run_and_compare(connection, claims)
             fresh = duckdb.connect()
             try:
@@ -238,6 +304,52 @@ def test_duckdb_sql_reconciles_standard_all_censored_empty_and_ties() -> None:
                 fresh.close()
     finally:
         connection.close()
+
+
+def test_duckdb_and_python_agree_on_spanning_claim_regression() -> None:
+    duckdb = pytest.importorskip("duckdb")
+    claims = _spanning_claim_hides_later_claim()
+    python = build_journey_output(claims)
+    connection = duckdb.connect()
+    try:
+        _run_and_compare(connection, claims)
+        sql_summary = connection.execute(
+            "SELECT * FROM analytics_synthetic.mart_journey_summaries"
+        ).fetchdf()
+        sql_events = connection.execute(
+            "SELECT claim_id FROM analytics_synthetic.mart_journeys ORDER BY event_date"
+        ).fetchdf()
+    finally:
+        connection.close()
+    assert list(sql_events["claim_id"]) == ["C2", "C3"]
+    assert list(python.events["claim_id"]) == ["C2", "C3"]
+    for summary in (python.summaries.iloc[0], sql_summary.iloc[0]):
+        assert pd.Timestamp(summary["persistence_date"]) == pd.Timestamp("2009-02-15")
+        assert bool(summary["event_observed"])
+        assert int(summary["duration_days"]) == 351
+
+
+def test_duckdb_excludes_people_without_a_target_from_survival() -> None:
+    duckdb = pytest.importorskip("duckdb")
+    claims = _late_target_no_target_and_window_edges()
+    connection = duckdb.connect()
+    try:
+        _run_and_compare(connection, claims)
+        summary_ids = connection.execute(
+            "SELECT synthetic_id FROM analytics_synthetic.mart_journey_summaries"
+        ).fetchdf()["synthetic_id"]
+        max_at_risk = connection.execute(
+            "SELECT MAX(at_risk) FROM analytics_synthetic.mart_journey_survival"
+        ).fetchone()
+        bad_durations = connection.execute(
+            "SELECT COUNT(*) FROM analytics_synthetic.mart_journey_summaries "
+            "WHERE duration_days < 0 OR duration_days > 364 OR target_date < index_date"
+        ).fetchone()
+    finally:
+        connection.close()
+    assert "NONE" not in set(summary_ids)
+    assert max_at_risk is not None and max_at_risk[0] == len(summary_ids)
+    assert bad_durations == (0,)
 
 
 def test_postgres_sql_reconciles_when_explicit_test_database_is_available() -> None:
@@ -250,14 +362,7 @@ def test_postgres_sql_reconciles_when_explicit_test_database_is_available() -> N
     except Exception as error:  # pragma: no cover - depends on local service
         pytest.skip(f"configured PostgreSQL is unavailable: {error}")
     try:
-        for claims in (
-            _claims(),
-            _claims().loc[lambda frame: frame["claim_id"] != "J003"],
-            _claims().iloc[0:0].copy(),
-            _adversarial_ties(),
-            _spanning_early_claim(),
-            _spanning_only_claim(),
-        ):
+        for claims in _scenarios():
             _run_postgres_scenario(connection, claims)
     finally:
         connection.close()

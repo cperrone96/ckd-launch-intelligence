@@ -39,12 +39,14 @@ WITH input_contract AS (
       AND input_contract.total_rows = input_contract.unique_claims
       AND input_contract.total_rows = input_contract.valid_rows
 ), in_release AS (
+    -- Drop claims whose service range covers more than 365 calendar days before
+    -- any date is derived, so the index and target are computed exactly once.
     SELECT *
     FROM source_rows
     WHERE event_date BETWEEN DATE '2008-01-01' AND DATE '2010-12-31'
       AND event_through_date BETWEEN DATE '2008-01-01' AND DATE '2010-12-31'
       AND event_through_date >= event_date
-      AND event_through_date <= event_date + INTERVAL '365 days'
+      AND event_through_date <= CAST(event_date + INTERVAL '364 days' AS DATE)
 ), indexed AS (
     SELECT
         in_release.*,
@@ -52,46 +54,48 @@ WITH input_contract AS (
             PARTITION BY synthetic_id
             ORDER BY event_date, event_through_date, claim_id
         ) AS event_position,
-        MIN(event_date) OVER (PARTITION BY synthetic_id) AS index_date
-    FROM in_release
-), bounded AS (
-    SELECT
-        indexed.*,
-        CAST(LEAST(DATE '2010-12-31', index_date + INTERVAL '365 days') AS DATE) AS follow_up_end
-    FROM indexed
-    WHERE event_date <= CAST(LEAST(DATE '2010-12-31', index_date + INTERVAL '365 days') AS DATE)
-      AND event_through_date <= CAST(
-          LEAST(DATE '2010-12-31', index_date + INTERVAL '365 days') AS DATE
-      )
-), signals AS (
-    SELECT
-        bounded.*,
+        MIN(event_date) OVER (PARTITION BY synthetic_id) AS index_date,
         CASE WHEN REPLACE(UPPER(diagnosis_code), '.', '') LIKE '585%'
                   OR REPLACE(UPPER(diagnosis_code), '.', '') LIKE '586%'
                   OR REPLACE(UPPER(diagnosis_code), '.', '') LIKE '588%'
              THEN 1 ELSE 0 END AS is_ckd_signal
-    FROM bounded
+    FROM in_release
 ), target_position AS (
     SELECT
-        signals.*,
+        indexed.*,
         MIN(CASE WHEN is_ckd_signal = 1 THEN event_position END)
             OVER (PARTITION BY synthetic_id) AS first_target_position
-    FROM signals
+    FROM indexed
 ), target_dates AS (
     SELECT
         target_position.*,
         MIN(CASE WHEN event_position = first_target_position THEN event_date END)
             OVER (PARTITION BY synthetic_id) AS target_date
     FROM target_position
-), persistence AS (
+), windowed AS (
+    -- The time origin is the target date. Follow-up is day 0 through day 364
+    -- (365 calendar days), cut at the observation end. People without a
+    -- target have no follow-up window and keep every remaining claim.
     SELECT
         target_dates.*,
+        CASE WHEN target_date IS NULL THEN NULL
+             ELSE CAST(LEAST(DATE '2010-12-31',
+                             CAST(target_date + INTERVAL '364 days' AS DATE)) AS DATE)
+        END AS follow_up_end
+    FROM target_dates
+), bounded AS (
+    SELECT *
+    FROM windowed
+    WHERE follow_up_end IS NULL OR event_date <= follow_up_end
+), persistence AS (
+    SELECT
+        bounded.*,
         MIN(CASE
                 WHEN is_ckd_signal = 1
-                 AND event_date >= target_date + INTERVAL '90 days'
+                 AND event_date >= CAST(target_date + INTERVAL '90 days' AS DATE)
                 THEN event_position
             END) OVER (PARTITION BY synthetic_id) AS persistence_position
-    FROM target_dates
+    FROM bounded
 )
 SELECT
     synthetic_id,
@@ -132,6 +136,9 @@ CREATE TABLE analytics_synthetic.mart_journeys AS
 SELECT *
 FROM _synpuf_journey_base;
 
+-- One row per person with a target code. Duration is measured from the target
+-- date; persistence can only fall inside follow-up because later claims were
+-- dropped above. People without a target are not in the risk set.
 CREATE TABLE analytics_synthetic.mart_journey_summaries AS
 SELECT
     synthetic_id,
@@ -140,20 +147,16 @@ SELECT
     MIN(persistence_date) AS persistence_date,
     MIN(follow_up_end) AS observation_end,
     CAST(
-        (CASE WHEN MIN(persistence_date) IS NOT NULL
-              AND MIN(persistence_date) <= MIN(follow_up_end)
-             THEN MIN(persistence_date) ELSE MIN(follow_up_end) END) - MIN(index_date)
+        COALESCE(MIN(persistence_date), MIN(follow_up_end)) - MIN(target_date)
         AS INTEGER
     ) AS duration_days,
+    CASE WHEN MIN(persistence_date) IS NOT NULL THEN TRUE ELSE FALSE END AS event_observed,
     CASE WHEN MIN(persistence_date) IS NOT NULL
-              AND MIN(persistence_date) <= MIN(follow_up_end)
-         THEN TRUE ELSE FALSE END AS event_observed,
-    CASE WHEN MIN(persistence_date) IS NOT NULL
-              AND MIN(persistence_date) <= MIN(follow_up_end)
          THEN NULL ELSE 'right_censored_at_follow_up_end' END AS censoring_reason,
-    CASE WHEN MIN(target_date) IS NULL THEN FALSE ELSE TRUE END AS has_target,
+    TRUE AS has_target,
     'public_synthetic' AS evidence_type
 FROM _synpuf_journey_base
+WHERE target_date IS NOT NULL
 GROUP BY synthetic_id;
 
 -- Aggregate durations into risk sets, then calculate a deterministic KM table.
@@ -214,8 +217,10 @@ SELECT
 FROM analytics_synthetic.mart_journey_survival;
 
 -- SQL/Python reconciliation contract:
--- * mart_journeys is one row per bounded synthetic claim;
--- * mart_journey_summaries is one row per synthetic beneficiary;
+-- * mart_journeys is one row per retained synthetic claim, including people
+--   without a target code (their follow_up_end is NULL);
+-- * mart_journey_summaries is one row per synthetic beneficiary with a target
+--   code, with durations measured from the target date;
 -- * mart_journey_survival contains the same risk/event/censor/Greenwood fields
 --   as ckd_intelligence.statistics.time_to_event.kaplan_meier;
 -- * mart_journey_survival_metadata persists the median survival method output;

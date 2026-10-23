@@ -86,21 +86,27 @@ class JourneyRules:
     def __post_init__(self) -> None:
         if self.observation_end < self.observation_start:
             raise ValueError("observation_end must not precede observation_start")
-        if self.follow_up_days < 0 or self.persistence_gap_days < 1:
-            raise ValueError("follow_up_days must be non-negative and gap must be positive")
+        if self.follow_up_days < 1 or self.persistence_gap_days < 1:
+            raise ValueError("follow_up_days and persistence_gap_days must be positive")
 
     @property
     def rule_text(self) -> str:
         return (
-            "Index date is the first valid claim date per synthetic beneficiary. "
-            "The target is the first diagnosis code beginning with one of the CKD "
-            f"ICD-9 prefixes {self.target_prefixes}. Events are sorted by event date, "
-            "through date, and claim ID. Follow-up ends at the earlier of the global "
-            "observation end and index plus the configured follow-up window. A target "
-            "is persistent only when another CKD event occurs at least the configured "
-            f"{self.persistence_gap_days}-day gap later (the boundary is inclusive). "
-            "People with no valid claim are excluded; those with no target are retained "
-            "as right-censored in the persistence demonstration."
+            "Claims whose service range covers more than "
+            f"{self.follow_up_days} calendar days are dropped first. Events are sorted "
+            "by event date, through date, and claim ID. The index date is the first "
+            "remaining claim date per synthetic beneficiary. The target is the first "
+            "diagnosis code beginning with one of the CKD ICD-9 prefixes "
+            f"{self.target_prefixes}, and the target date is the time origin. Follow-up "
+            f"covers {self.follow_up_days} calendar days, day 0 (the target date) "
+            f"through day {self.follow_up_days - 1}, and is cut at the global "
+            "observation end if that comes first. A target is persistent when another "
+            f"CKD claim starts at least {self.persistence_gap_days} days after the "
+            "target date (the boundary is inclusive) and within follow-up. Duration is "
+            "days from the target date to persistence or to the follow-up end "
+            "(right-censored). Claims after the follow-up end are dropped. People "
+            "without a target code have no time origin and are excluded from the "
+            "summaries and the Kaplan-Meier table."
         )
 
 
@@ -119,6 +125,13 @@ class JourneyOutput:
 
         eligible = self.survival.loc[self.survival["survival"] <= 0.5, "time"]
         return float(eligible.iloc[0]) if not eligible.empty else None
+
+    @property
+    def excluded_without_target(self) -> tuple[str, ...]:
+        """Synthetic IDs with eligible claims but no target code (not in KM)."""
+
+        no_target = self.events.loc[self.events["target_date"].isna(), "synthetic_id"]
+        return tuple(sorted(str(value) for value in no_target.unique()))
 
 
 def _is_ckd_code(value: object, prefixes: tuple[str, ...]) -> bool:
@@ -236,9 +249,12 @@ def build_journey_output(
     *,
     rules: JourneyRules | None = None,
 ) -> JourneyOutput:
-    """Build event and summary tables from normalized synthetic claim rows.
+    """Build event, summary, and survival tables from normalized synthetic claims.
 
-    Rows outside the documented 2008--2010 observation window are excluded.  The
+    Claims whose service range covers more than ``follow_up_days`` calendar days
+    are dropped before anything else, so the index and target dates are computed
+    once from the remaining claims.  The persistence clock starts at the target
+    date; people without a target code appear in the event table only.  The
     function does not mutate its input and never performs a cross-source join.
     """
 
@@ -254,6 +270,13 @@ def build_journey_output(
         kind: position for position, kind in enumerate(journey_rules.allowed_event_order)
     }
     frame: Any = _validate_input(claims, journey_rules)
+    # Drop spanning claims up front, exactly like the SQL mart, so a removed
+    # claim can never move the index date or hide a later valid claim.
+    span_days = [
+        (through - start).days
+        for start, through in zip(frame["event_date"], frame["event_through_date"], strict=True)
+    ]
+    frame = frame.loc[[days < journey_rules.follow_up_days for days in span_days]]
     frame = frame.sort_values(
         ["beneficiary_id", "event_date", "event_through_date", "claim_id"],
         kind="mergesort",
@@ -261,57 +284,39 @@ def build_journey_output(
     if frame.empty:
         return JourneyOutput(_empty_events(), _empty_summaries(), _empty_survival(), journey_rules)
 
+    last_follow_up_day = timedelta(days=journey_rules.follow_up_days - 1)
+    persistence_gap = timedelta(days=journey_rules.persistence_gap_days)
     event_rows: list[dict[str, Any]] = []
     summaries: list[dict[str, Any]] = []
     for synthetic_id, group in frame.groupby("beneficiary_id", sort=False):
         group = group.reset_index(drop=True)
-        # Eligibility is applied before the final index date.  Recompute the
-        # index after removing a spanning/post-censor row so that a later valid
-        # claim cannot inherit a discarded row's index or follow-up boundary.
-        for _ in range(2):
-            index_date = group.loc[0, "event_date"]
-            follow_up_end = min(
-                journey_rules.observation_end,
-                index_date + timedelta(days=journey_rules.follow_up_days),
-            )
-            bounded = group.loc[
-                (group["event_date"] <= follow_up_end)
-                & (group["event_through_date"] <= follow_up_end)
-            ].reset_index(drop=True)
-            if bounded.empty or list(bounded["claim_id"]) == list(group["claim_id"]):
-                group = bounded
-                break
-            group = bounded
-        if group.empty:
-            # A beneficiary without any eligible bounded claim has no journey
-            # grain and is excluded.
-            continue
         index_date = group.loc[0, "event_date"]
-        follow_up_end = min(
-            journey_rules.observation_end,
-            index_date + timedelta(days=journey_rules.follow_up_days),
-        )
-        group = group.loc[
-            (group["event_date"] <= follow_up_end)
-            & (group["event_through_date"] <= follow_up_end)
-        ].reset_index(drop=True)
-        if group.empty:
-            continue
         is_target = group["diagnosis_code"].map(
             lambda value: _is_ckd_code(value, journey_rules.target_prefixes)
         )
-        target_positions = list(group.index[is_target])
+        target_positions = [int(position) for position in group.index[is_target]]
         target_position = target_positions[0] if target_positions else None
         target_date = (
             group.loc[target_position, "event_date"] if target_position is not None else None
         )
+        follow_up_end = (
+            min(journey_rules.observation_end, target_date + last_follow_up_day)
+            if target_date is not None
+            else None
+        )
+        if follow_up_end is not None:
+            # Rows are sorted by event date, so this keeps a prefix and the
+            # target position is unchanged.
+            group = group.loc[group["event_date"] <= follow_up_end]
+            is_target = is_target.loc[group.index]
+            target_positions = [
+                position for position in target_positions if position in group.index
+            ]
         persistence_position: int | None = None
-        if target_position is not None and target_date is not None:
+        if target_date is not None:
             for position in target_positions[1:]:
-                if group.loc[position, "event_date"] >= target_date + timedelta(
-                    days=journey_rules.persistence_gap_days
-                ):
-                    persistence_position = int(position)
+                if group.loc[position, "event_date"] >= target_date + persistence_gap:
+                    persistence_position = position
                     break
         persistence_date = (
             group.loc[persistence_position, "event_date"]
@@ -319,19 +324,14 @@ def build_journey_output(
             else None
         )
         for position, row in group.iterrows():
-            signal = bool(is_target.iloc[position])
             if position == 0:
                 event_kind = "index"
-                event_order_value = event_order["index"]
-            elif target_position is not None and position == target_position:
+            elif position == target_position:
                 event_kind = "target"
-                event_order_value = event_order["target"]
             elif target_position is None or position < target_position:
                 event_kind = "pre_target"
-                event_order_value = event_order["pre_target"]
             else:
                 event_kind = "follow_up"
-                event_order_value = event_order["follow_up"]
             event_rows.append(
                 {
                     "synthetic_id": str(synthetic_id),
@@ -342,8 +342,8 @@ def build_journey_output(
                     "claim_type": str(row["claim_type"]),
                     "diagnosis_code": str(row["diagnosis_code"]),
                     "event_kind": event_kind,
-                    "event_order": event_order_value,
-                    "is_ckd_signal": signal,
+                    "event_order": event_order[event_kind],
+                    "is_ckd_signal": bool(is_target.loc[position]),
                     "is_target_event": target_position == position,
                     "is_persistence_event": persistence_position == position,
                     "index_date": index_date,
@@ -353,32 +353,32 @@ def build_journey_output(
                     "evidence_type": EvidenceType,
                 }
             )
-        observation_end = follow_up_end
-        event_observed = persistence_date is not None and persistence_date <= observation_end
-        event_date = persistence_date if event_observed else observation_end
+        if target_date is None or follow_up_end is None:
+            # No target code means no time origin: the person is shown in the
+            # event table but is not part of the persistence risk set.
+            continue
+        event_observed = persistence_date is not None
+        end_date = persistence_date if persistence_date is not None else follow_up_end
         summaries.append(
             {
                 "synthetic_id": str(synthetic_id),
                 "index_date": index_date,
                 "target_date": target_date,
                 "persistence_date": persistence_date,
-                "observation_end": observation_end,
-                "duration_days": int((event_date - index_date).days),
-                "event_observed": bool(event_observed),
+                "observation_end": follow_up_end,
+                "duration_days": int((end_date - target_date).days),
+                "event_observed": event_observed,
                 "censoring_reason": None if event_observed else "right_censored_at_follow_up_end",
-                "has_target": target_date is not None,
+                "has_target": True,
                 "evidence_type": EvidenceType,
             }
         )
-    if not event_rows:
-        # Every source group may be excluded by the bounded follow-up contract
-        # (for example, a spanning-only claim).  Preserve the documented typed
-        # output schema instead of sorting a columnless DataFrame.
-        return JourneyOutput(_empty_events(), _empty_summaries(), _empty_survival(), journey_rules)
     events = pd.DataFrame(event_rows).sort_values(
         ["synthetic_id", "event_date", "event_through_date", "claim_id"],
         kind="mergesort",
     ).reset_index(drop=True)
+    if not summaries:
+        return JourneyOutput(events, _empty_summaries(), _empty_survival(), journey_rules)
     summary_frame = pd.DataFrame(summaries).sort_values("synthetic_id").reset_index(drop=True)
     km = kaplan_meier(
         summary_frame["duration_days"].to_numpy(dtype=float),
@@ -404,7 +404,7 @@ def build_synthetic_journeys(
 def summarize_synthetic_journeys(
     claims: pd.DataFrame, *, rules: JourneyRules | None = None
 ) -> pd.DataFrame:
-    """Return one right-censored/persistence observation per synthetic beneficiary."""
+    """Return one persistence observation per synthetic beneficiary with a target code."""
 
     return build_journey_output(claims, rules=rules).summaries
 
