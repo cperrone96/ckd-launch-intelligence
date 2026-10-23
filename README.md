@@ -1,6 +1,6 @@
 # CKD Launch Intelligence
 
-How many U.S. adults have laboratory signs of chronic kidney disease (CKD), can information collected before any kidney test find them, and what does kidney damage add to the cost of diabetes care? Most people with CKD don't know they have it, so these are the sizing, targeting and value questions behind any kidney screening program or therapy launch. This project answers them from public CDC, AHRQ, CMS and ClinicalTrials.gov data and serves the results through a typed API and a dashboard.
+How many U.S. adults have laboratory signs of chronic kidney disease (CKD), can information collected before any kidney test find them and what does kidney damage add to the cost of diabetes care? Most people with CKD don't know they have it, so these are the sizing, targeting and value questions behind any kidney screening program or therapy launch. This project answers them from public CDC, AHRQ, CMS and ClinicalTrials.gov data and serves the results through a typed API and a dashboard.
 
 ## Key results
 
@@ -13,7 +13,7 @@ How many U.S. adults have laboratory signs of chronic kidney disease (CKD), can 
 | Extra yearly health spending for adults with diabetes who report kidney problems | **+$10,974** per person ($26,494 vs $15,520) | 95% CI $6,172–$15,775; MEPS 2022 |
 | Registered CKD studies on ClinicalTrials.gov | **3,706**, of which 419 recruiting | full snapshot, 2026-09-11 |
 
-![Model discrimination with confidence intervals, logistic calibration, and MEPS spending by kidney-problem status](docs/figures/key_results.png)
+![Model discrimination with confidence intervals, logistic calibration and MEPS spending by kidney-problem status](docs/figures/key_results.png)
 
 Numbers come from `data/processed/patient_need_summary.json`, `patient_finding_model_comparison.json`, `meps_hc243_2022_landscape.json` and `clinicaltrials_ckd_landscape.json`. The [model card](docs/models/patient-finding-model-card.md) has calibration, subgroup and definition-sensitivity results.
 
