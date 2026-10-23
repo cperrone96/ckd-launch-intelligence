@@ -62,6 +62,13 @@ receives null normalized values, no rank, and no score. Its extreme or missing
 values cannot change an eligible candidate's normalization. Coverage is not a statistical confidence level;
 it is a completeness gate for the scenario input.
 
+Min-max scaling is relative to the candidates in the run, so adding or removing a
+candidate can reorder the others: adding a last-place candidate D = (0.60, 0.50,
+0.70, 0.00) to the notebook's three scenarios swaps B and C. Rank only a fixed,
+pre-declared candidate set, or switch to fixed reference bounds (for example the
+0-1 range of a share) before comparing runs with different candidates. Weight
+sensitivity does not detect this effect.
+
 Ranks are deterministic: score descending, then candidate key ascending. This
 is an ordinal tie policy, so equal scores are still reproducibly ordered and are
 not falsely described as materially different.
