@@ -37,3 +37,11 @@ def test_official_aggregate_artifact_reconciles_to_reviewed_nhanes_snapshot() ->
     assert {estimate["denominator"] for estimate in estimates.values()} == {5016}
     assert {estimate["excluded_missing"] for estimate in estimates.values()} == {462}
     assert estimates["primary_egfr_or_albuminuria"]["point"] == pytest.approx(0.139189, abs=1e-6)
+    # Reference values from R survey 4.x on the same files: svydesign(id=~SDMVPSU,
+    # strata=~SDMVSTRA, weights=~WTMEC2YR, nest=TRUE), subset() to the domain, svymean()
+    # and confint(df=degf(design)).
+    primary = estimates["primary_egfr_or_albuminuria"]
+    assert primary["standard_error"] == pytest.approx(0.0065, abs=5e-5)
+    assert primary["ci_low"] == pytest.approx(0.1253261, abs=1e-7)
+    assert primary["ci_high"] == pytest.approx(0.1530514, abs=1e-7)
+    assert primary["degrees_freedom"] == 15

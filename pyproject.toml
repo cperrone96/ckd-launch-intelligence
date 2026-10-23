@@ -25,6 +25,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "ipykernel>=6.29,<8",
+  "matplotlib>=3.8,<4",
   "nbconvert>=7.16,<8",
   "mypy>=1.11,<2",
   "pandas-stubs>=2.2,<3",
@@ -44,6 +45,11 @@ packages = ["src/ckd_intelligence", "api"]
 addopts = "-ra"
 pythonpath = ["src", "."]
 testpaths = ["tests"]
+# Third-party deprecation notices that do not affect behavior under the pinned versions.
+filterwarnings = [
+  "ignore:\\s*The dash_table.DataTable will be removed:DeprecationWarning",
+  "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
 
 [tool.ruff]
 line-length = 100

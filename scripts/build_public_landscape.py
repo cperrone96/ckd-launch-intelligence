@@ -580,7 +580,15 @@ def _group_sponsor(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     ]
 
 
+BUILDERS = {"meps": build_meps, "partd": build_partd, "trials": build_trials}
+
+
 if __name__ == "__main__":
-    build_meps()
-    build_partd()
-    build_trials()
+    import sys
+
+    requested = sys.argv[1:] or list(BUILDERS)
+    unknown = sorted(set(requested) - set(BUILDERS))
+    if unknown:
+        raise SystemExit(f"unknown source(s): {', '.join(unknown)}; choose from {list(BUILDERS)}")
+    for name in requested:
+        BUILDERS[name]()

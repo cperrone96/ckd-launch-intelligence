@@ -1,4 +1,4 @@
-.PHONY: venv install check-venv test lint typecheck check compose-config
+.PHONY: venv install check-venv test lint typecheck check compose-config data artifacts figures notebooks
 
 VENV_DIR ?= .venv
 PYTHON ?= $(VENV_DIR)/bin/python
@@ -17,7 +17,8 @@ venv:
 	}
 
 install: venv
-	"$(PYTHON)" -m pip install -e ".[dev]"
+	"$(PYTHON)" -m pip install -r requirements.txt
+	"$(PYTHON)" -m pip install --no-deps -e .
 
 check-venv:
 	@test -x "$(PYTHON)" || { \
@@ -42,3 +43,24 @@ compose-config:
 	docker compose config --quiet
 
 check: test lint typecheck compose-config
+
+# Download and checksum-verify the NHANES and MEPS public-use files into data/raw.
+data: check-venv
+	"$(PYTHON)" scripts/retrieve_surveys.py
+
+# Rebuild the NHANES and MEPS artifacts and manifests from the verified files in data/raw.
+# Part D and ClinicalTrials.gov are dated API snapshots: rebuild them with
+# `scripts/build_public_landscape.py partd trials` after their retrieve_* scripts.
+artifacts: check-venv
+	"$(PYTHON)" -m ckd_intelligence.analysis.nhanes_pipeline
+	"$(PYTHON)" scripts/build_public_landscape.py meps
+
+figures: check-venv
+	"$(PYTHON)" scripts/make_figures.py
+
+# Execute every notebook in place so committed outputs match the current artifacts.
+notebooks: check-venv
+	for notebook in notebooks/*.ipynb; do \
+		PATH="$(abspath $(VENV_DIR))/bin:$$PATH" "$(PYTHON)" -m jupyter nbconvert --to notebook \
+			--execute --inplace "$$notebook" --ExecutePreprocessor.timeout=900 || exit 1; \
+	done
