@@ -61,7 +61,7 @@ Requires Python 3.12. From a fresh clone:
 
 ```bash
 make install          # .venv with pinned requirements.txt
-make test             # 300 tests, offline, about 30 s
+make test             # 311 tests, offline, about 30 s; PostgreSQL and raw-data tests skip
 make lint typecheck   # ruff and strict mypy
 ```
 
