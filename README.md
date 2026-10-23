@@ -25,7 +25,7 @@ Numbers come from `data/processed/patient_need_summary.json`, `patient_finding_m
 - **Grouped cross-validation and paired bootstrap.** Stratified grouped 5-fold CV over the 30 NHANES PSUs keeps survey clusters out of both sides of a split. 1,000 cluster-bootstrap replicates give intervals; model comparisons are paired on the same replicates. Logistic regression was pre-specified; a random forest and a demographics-only model are comparators, and a constant-prevalence model is the no-skill baseline.
 - **Capacity-based operating point.** Performance is reported at a fixed screening capacity (top 10%), with precision, recall, quintile calibration and age and sex subgroups.
 - **Source-specific market context.** Medicare Part D prescribing for SGLT2 inhibitors and finerenone and a fully paginated ClinicalTrials.gov snapshot stay at their own grain; nothing is joined across sources at the person level.
-- **Product layer.** A FastAPI service serves only checksum- and manifest-verified artifacts with strict Pydantic schemas, including a JSON (not pickle) logistic scorer. A Dash dashboard reads only the API.
+- **Product layer.** A FastAPI service serves only checksum- and manifest-verified artifacts with strict Pydantic schemas, including a JSON (not pickle) logistic scorer. A Dash dashboard reads only the API ([model page screenshot](docs/figures/dashboard_patient_finding.png)).
 
 ## Data
 
