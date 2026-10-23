@@ -151,6 +151,7 @@ class TrialItem(APIModel):
     evidence_type: EvidenceType
     grain: StrictStr
     intervention: StrictStr | None = None
+    median_reported_enrollment: StrictFloat | None = None
     overall_status: StrictStr | None = None
     phase: StrictStr | None = None
     share_of_registered_studies: StrictFloat | None = None

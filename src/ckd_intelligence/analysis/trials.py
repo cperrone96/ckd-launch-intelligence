@@ -8,10 +8,12 @@ registered study, not an enrolled patient or an observed treatment outcome.
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import Counter, defaultdict
 from collections.abc import Iterable, Mapping
 from datetime import date
 from typing import Any
+
+import numpy as np
 
 
 def _text(row: Mapping[str, Any], field: str) -> str:
@@ -81,8 +83,13 @@ def _aggregate(rows: list[Mapping[str, Any]], key_field: str) -> list[dict[str, 
                 "study_count": len(group),
                 "study_share": len(group) / total if total else 0.0,
                 "available_denominator": total,
+                # Sums mix actual and anticipated counts and are dominated by a few
+                # very large observational studies; the median is the typical study.
                 "total_reported_enrollment": (
                     sum(observed_enrollment) if observed_enrollment else None
+                ),
+                "median_reported_enrollment": (
+                    float(np.median(observed_enrollment)) if observed_enrollment else None
                 ),
                 "studies_with_reported_enrollment": len(observed_enrollment),
                 "source": "ClinicalTrials.gov",
@@ -130,24 +137,36 @@ def summarize_trial_interventions(
     available = _available_rows(rows, "intervention")
     if not available:
         return []
-    grouped: dict[str, list[Mapping[str, Any]]] = defaultdict(list)
+    # Registrants type the same intervention with different case and spacing
+    # ("Placebo", "placebo", "Placebo "); group on a normalized key and label each
+    # group with its most common spelling.
+    grouped: dict[str, set[str]] = defaultdict(set)
+    spellings: dict[str, Counter[str]] = defaultdict(Counter)
     for row in available:
         for intervention in _text(row, "intervention").split(" | "):
-            grouped[intervention].append(row)
+            label = " ".join(intervention.split())
+            if not label:
+                continue
+            key = label.casefold()
+            grouped[key].add(str(row["nct_id"]))
+            spellings[key][label] += 1
     evidence_type = _evidence_type(rows)
     total = len(available)
+    labels = {
+        key: min(counts, key=lambda label: (-counts[label], label))
+        for key, counts in spellings.items()
+    }
     return [
         {
-            "intervention": intervention,
-            "study_count": len({str(row["nct_id"]) for row in group}),
-            "share_of_studies_with_intervention": len({str(row["nct_id"]) for row in group})
-            / total,
+            "intervention": labels[key],
+            "study_count": len(grouped[key]),
+            "share_of_studies_with_intervention": len(grouped[key]) / total,
             "available_denominator": total,
             "source": "ClinicalTrials.gov",
             "evidence_type": evidence_type,
-            "grain": "registered study grouped by intervention name",
+            "grain": "registered study grouped by normalized intervention name",
         }
-        for intervention, group in sorted(grouped.items())
+        for key in sorted(grouped, key=lambda item: labels[item])
     ]
 
 

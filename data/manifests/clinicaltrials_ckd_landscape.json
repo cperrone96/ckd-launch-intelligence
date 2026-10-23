@@ -1,7 +1,7 @@
 {
   "api_total_count": 3706,
   "artifact_path": "data/processed/clinicaltrials_ckd_landscape.json",
-  "artifact_sha256": "e2ae12a4957a4890687cf2b72bab66ebd07c8d7c4f4c8dc98ac314d20f03613c",
+  "artifact_sha256": "ab51386c3cb7ebe18a48d5edbf42f868a0b822fe7af3ed2b382b236715da6da0",
   "endpoint": "https://clinicaltrials.gov/api/v2/studies",
   "evidence_type": "public_observed",
   "grain": "registered study aggregate; no study IDs committed",

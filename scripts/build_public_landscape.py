@@ -535,6 +535,14 @@ def build_trials() -> None:
                 "metadata, not patient outcomes or treatment effectiveness."
             ),
             "Missing enrollment is preserved as null in grouped rows; it is never recoded to zero.",
+            (
+                "Enrollment totals add actual and anticipated counts and are dominated by a "
+                "few very large observational studies; use the median for a typical study."
+            ),
+            (
+                "change_over_time counts studies by the year of their last registry update, "
+                "so it reflects record maintenance, not new-study starts."
+            ),
         ],
     }
     manifest = {

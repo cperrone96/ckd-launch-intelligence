@@ -54,6 +54,12 @@ records, 364 PSUs, 105 strata).
 - Proxy-positive vs proxy-negative inpatient stays: 0.39 vs 0.13 per person-year;
   office visits: 21.5 vs 11.1.
 
+Six utilization measures are contrasted; total expenditure is the headline
+measure. After a Bonferroni correction for six comparisons (alpha 0.0083), the
+expenditure (p = 1e-5), inpatient-stay, office-visit and prescription differences
+remain significant; the emergency-visit (p = 0.047) and outpatient differences do
+not.
+
 These are descriptive HC-243 person-year estimates with Taylor-linearized
 uncertainty; the contrast is an association, not a causal effect of kidney
 problems. Part D is a selected-generic, provider/drug/provider-state aggregate. It
