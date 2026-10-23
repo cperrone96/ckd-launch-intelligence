@@ -49,9 +49,7 @@ def sample_inputs() -> list[dict[str, Any]]:
                 "scenario_only": True,
                 "compatibility_key": "demo",
                 "components": {
-                    component: _evidence(
-                        value, component=component, key="demo"
-                    )
+                    component: _evidence(value, component=component, key="demo")
                     for component, value in zip(
                         ("need", "screening_gap", "prescribing", "trial_activity"),
                         values,
@@ -236,3 +234,64 @@ def test_rank_ties_are_deterministic_and_documented() -> None:
     assert [row.key for row in result.rows] == ["Alpha", "Beta"]
     assert [row.rank for row in result.rows] == [1, 2]
     assert result.tie_policy == "score_desc_then_key_asc"
+
+
+def _two_component_rows(spec: list[tuple[str, float, float]]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for key, need, gap in spec:
+        values = {"need": need, "screening_gap": gap, "prescribing": 0.5, "trial_activity": 0.5}
+        rows.append(
+            {
+                "key": key,
+                "geography": key,
+                "time_period": "2024",
+                "scenario_only": True,
+                "compatibility_key": "demo",
+                "components": {
+                    component: _evidence(value, component=component, key="demo")
+                    for component, value in values.items()
+                },
+            }
+        )
+    return rows
+
+
+_HALF_HALF = {"need": 0.5, "screening_gap": 0.5, "prescribing": 0.0, "trial_activity": 0.0}
+_SPEC = [("A", 0.50, 0.21), ("B", 0.30, 0.40), ("C", 0.42, 0.29)]
+
+
+def test_min_max_scaling_lets_one_candidate_reorder_the_others() -> None:
+    without_d = rank_opportunities(_two_component_rows(_SPEC), _HALF_HALF)
+    with_d = rank_opportunities(_two_component_rows([*_SPEC, ("D", 0.10, 0.30)]), _HALF_HALF)
+
+    order_without = [row.key for row in without_d.rows]
+    order_with = [row.key for row in with_d.rows if row.key != "D"]
+    assert order_without != order_with
+    assert with_d.candidate_removal_reorders["D"] is True
+    assert not with_d.stable_to_candidate_set
+    assert with_d.to_dict()["stable_to_candidate_set"] is False
+
+
+def test_fixed_reference_bounds_make_ranking_independent_of_candidate_set() -> None:
+    bounds = {component: (0.0, 1.0) for component in _HALF_HALF}
+    without_d = rank_opportunities(_two_component_rows(_SPEC), _HALF_HALF, reference_bounds=bounds)
+    with_d = rank_opportunities(
+        _two_component_rows([*_SPEC, ("D", 0.10, 0.30)]), _HALF_HALF, reference_bounds=bounds
+    )
+
+    assert [row.key for row in without_d.rows] == [row.key for row in with_d.rows if row.key != "D"]
+    assert with_d.stable_to_candidate_set
+    shared = {row.key: row.score for row in without_d.rows}
+    assert all(
+        row.score == pytest.approx(shared[row.key]) for row in with_d.rows if row.key in shared
+    )
+
+
+def test_reference_bounds_must_cover_every_component_and_contain_values() -> None:
+    with pytest.raises(ValueError, match="must cover exactly"):
+        rank_opportunities(
+            _two_component_rows(_SPEC), _HALF_HALF, reference_bounds={"need": (0, 1)}
+        )
+    narrow = {component: (0.0, 0.45) for component in _HALF_HALF}
+    with pytest.raises(ValueError, match="outside its reference bounds"):
+        rank_opportunities(_two_component_rows(_SPEC), _HALF_HALF, reference_bounds=narrow)

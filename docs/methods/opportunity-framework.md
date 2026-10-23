@@ -64,10 +64,13 @@ it is a completeness gate for the scenario input.
 
 Min-max scaling is relative to the candidates in the run, so adding or removing a
 candidate can reorder the others: adding a last-place candidate D = (0.60, 0.50,
-0.70, 0.00) to the notebook's three scenarios swaps B and C. Rank only a fixed,
-pre-declared candidate set, or switch to fixed reference bounds (for example the
-0-1 range of a share) before comparing runs with different candidates. Weight
-sensitivity does not detect this effect.
+0.70, 0.00) to the notebook's three scenarios swaps B and C. Weight sensitivity
+doesn't detect this, so every result also reports `candidate_removal_reorders`
+(for each scorable candidate, whether dropping it changes the order of the rest)
+and `stable_to_candidate_set`. Passing `reference_bounds` (a declared lower and
+upper bound per component, for example 0 to 1 for a share) scales against fixed
+bounds instead, so a candidate's score no longer depends on who else is in the
+run. Use fixed bounds whenever runs with different candidate sets are compared.
 
 Ranks are deterministic: score descending, then candidate key ascending. This
 is an ordinal tie policy, so equal scores are still reproducibly ordered and are

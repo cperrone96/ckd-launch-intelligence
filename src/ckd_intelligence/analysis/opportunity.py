@@ -89,7 +89,14 @@ class OpportunityResult:
     sensitivity: Mapping[str, SensitivityInterval]
     minimum_coverage: float
     scenario_only: bool
+    candidate_removal_reorders: Mapping[str, bool]
     tie_policy: str = "score_desc_then_key_asc"
+
+    @property
+    def stable_to_candidate_set(self) -> bool:
+        """True when removing any one candidate leaves the others in the same order."""
+
+        return not any(self.candidate_removal_reorders.values())
 
     @property
     def rankings(self) -> tuple[OpportunityRow, ...]:
@@ -111,6 +118,8 @@ class OpportunityResult:
                 key: _sensitivity_dict(value) for key, value in self.sensitivity.items()
             },
             "rows": [_row_dict(row) for row in self.rows],
+            "candidate_removal_reorders": dict(self.candidate_removal_reorders),
+            "stable_to_candidate_set": self.stable_to_candidate_set,
         }
 
 
@@ -263,9 +272,7 @@ def _parse_evidence(
         token in f"{source} {item_provenance}".lower()
         for token in ("caller", "illustrative", "notebook", "test")
     ):
-        raise ValueError(
-            f"{component} caller-created illustrative values must use fixture_only"
-        )
+        raise ValueError(f"{component} caller-created illustrative values must use fixture_only")
     return ComponentEvidence(
         value=numeric_value,
         source_population=source,
@@ -338,7 +345,10 @@ def _normalization(
     evidence_rows: Sequence[dict[str, ComponentEvidence]],
     component: str,
     eligible_indices: set[int],
+    reference_bounds: tuple[float, float] | None = None,
 ) -> tuple[dict[str, float | str], dict[int, float | None]]:
+    if reference_bounds is not None:
+        return _fixed_normalization(evidence_rows, component, eligible_indices, reference_bounds)
     available: list[float] = []
     for index in eligible_indices:
         value = evidence_rows[index][component].value
@@ -372,14 +382,35 @@ def _normalization(
     return params, normalized
 
 
+def _fixed_normalization(
+    evidence_rows: Sequence[dict[str, ComponentEvidence]],
+    component: str,
+    eligible_indices: set[int],
+    bounds: tuple[float, float],
+) -> tuple[dict[str, float | str], dict[int, float | None]]:
+    """Scale against declared bounds so a score never depends on the other candidates."""
+
+    low, high = (_number(bounds[0], "reference lower bound"), _number(bounds[1], "upper"))
+    if not low < high:
+        raise ValueError(f"reference bounds for {component} must satisfy lower < upper")
+    normalized: dict[int, float | None] = {}
+    for index, row in enumerate(evidence_rows):
+        value = row[component].value
+        if index not in eligible_indices or value is None:
+            normalized[index] = None
+            continue
+        if not low <= value <= high:
+            raise ValueError(f"{component} value {value} lies outside its reference bounds")
+        normalized[index] = (value - low) / (high - low)
+    return {"method": "fixed_reference", "minimum": low, "maximum": high}, normalized
+
+
 def _rank_scores(scores: Mapping[str, float]) -> dict[str, int]:
     ordered = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
     return {key: position for position, (key, _) in enumerate(ordered, start=1)}
 
 
-def _score(
-    normalized: Mapping[str, float | None], weights: Mapping[str, float]
-) -> float | None:
+def _score(normalized: Mapping[str, float | None], weights: Mapping[str, float]) -> float | None:
     values: list[float] = []
     for component in COMPONENTS:
         value = normalized[component]
@@ -387,8 +418,7 @@ def _score(
             return None
         values.append(value)
     return sum(
-        weights[component] * value
-        for component, value in zip(COMPONENTS, values, strict=True)
+        weights[component] * value for component, value in zip(COMPONENTS, values, strict=True)
     )
 
 
@@ -398,6 +428,8 @@ def rank_opportunities(
     *,
     sensitivity_weights: Sequence[Mapping[str, float]] | None = None,
     minimum_coverage: float = 0.8,
+    reference_bounds: Mapping[str, tuple[float, float]] | None = None,
+    check_candidate_removal: bool = True,
 ) -> OpportunityResult:
     """Rank explicitly compatible scenario aggregates with sensitivity evidence.
 
@@ -408,6 +440,12 @@ def rank_opportunities(
     panels should be displayed separately, not passed directly to this function.
     Eligibility is resolved before component min/max fitting so incomplete rows
     cannot distort the scores of eligible candidates.
+
+    By default each component is min-max scaled across the candidates present, so
+    the candidate set itself can reorder candidates. ``candidate_removal_reorders``
+    reports, for each scorable candidate, whether dropping it changes the order of
+    the others. Passing ``reference_bounds`` (component -> (lower, upper)) scales
+    against fixed, declared bounds instead, which removes that dependence.
     """
 
     if not inputs:
@@ -431,9 +469,7 @@ def rank_opportunities(
             "candidates ranked together must share one exact compatible compatibility_key"
         )
     candidate_periods = {
-        evidence[component].time_period
-        for evidence in evidence_rows
-        for component in COMPONENTS
+        evidence[component].time_period for evidence in evidence_rows for component in COMPONENTS
     }
     if len(candidate_periods) != 1:
         raise ValueError("candidates ranked together must share one exact time period")
@@ -445,15 +481,21 @@ def rank_opportunities(
         index
         for index, evidence in enumerate(evidence_rows)
         if all(
-            evidence[component].value is not None
-            and coverage_rows[index][component] >= minimum
+            evidence[component].value is not None and coverage_rows[index][component] >= minimum
             for component in COMPONENTS
         )
     }
     normalization: dict[str, Mapping[str, float | str]] = {}
     normalized_by_component: dict[str, dict[int, float | None]] = {}
+    if reference_bounds is not None and set(reference_bounds) != set(COMPONENTS):
+        raise ValueError(f"reference_bounds must cover exactly: {', '.join(COMPONENTS)}")
     for component in COMPONENTS:
-        params, normalized = _normalization(evidence_rows, component, eligible_indices)
+        params, normalized = _normalization(
+            evidence_rows,
+            component,
+            eligible_indices,
+            None if reference_bounds is None else reference_bounds[component],
+        )
         normalization[component] = params
         normalized_by_component[component] = normalized
     normalized_rows: list[dict[str, float | None]] = [
@@ -502,9 +544,7 @@ def rank_opportunities(
         values = {component: evidence[component].value for component in COMPONENTS}
         coverage = coverage_rows[index]
         limitations = [
-            limitation
-            for component in COMPONENTS
-            for limitation in evidence[component].limitations
+            limitation for component in COMPONENTS for limitation in evidence[component].limitations
         ]
         if any(value is None for value in values.values()):
             limitations.append("At least one component is missing; null was not treated as zero.")
@@ -531,6 +571,22 @@ def rank_opportunities(
             )
         )
     output_rows.sort(key=lambda row: (row.rank is None, row.rank or math.inf, row.key))
+    base_order = [key for key, _ in sorted(base_ranks.items(), key=lambda item: item[1])]
+    removal_reorders: dict[str, bool] = {}
+    if check_candidate_removal and len(base_order) > 2:
+        for removed in base_order:
+            remaining = [row for row, key in zip(inputs, keys, strict=True) if key != removed]
+            reduced = rank_opportunities(
+                remaining,
+                canonical,
+                minimum_coverage=minimum,
+                reference_bounds=reference_bounds,
+                check_candidate_removal=False,
+            )
+            reduced_order = [row.key for row in reduced.rows if row.rank is not None]
+            removal_reorders[removed] = reduced_order != [
+                key for key in base_order if key != removed
+            ]
     return OpportunityResult(
         rows=tuple(output_rows),
         components={
@@ -542,4 +598,5 @@ def rank_opportunities(
         sensitivity=all_sensitivity,
         minimum_coverage=minimum,
         scenario_only=True,
+        candidate_removal_reorders=removal_reorders,
     )
