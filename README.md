@@ -7,13 +7,17 @@ How many U.S. adults have laboratory signs of chronic kidney disease (CKD), can 
 | Question | Result | Uncertainty and baseline |
 |---|---|---|
 | Share of U.S. adults with the CKD lab indicator (eGFR <60 or UACR ≥30 mg/g) | **13.9%** | 95% CI 12.5–15.3%; survey-weighted, n = 5,016 |
-| How well 8 pre-lab predictors rank who has it (logistic regression) | **ROC-AUC 0.772** | 95% CI 0.759–0.784; no-skill 0.500; demographics only 0.741 |
-| What the clinical predictors add over age, sex and race/ethnicity | **+0.031 ROC-AUC** | paired 95% CI +0.018 to +0.045 |
-| Yield of screening the top 10% by predicted risk | **55.7% positive**, 30.3% of all positives found | base rate 18.4% (3.0× lift) |
+| How well 8 pre-lab predictors rank who has it (selected model: spline logistic regression) | **ROC-AUC 0.779** | 95% CI 0.766–0.791; tuned random forest 0.781, paired difference −0.002 (−0.008 to +0.004); no-skill 0.500 |
+| What the clinical predictors add over age, sex and race/ethnicity | **+0.039 ROC-AUC** | paired 95% CI +0.026 to +0.051 |
+| Yield of screening the top 10% by predicted risk | **56.1% positive**, 30.6% of all positives found | base rate 18.4% (3.1× lift) |
 | Extra yearly health spending for adults with diabetes who report kidney problems | **+$10,974** per person ($26,494 vs $15,520) | 95% CI $6,172–$15,775; MEPS 2022 |
 | Registered CKD studies on ClinicalTrials.gov | **3,706**, of which 419 recruiting | full snapshot, 2026-09-11 |
 
-![Model discrimination with confidence intervals, logistic calibration and MEPS spending by kidney-problem status](docs/figures/key_results.png)
+![Model discrimination with confidence intervals, selected-model calibration and MEPS spending by kidney-problem status](docs/figures/key_results.png)
+
+**Recommendation.** With capacity to lab-test 1 in 10 adults, test the top 10% by this score: about 56 of every 100 tested would have the indicator, against 18 for untargeted testing, and that 10% holds 31% of all cases. The score finds almost no cases under age 40 (0 of 107 in the cohort), so a program that cares about younger adults needs a separate rule for them.
+
+**How the model was chosen.** Four families were tuned inside nested grouped cross-validation: L2 logistic, spline logistic, random forest and gradient boosting. A rule written before the nested run picks the simplest family within one standard error of the best inner log loss. It chose the spline logistic model, which is also the best calibrated (Brier 0.1223). No tuned rival beats it reliably, and it ships as a small JSON scorer. The choice was close: inside the outer folds the rule picked plain logistic in 4 of 5 fit sets, so the conservative estimate for the whole procedure is ROC-AUC 0.773 (0.759–0.786).
 
 Numbers come from `data/processed/patient_need_summary.json`, `patient_finding_model_comparison.json`, `meps_hc243_2022_landscape.json` and `clinicaltrials_ckd_landscape.json`. The [model card](docs/models/patient-finding-model-card.md) has calibration, subgroup and definition-sensitivity results.
 
@@ -22,10 +26,10 @@ Numbers come from `data/processed/patient_need_summary.json`, `patient_finding_m
 - **Design-based survey estimation.** NHANES and MEPS estimates use the published weights, strata and PSUs with Taylor-series linearization and Student-t intervals. Subpopulations are estimated as domains of the full design, never by subsetting rows. Results match R `survey` to four decimals (checked in the test suite).
 - **Outcome definition.** Race-free CKD-EPI 2021 eGFR plus the albumin-to-creatinine ratio, with eGFR-only and albuminuria-only sensitivity versions on the same denominator. Missing labs are excluded, never counted as negative.
 - **Leakage-controlled risk model.** An allowlist admits only pre-lab predictors (age, sex, race/ethnicity, BMI, blood pressure, diabetes, hypertension, smoking); any kidney-lab-derived column is rejected. Scaling and encoding are fit inside each training fold.
-- **Grouped cross-validation and paired bootstrap.** Stratified grouped 5-fold CV over the 30 NHANES PSUs keeps survey clusters out of both sides of a split. 1,000 cluster-bootstrap replicates give intervals; model comparisons are paired on the same replicates. Logistic regression was pre-specified; a random forest and a demographics-only model are comparators, and a constant-prevalence model is the no-skill baseline.
+- **Grouped cross-validation and paired bootstrap.** Stratified grouped 5-fold CV over the 30 NHANES PSUs keeps survey clusters out of both sides of a split. 1,000 cluster-bootstrap replicates give intervals; model comparisons are paired on the same replicates. Model families are tuned and selected inside each outer fit set (nested CV), so the outer folds only measure; a demographics-only model and a constant-prevalence score are baselines.
 - **Capacity-based operating point.** Performance is reported at a fixed screening capacity (top 10%), with precision, recall, quintile calibration and age and sex subgroups.
 - **Source-specific market context.** Medicare Part D prescribing for SGLT2 inhibitors and finerenone and a fully paginated ClinicalTrials.gov snapshot stay at their own grain; nothing is joined across sources at the person level.
-- **Product layer.** A FastAPI service serves only checksum- and manifest-verified artifacts with strict Pydantic schemas, including a JSON (not pickle) logistic scorer. A Dash dashboard reads only the API ([model page screenshot](docs/figures/dashboard_patient_finding.png)).
+- **Product layer.** A FastAPI service serves only checksum- and manifest-verified artifacts with strict Pydantic schemas, including a JSON (not pickle) spline-logistic scorer. A Dash dashboard reads only the API ([model page screenshot](docs/figures/dashboard_patient_finding.png)).
 
 ## Data
 
@@ -61,7 +65,7 @@ Requires Python 3.12. From a fresh clone:
 
 ```bash
 make install          # .venv with pinned requirements.txt
-make test             # 311 tests, offline, about 30 s; PostgreSQL and raw-data tests skip
+make test             # 318 tests, offline, about 40 s; PostgreSQL and raw-data tests skip
 make lint typecheck   # ruff and strict mypy
 ```
 
@@ -86,7 +90,7 @@ PYTHONPATH=.:src .venv/bin/python -m dashboard.app       # http://127.0.0.1:8050
 ## Limitations
 
 - NHANES measures each person once, so the indicator can't confirm the 3-month persistence that defines CKD, and single measurements overstate persistent disease.
-- Model metrics are unweighted, internal cross-validation on one survey cycle. They describe this cohort, not U.S. population performance, and aren't external validation. Age dominates the ranking, so a single 10% capacity selects no adults under 40.
+- Model metrics are unweighted, internal cross-validation on one survey cycle. They describe this cohort, not U.S. population performance, and aren't external validation. Age dominates the ranking, so a single 10% capacity finds no indicator-positive adults under 40. The model-selection rule was written after an earlier, untuned comparison had been seen; nesting keeps the estimate honest for the rule as written.
 - The MEPS kidney measure is self-reported "diabetes has caused kidney problems" among adults with diabetes, not diagnosed CKD, and the spending gap is descriptive, not causal.
 - Part D rows are prescriber-state aggregates for three selected generics; prescriber counts can't be summed across brands, and the data can't show indication or patient residence.
 - Sources differ in population, geography and year, so the opportunity view compares them side by side and never combines them into one score.

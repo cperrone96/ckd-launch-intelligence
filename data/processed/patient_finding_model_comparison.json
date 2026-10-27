@@ -21,14 +21,14 @@
     "sensitivity_albuminuria_only": {
       "evaluated_n": 4741,
       "evaluated_prevalence": 0.1326724319763763,
-      "pr_auc": 0.3339476713533233,
-      "roc_auc": 0.7236731610301077
+      "pr_auc": 0.33813879503713373,
+      "roc_auc": 0.7271025746506405
     },
     "sensitivity_egfr_only": {
       "evaluated_n": 4741,
       "evaluated_prevalence": 0.08141742248470787,
-      "pr_auc": 0.30981524877091554,
-      "roc_auc": 0.8479747535737017
+      "pr_auc": 0.3433150439922012,
+      "roc_auc": 0.8582149039576925
     }
   },
   "evaluated_n": 4741,
@@ -52,12 +52,105 @@
     "Subgroup metrics are descriptive; small event counts can be unstable."
   ],
   "models": {
+    "gradient_boosting": {
+      "brier_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.12954946340123624,
+        "low": 0.11629402945459677,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "brier_score": 0.12302758687617524,
+      "calibration_bins": [
+        {
+          "mean_probability": 0.05392292577148751,
+          "n": 949,
+          "observed_rate": 0.059009483667017915
+        },
+        {
+          "mean_probability": 0.07450278293506915,
+          "n": 949,
+          "observed_rate": 0.06006322444678609
+        },
+        {
+          "mean_probability": 0.11203963781704235,
+          "n": 948,
+          "observed_rate": 0.10126582278481013
+        },
+        {
+          "mean_probability": 0.21729804546138415,
+          "n": 947,
+          "observed_rate": 0.22808870116156282
+        },
+        {
+          "mean_probability": 0.4632125659630525,
+          "n": 948,
+          "observed_rate": 0.4694092827004219
+        }
+      ],
+      "confusion_matrix": {
+        "false_negative": 609,
+        "false_positive": 213,
+        "true_negative": 3658,
+        "true_positive": 261
+      },
+      "mean_probability": 0.18413759455768466,
+      "n": 4741,
+      "positives": 870,
+      "pr_auc": 0.47545322023356423,
+      "pr_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5106481690428631,
+        "low": 0.44333122496325017,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision": 0.5506329113924051,
+      "precision_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5944220815906254,
+        "low": 0.505196433546949,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall": 0.3,
+      "recall_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.3210659900067942,
+        "low": 0.28008100077369624,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "requested_count": 474,
+      "roc_auc": 0.7760907069069444,
+      "roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7892238168843434,
+        "low": 0.7635436492067751,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_count": 474,
+      "selected_share": 0.09997890740350138,
+      "threshold": 0.43638802071907895,
+      "tie_policy": "descending_probability_then_stable_row_order"
+    },
     "logistic_demographics_only": {
       "brier_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.13811963687124454,
-        "low": 0.12373058463453347,
+        "high": 0.13799135803976575,
+        "low": 0.12435827612655756,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -103,8 +196,8 @@
       "pr_auc_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.44156709454662785,
-        "low": 0.381210603800216,
+        "high": 0.44525832715987984,
+        "low": 0.3829327604790269,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -113,8 +206,8 @@
       "precision_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.5527950310559007,
-        "low": 0.4646526990524975,
+        "high": 0.5536882591093117,
+        "low": 0.46331236897274636,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -123,8 +216,8 @@
       "recall_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.30207219695089216,
-        "low": 0.25749908701399565,
+        "high": 0.3012522321428572,
+        "low": 0.2565862949900524,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -134,8 +227,8 @@
       "roc_auc_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.7556510074360491,
-        "low": 0.7254244556900145,
+        "high": 0.7570380417274021,
+        "low": 0.7250415751471322,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -149,93 +242,279 @@
       "brier_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.1309527370135526,
-        "low": 0.11790908118992749,
+        "high": 0.1308940542815968,
+        "low": 0.11784266883137465,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "brier_score": 0.12437859933882764,
+      "brier_score": 0.1243350339439118,
       "calibration_bins": [
         {
-          "mean_probability": 0.03487963438635901,
+          "mean_probability": 0.03623669883101047,
           "n": 949,
           "observed_rate": 0.05690200210748156
         },
         {
-          "mean_probability": 0.06633717369624545,
+          "mean_probability": 0.06815590794580861,
           "n": 948,
-          "observed_rate": 0.06223628691983123
+          "observed_rate": 0.06118143459915612
         },
         {
-          "mean_probability": 0.12920423140456372,
+          "mean_probability": 0.13129882514198493,
           "n": 948,
-          "observed_rate": 0.10337552742616034
+          "observed_rate": 0.10443037974683544
         },
         {
-          "mean_probability": 0.2366922977203216,
+          "mean_probability": 0.23770261469359788,
           "n": 948,
-          "observed_rate": 0.23628691983122363
+          "observed_rate": 0.23945147679324894
         },
         {
-          "mean_probability": 0.4512848471690046,
+          "mean_probability": 0.44466727094015795,
           "n": 948,
-          "observed_rate": 0.4588607594936709
+          "observed_rate": 0.45569620253164556
         }
       ],
       "confusion_matrix": {
-        "false_negative": 606,
-        "false_positive": 210,
-        "true_negative": 3661,
-        "true_positive": 264
+        "false_negative": 609,
+        "false_positive": 213,
+        "true_negative": 3658,
+        "true_positive": 261
       },
-      "mean_probability": 0.18364825109118396,
+      "mean_probability": 0.18358117817731653,
       "n": 4741,
       "positives": 870,
-      "pr_auc": 0.4642758487689423,
+      "pr_auc": 0.4656577581548853,
       "pr_auc_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.4944037172407875,
-        "low": 0.4361279256129689,
+        "high": 0.496185264141881,
+        "low": 0.4369916528167841,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "precision": 0.5569620253164557,
+      "precision": 0.5506329113924051,
       "precision_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.5946179411118435,
-        "low": 0.5043197755960729,
+        "high": 0.5964173164624451,
+        "low": 0.5052108693446947,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "recall": 0.30344827586206896,
+      "recall": 0.3,
       "recall_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.3202943398477107,
-        "low": 0.27950401177936884,
+        "high": 0.32048928591076636,
+        "low": 0.28015950920245397,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "requested_count": 474,
-      "roc_auc": 0.7722335551418298,
+      "roc_auc": 0.7724901047280545,
       "roc_auc_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.7841515557218884,
-        "low": 0.7589110680347045,
+        "high": 0.7844029476086679,
+        "low": 0.7590656666659626,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "selected_count": 474,
       "selected_share": 0.09997890740350138,
-      "threshold": 0.43074498896983215,
+      "threshold": 0.4262724914444747,
+      "tie_policy": "descending_probability_then_stable_row_order"
+    },
+    "logistic_spline": {
+      "brier_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.1292580369303913,
+        "low": 0.11538983098569394,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "brier_score": 0.12226024632601482,
+      "calibration_bins": [
+        {
+          "mean_probability": 0.04935249283199545,
+          "n": 949,
+          "observed_rate": 0.06006322444678609
+        },
+        {
+          "mean_probability": 0.06868260577416943,
+          "n": 948,
+          "observed_rate": 0.05379746835443038
+        },
+        {
+          "mean_probability": 0.10770131658527085,
+          "n": 948,
+          "observed_rate": 0.10126582278481013
+        },
+        {
+          "mean_probability": 0.2082165201446292,
+          "n": 948,
+          "observed_rate": 0.23945147679324894
+        },
+        {
+          "mean_probability": 0.4831068811504286,
+          "n": 948,
+          "observed_rate": 0.4630801687763713
+        }
+      ],
+      "confusion_matrix": {
+        "false_negative": 604,
+        "false_positive": 208,
+        "true_negative": 3663,
+        "true_positive": 266
+      },
+      "mean_probability": 0.18338368667412525,
+      "n": 4741,
+      "positives": 870,
+      "pr_auc": 0.48407916220057434,
+      "pr_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5180102766108376,
+        "low": 0.4532667100307062,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision": 0.5611814345991561,
+      "precision_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5957468971631206,
+        "low": 0.5250993940867028,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall": 0.3057471264367816,
+      "recall_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.3263486806965068,
+        "low": 0.28815167230613853,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "requested_count": 474,
+      "roc_auc": 0.7794923643835534,
+      "roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7914273599123164,
+        "low": 0.7663735471098628,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_count": 474,
+      "selected_share": 0.09997890740350138,
+      "threshold": 0.4527522291718821,
+      "tie_policy": "descending_probability_then_stable_row_order"
+    },
+    "nested_selection": {
+      "brier_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.1307049312801798,
+        "low": 0.11738395501107146,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "brier_score": 0.12402891559844546,
+      "calibration_bins": [
+        {
+          "mean_probability": 0.03792900366360332,
+          "n": 949,
+          "observed_rate": 0.05795574288724974
+        },
+        {
+          "mean_probability": 0.06781275292171704,
+          "n": 948,
+          "observed_rate": 0.060126582278481014
+        },
+        {
+          "mean_probability": 0.12329417467964561,
+          "n": 948,
+          "observed_rate": 0.10548523206751055
+        },
+        {
+          "mean_probability": 0.23017452228255572,
+          "n": 948,
+          "observed_rate": 0.23734177215189872
+        },
+        {
+          "mean_probability": 0.45236230463218186,
+          "n": 948,
+          "observed_rate": 0.45675105485232065
+        }
+      ],
+      "confusion_matrix": {
+        "false_negative": 609,
+        "false_positive": 213,
+        "true_negative": 3658,
+        "true_positive": 261
+      },
+      "mean_probability": 0.18228409697490455,
+      "n": 4741,
+      "positives": 870,
+      "pr_auc": 0.46907742165145083,
+      "pr_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.4993048126076182,
+        "low": 0.4368578221369066,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision": 0.5506329113924051,
+      "precision_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5920598783446434,
+        "low": 0.5062335710290827,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall": 0.3,
+      "recall_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.32051944106925884,
+        "low": 0.2800418454935622,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "requested_count": 474,
+      "roc_auc": 0.772628772154868,
+      "roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7855170328696627,
+        "low": 0.7589470571101115,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_count": 474,
+      "selected_share": 0.09997890740350138,
+      "threshold": 0.4309584878278794,
       "tie_policy": "descending_probability_then_stable_row_order"
     },
     "prevalence_no_skill": {
@@ -315,93 +594,93 @@
       "brier_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.12989817264730105,
-        "low": 0.116826015740703,
+        "high": 0.12911600620704783,
+        "low": 0.11594293161930518,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "brier_score": 0.12314573281149341,
+      "brier_score": 0.1227058306273252,
       "calibration_bins": [
         {
-          "mean_probability": 0.05799355143056193,
+          "mean_probability": 0.05837599199308064,
           "n": 949,
-          "observed_rate": 0.05374077976817703
+          "observed_rate": 0.0547945205479452
         },
         {
-          "mean_probability": 0.07176058997449365,
+          "mean_probability": 0.07192422237620776,
           "n": 948,
-          "observed_rate": 0.06118143459915612
+          "observed_rate": 0.06223628691983123
         },
         {
-          "mean_probability": 0.12267118509650024,
+          "mean_probability": 0.1219635823426713,
           "n": 948,
-          "observed_rate": 0.10759493670886076
+          "observed_rate": 0.10126582278481013
         },
         {
-          "mean_probability": 0.23520278701371483,
+          "mean_probability": 0.23278282596660657,
           "n": 948,
           "observed_rate": 0.2320675105485232
         },
         {
-          "mean_probability": 0.42911010048312465,
+          "mean_probability": 0.4319319148900771,
           "n": 948,
-          "observed_rate": 0.4630801687763713
+          "observed_rate": 0.46729957805907174
         }
       ],
       "confusion_matrix": {
-        "false_negative": 609,
-        "false_positive": 213,
-        "true_negative": 3658,
-        "true_positive": 261
+        "false_negative": 606,
+        "false_positive": 210,
+        "true_negative": 3661,
+        "true_positive": 264
       },
-      "mean_probability": 0.18332120236699204,
+      "mean_probability": 0.18336933760959018,
       "n": 4741,
       "positives": 870,
-      "pr_auc": 0.4711542071951875,
+      "pr_auc": 0.47557014118222873,
       "pr_auc_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.5020940112103187,
-        "low": 0.4424451990400176,
+        "high": 0.5061441293380726,
+        "low": 0.44758110159201164,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "precision": 0.5506329113924051,
+      "precision": 0.5569620253164557,
       "precision_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.5887476014349676,
-        "low": 0.5154164752303992,
+        "high": 0.5952496159754224,
+        "low": 0.5243108008680184,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
-      "recall": 0.3,
+      "recall": 0.30344827586206896,
       "recall_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.3321450894520287,
-        "low": 0.2793858917333111,
+        "high": 0.33656408629441625,
+        "low": 0.27999767711962836,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "requested_count": 474,
-      "roc_auc": 0.7801154770070404,
+      "roc_auc": 0.7811012925467001,
       "roc_auc_interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.7912147855124655,
-        "low": 0.7681595123182784,
+        "high": 0.7918889624673389,
+        "low": 0.7693837142244256,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "selected_count": 474,
       "selected_share": 0.09997890740350138,
-      "threshold": 0.4097042602810147,
+      "threshold": 0.41047251706845,
       "tie_policy": "descending_probability_then_stable_row_order"
     }
   },
@@ -409,95 +688,185 @@
     "requested_count": 474,
     "selected_count": 474,
     "selected_share": 0.09997890740350138,
-    "threshold": 0.43074498896983215,
+    "threshold": 0.4527522291718821,
     "tie_policy": "descending_probability_then_stable_row_order"
   },
   "outcome": "Cross-sectional eGFR <60 or UACR >=30 mg/g indicator; not confirmed CKD",
   "paired_differences": {
-    "logistic_minus_demographics_only_brier_score": {
-      "comparison": "logistic_regression minus logistic_demographics_only",
-      "estimate": -0.006796739224962739,
-      "interpretation": "logistic_regression has lower error.",
+    "logistic_spline_minus_gradient_boosting_brier_score": {
+      "comparison": "logistic_spline minus gradient_boosting",
+      "estimate": -0.0007673405501604225,
+      "interpretation": "Interval includes zero; no reliable difference is established.",
       "interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": -0.0038846761956554733,
-        "low": -0.009535545406477806,
+        "high": 0.00027700072006377544,
+        "low": -0.0019270739152473543,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "metric": "brier_score"
     },
-    "logistic_minus_demographics_only_pr_auc": {
-      "comparison": "logistic_regression minus logistic_demographics_only",
-      "estimate": 0.05223471615656172,
-      "interpretation": "logistic_regression has higher discrimination.",
+    "logistic_spline_minus_gradient_boosting_pr_auc": {
+      "comparison": "logistic_spline minus gradient_boosting",
+      "estimate": 0.008625941967010109,
+      "interpretation": "Interval includes zero; no reliable difference is established.",
       "interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.08196392657083419,
-        "low": 0.024392535756282675,
+        "high": 0.01869192477163243,
+        "low": -0.0011805044638954403,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "metric": "pr_auc"
     },
-    "logistic_minus_demographics_only_roc_auc": {
-      "comparison": "logistic_regression minus logistic_demographics_only",
-      "estimate": 0.031321764847362044,
-      "interpretation": "logistic_regression has higher discrimination.",
+    "logistic_spline_minus_gradient_boosting_roc_auc": {
+      "comparison": "logistic_spline minus gradient_boosting",
+      "estimate": 0.0034016574766090324,
+      "interpretation": "Interval includes zero; no reliable difference is established.",
       "interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.044715902431779066,
-        "low": 0.018172094964165726,
+        "high": 0.007622972372188488,
+        "low": -0.0007689797015180133,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "metric": "roc_auc"
     },
-    "logistic_minus_random_forest_brier_score": {
-      "comparison": "logistic_regression minus random_forest",
-      "estimate": 0.001232866527334231,
-      "interpretation": "random_forest has lower error.",
+    "logistic_spline_minus_logistic_demographics_only_brier_score": {
+      "comparison": "logistic_spline minus logistic_demographics_only",
+      "estimate": -0.008915092237775563,
+      "interpretation": "logistic_spline has lower error.",
       "interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.0021375872088834364,
-        "low": 0.0002642267588364996,
+        "high": -0.005958052457399183,
+        "low": -0.011888090167334433,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "metric": "brier_score"
     },
-    "logistic_minus_random_forest_pr_auc": {
-      "comparison": "logistic_regression minus random_forest",
-      "estimate": -0.006878358426245235,
-      "interpretation": "Interval includes zero; no reliable difference is established.",
+    "logistic_spline_minus_logistic_demographics_only_pr_auc": {
+      "comparison": "logistic_spline minus logistic_demographics_only",
+      "estimate": 0.07203802958819377,
+      "interpretation": "logistic_spline has higher discrimination.",
       "interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": 0.000765420244398163,
-        "low": -0.01421283174095075,
+        "high": 0.09854512680781236,
+        "low": 0.04419838272356817,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
       },
       "metric": "pr_auc"
     },
-    "logistic_minus_random_forest_roc_auc": {
-      "comparison": "logistic_regression minus random_forest",
-      "estimate": -0.00788192186521064,
-      "interpretation": "random_forest has higher discrimination.",
+    "logistic_spline_minus_logistic_demographics_only_roc_auc": {
+      "comparison": "logistic_spline minus logistic_demographics_only",
+      "estimate": 0.03858057408908566,
+      "interpretation": "logistic_spline has higher discrimination.",
       "interval": {
         "caveat": null,
         "cluster_count": 30,
-        "high": -0.0024606010741796084,
-        "low": -0.01392182070420459,
+        "high": 0.05118545750234596,
+        "low": 0.026042393925409645,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "roc_auc"
+    },
+    "logistic_spline_minus_logistic_regression_brier_score": {
+      "comparison": "logistic_spline minus logistic_regression",
+      "estimate": -0.002074787617896978,
+      "interpretation": "logistic_spline has lower error.",
+      "interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": -0.0007519771718539886,
+        "low": -0.003231925620263838,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "brier_score"
+    },
+    "logistic_spline_minus_logistic_regression_pr_auc": {
+      "comparison": "logistic_spline minus logistic_regression",
+      "estimate": 0.018421404045689038,
+      "interpretation": "logistic_spline has higher discrimination.",
+      "interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.030190537720330424,
+        "low": 0.006476570254824352,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "pr_auc"
+    },
+    "logistic_spline_minus_logistic_regression_roc_auc": {
+      "comparison": "logistic_spline minus logistic_regression",
+      "estimate": 0.007002259655498944,
+      "interpretation": "logistic_spline has higher discrimination.",
+      "interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.012643202803241792,
+        "low": 0.0012795497513018535,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "roc_auc"
+    },
+    "logistic_spline_minus_random_forest_brier_score": {
+      "comparison": "logistic_spline minus random_forest",
+      "estimate": -0.0004455843013103783,
+      "interpretation": "Interval includes zero; no reliable difference is established.",
+      "interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.0011388722588160593,
+        "low": -0.0018622955000357454,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "brier_score"
+    },
+    "logistic_spline_minus_random_forest_pr_auc": {
+      "comparison": "logistic_spline minus random_forest",
+      "estimate": 0.008509021018345608,
+      "interpretation": "Interval includes zero; no reliable difference is established.",
+      "interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.01825737701182258,
+        "low": -0.0029548508332885525,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "metric": "pr_auc"
+    },
+    "logistic_spline_minus_random_forest_roc_auc": {
+      "comparison": "logistic_spline minus random_forest",
+      "estimate": -0.0016089281631467278,
+      "interpretation": "Interval includes zero; no reliable difference is established.",
+      "interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.0035796081032444414,
+        "low": -0.007531773252249551,
         "method": "cluster_bootstrap_percentile",
         "requested_replicates": 1000,
         "valid_replicates": 1000
@@ -538,25 +907,43 @@
     },
     "coefficient_precision": "float64",
     "coefficients": [
-      0.6379881617682315,
-      0.02423032872789991,
-      0.2684779698704691,
-      0.035739792984874036,
-      -0.040035876362151376,
-      -0.01641546246242786,
-      -0.1428314082633796,
-      0.19341174130915723,
-      0.05219554072669679,
-      -0.19809032096950482,
-      0.10743382628214221,
-      -0.39257714990042286,
-      -0.2804160338244468,
-      0.6686971003476018,
-      -0.2694266902982882,
-      0.2651306069210338,
-      0.03761880571875388,
-      -0.00039879669233280207,
-      -0.04151609240372854
+      -0.16290704668466666,
+      -0.9082324172679631,
+      -0.8936253471215827,
+      -0.37467205815389737,
+      -0.43983863716823396,
+      1.6747929159782096,
+      1.0761145741649283,
+      0.0898547998444177,
+      0.590772399653945,
+      -0.5663871746423299,
+      -0.18374202760807792,
+      0.14513957681099096,
+      -0.11662334684563173,
+      0.01261775653348064,
+      0.09014102294403852,
+      0.21482692571248457,
+      -1.072144976371865,
+      -1.0422445737620527,
+      -0.47243986244325814,
+      1.9587421904742337,
+      0.29475125719322576,
+      -0.00024366579507481773,
+      -0.028124350458121866,
+      0.006693931820564745,
+      -0.0594168115764925,
+      0.1978528812449278,
+      -0.06445289435463968,
+      -0.16355317435951167,
+      0.05450805097195047,
+      -0.39859012653509446,
+      -0.31738139472918414,
+      0.6876035050110817,
+      -0.3173325812999957,
+      0.2889645650468009,
+      0.07866860306664075,
+      -0.03595591809206608,
+      -0.07108070122777325
     ],
     "feature_order": [
       "age_years",
@@ -569,8 +956,9 @@
       "smoking_status"
     ],
     "format": "portable_logistic_json_v1",
-    "intercept": -1.6579550772475757,
+    "intercept": -0.15914983069804842,
     "missing_value_policy": "reject",
+    "numeric_encoding": "cubic_bspline",
     "numeric_means": {
       "age_years": 49.97637629192153,
       "body_mass_index": 29.699198481333053,
@@ -647,11 +1035,53 @@
         "type": "string"
       }
     ],
+    "spline_degree": 3,
+    "spline_knots": {
+      "age_years": [
+        -30.0,
+        -14.0,
+        2.0,
+        18.0,
+        34.0,
+        52.0,
+        64.0,
+        80.0,
+        96.0,
+        112.0,
+        128.0
+      ],
+      "body_mass_index": [
+        -14.600000000000001,
+        -4.800000000000001,
+        5.0,
+        14.8,
+        24.6,
+        28.5,
+        33.5,
+        74.8,
+        116.1,
+        157.39999999999998,
+        198.7
+      ],
+      "systolic_blood_pressure": [
+        -42.000000000000014,
+        -3.333333333333343,
+        35.33333333333333,
+        74.0,
+        112.66666666666667,
+        123.33333333333333,
+        136.66666666666666,
+        238.0,
+        339.33333333333337,
+        440.6666666666667,
+        542.0
+      ]
+    },
     "unknown_category_policy": "reject"
   },
-  "selected_model": "logistic_regression",
-  "selected_threshold": 0.43074498896983215,
-  "selection_policy": "logistic_prespecified_before_evaluation",
+  "selected_model": "logistic_spline",
+  "selected_threshold": 0.4527522291718821,
+  "selection_policy": "nested_grouped_cv_one_standard_error_rule",
   "source": "Verified CDC/NCHS NHANES 2017-2018 public-use files",
   "source_provenance": {
     "evidence_type": "public_observed",
@@ -731,7 +1161,7 @@
       951
     ],
     "strategy": "stratified grouped 5-fold cross-validation; survey clusters never shared between fitting and scoring folds; pooled out-of-fold predictions",
-    "threshold_source": "pooled_out_of_fold_logistic_predictions"
+    "threshold_source": "pooled_out_of_fold_selected_model_predictions"
   },
   "subgroups": {
     "age_band": [
@@ -739,19 +1169,29 @@
         "brier_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.07433789310182423,
-          "low": 0.05474784074318841,
+          "high": 0.0736805176300378,
+          "low": 0.05451357774163252,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "brier_score": 0.06403460971477253,
-        "caveat": "No records were flagged by the exact-capacity ranked mask; precision is undefined.",
+        "brier_score": 0.06359881168599969,
+        "caveat": null,
+        "flagged_share": 0.0006443298969072165,
         "group": "age_band",
+        "mean_probability": 0.06653127029473574,
         "n": 1552,
         "positives": 107,
-        "precision": null,
-        "precision_interval": null,
+        "precision": 0.0,
+        "precision_interval": {
+          "caveat": "Only 582 of 1000 bootstrap replicates were estimable.",
+          "cluster_count": 30,
+          "high": 0.0,
+          "low": 0.0,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 582
+        },
         "prevalence": 0.06894329896907217,
         "recall": 0.0,
         "recall_interval": {
@@ -763,29 +1203,32 @@
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
+        "roc_auc": 0.5872198687061411,
         "value": "18-39"
       },
       {
         "brier_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.11410062042937867,
-          "low": 0.09180259253205761,
+          "high": 0.11273757060546585,
+          "low": 0.08996943691115739,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "brier_score": 0.10320131830117736,
+        "brier_score": 0.10156712729906217,
         "caveat": null,
+        "flagged_share": 0.01307639366827254,
         "group": "age_band",
+        "mean_probability": 0.13435962416668354,
         "n": 1453,
         "positives": 186,
-        "precision": 0.5,
+        "precision": 0.6842105263157895,
         "precision_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.6176820728291317,
-          "low": 0.28121875,
+          "high": 0.9090909090909091,
+          "low": 0.4444444444444444,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
@@ -795,51 +1238,512 @@
         "recall_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.10495300576958866,
-          "low": 0.029848525230987917,
+          "high": 0.10426612973570203,
+          "low": 0.040923841395396,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
+        "roc_auc": 0.717646459760165,
         "value": "40-59"
       },
       {
         "brier_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.20460285417892224,
-          "low": 0.1880419016435907,
+          "high": 0.20065330297570036,
+          "low": 0.18370305475884866,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "brier_score": 0.19605167609242177,
+        "brier_score": 0.19202386873814942,
         "caveat": null,
+        "flagged_share": 0.26152073732718895,
         "group": "age_band",
+        "mean_probability": 0.3288830605474693,
         "n": 1736,
         "positives": 577,
-        "precision": 0.5602678571428571,
+        "precision": 0.5572687224669604,
         "precision_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.599148420811718,
-          "low": 0.5113084296218487,
+          "high": 0.5925231831808674,
+          "low": 0.518431065826745,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
         "prevalence": 0.3323732718894009,
-        "recall": 0.43500866551126516,
+        "recall": 0.43847487001733104,
         "recall_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.47222478474784746,
-          "low": 0.394044019856998,
+          "high": 0.4724184434968017,
+          "low": 0.4058174633374405,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
+        "roc_auc": 0.7215746557347142,
         "value": "60+"
+      }
+    ],
+    "diabetes_history": [
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.16984181059029704,
+          "low": 0.10383627145835334,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.13549499169432758,
+        "caveat": null,
+        "flagged_share": 0.08666666666666667,
+        "group": "diabetes_history",
+        "mean_probability": 0.18967830190322674,
+        "n": 150,
+        "positives": 28,
+        "precision": 0.5384615384615384,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.8571428571428571,
+          "low": 0.2727272727272727,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.18666666666666668,
+        "recall": 0.25,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.391304347826087,
+          "low": 0.12,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.6595433255269322,
+        "value": "Borderline"
+      },
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.10996774848527271,
+          "low": 0.09667551439582117,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.10304376279795142,
+        "caveat": null,
+        "flagged_share": 0.043939002326182475,
+        "group": "diabetes_history",
+        "mean_probability": 0.1375977168457563,
+        "n": 3869,
+        "positives": 533,
+        "precision": 0.5411764705882353,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.6125284090909091,
+          "low": 0.4533935945036261,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.13776169552856035,
+        "recall": 0.1726078799249531,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.19793969072164946,
+          "low": 0.1420697098692751,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.7490686625183905,
+        "value": "No"
+      },
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.23511013920600182,
+          "low": 0.20929598579248143,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.22248651082023976,
+        "caveat": null,
+        "flagged_share": 0.40304709141274236,
+        "group": "diabetes_history",
+        "mean_probability": 0.4274303971749484,
+        "n": 722,
+        "positives": 309,
+        "precision": 0.5738831615120275,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.6317797190818772,
+          "low": 0.517976112068092,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.4279778393351801,
+        "recall": 0.540453074433657,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.6008212553575457,
+          "low": 0.49719841131284914,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.6725906423125446,
+        "value": "Yes"
+      }
+    ],
+    "hypertension_history": [
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.09048703286832867,
+          "low": 0.0771997573971184,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.08386740079546041,
+        "caveat": null,
+        "flagged_share": 0.015719063545150503,
+        "group": "hypertension_history",
+        "mean_probability": 0.1036441695450405,
+        "n": 2990,
+        "positives": 311,
+        "precision": 0.574468085106383,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.7105409356725146,
+          "low": 0.4053766532489937,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.1040133779264214,
+        "recall": 0.08681672025723473,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.11254681005411339,
+          "low": 0.05554597701149425,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.7029294176811667,
+        "value": "No"
+      },
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.19730594339816354,
+          "low": 0.17795655581294678,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.18781970271456858,
+        "caveat": null,
+        "flagged_share": 0.24386065105653912,
+        "group": "hypertension_history",
+        "mean_probability": 0.31954654002419003,
+        "n": 1751,
+        "positives": 559,
+        "precision": 0.5597189695550351,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.5961324371160006,
+          "low": 0.5211170247290192,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.31924614505996574,
+        "recall": 0.4275491949910555,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.4671932428864037,
+          "low": 0.39762676232517974,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.7225585597483521,
+        "value": "Yes"
+      }
+    ],
+    "race_ethnicity": [
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 26,
+          "high": 0.12067678127114119,
+          "low": 0.09960832649405654,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.11012378987681422,
+        "caveat": null,
+        "flagged_share": 0.06287425149700598,
+        "group": "race_ethnicity",
+        "mean_probability": 0.14955073079333467,
+        "n": 668,
+        "positives": 100,
+        "precision": 0.5,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 26,
+          "high": 0.6923469387755101,
+          "low": 0.3249831081081081,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.1497005988023952,
+        "recall": 0.21,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 26,
+          "high": 0.2947493734335839,
+          "low": 0.12306122448979592,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.7436091549295776,
+        "value": "Mexican American"
+      },
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 29,
+          "high": 0.12368705221943178,
+          "low": 0.09347539952330303,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.10702400584349105,
+        "caveat": null,
+        "flagged_share": 0.04984894259818731,
+        "group": "race_ethnicity",
+        "mean_probability": 0.1426829946080847,
+        "n": 662,
+        "positives": 93,
+        "precision": 0.45454545454545453,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 29,
+          "high": 0.625,
+          "low": 0.27263986013986014,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.1404833836858006,
+        "recall": 0.16129032258064516,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 29,
+          "high": 0.22341125419932809,
+          "low": 0.09087995337995339,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.7327134947181435,
+        "value": "Non-Hispanic Asian"
+      },
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.1599938339397061,
+          "low": 0.1189624287517631,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.13792637759531448,
+        "caveat": null,
+        "flagged_share": 0.1442125237191651,
+        "group": "race_ethnicity",
+        "mean_probability": 0.2246702106607013,
+        "n": 1054,
+        "positives": 236,
+        "precision": 0.631578947368421,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.6744256094144018,
+          "low": 0.546985815602837,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.2239089184060721,
+        "recall": 0.4067796610169492,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.4810281580986825,
+          "low": 0.3360264128957079,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.7865090547428619,
+        "value": "Non-Hispanic Black"
+      },
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.1403357669101111,
+          "low": 0.11678171987990653,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.12860590032277033,
+        "caveat": null,
+        "flagged_share": 0.12252252252252252,
+        "group": "race_ethnicity",
+        "mean_probability": 0.1986520888090227,
+        "n": 1665,
+        "positives": 334,
+        "precision": 0.5441176470588235,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.600750547720115,
+          "low": 0.49431487843551797,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.2006006006006006,
+        "recall": 0.3323353293413174,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.3977715153695487,
+          "low": 0.2839475614228089,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.7902212104716188,
+        "value": "Non-Hispanic White"
+      },
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 29,
+          "high": 0.12271017512773917,
+          "low": 0.08545760167140844,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.10402006450932451,
+        "caveat": null,
+        "flagged_share": 0.05034324942791762,
+        "group": "race_ethnicity",
+        "mean_probability": 0.1448583134771848,
+        "n": 437,
+        "positives": 63,
+        "precision": 0.5909090909090909,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 29,
+          "high": 0.8183155080213903,
+          "low": 0.37037037037037035,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.14416475972540047,
+        "recall": 0.20634920634920634,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 29,
+          "high": 0.3333333333333333,
+          "low": 0.1,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.7599949070537305,
+        "value": "Other Hispanic"
+      },
+      {
+        "brier_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.1415959317435552,
+          "low": 0.09486408235118163,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "brier_score": 0.1186794122042524,
+        "caveat": null,
+        "flagged_share": 0.08235294117647059,
+        "group": "race_ethnicity",
+        "mean_probability": 0.17335221579841747,
+        "n": 255,
+        "positives": 44,
+        "precision": 0.47619047619047616,
+        "precision_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.7272727272727273,
+          "low": 0.2222222222222222,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "prevalence": 0.17254901960784313,
+        "recall": 0.22727272727272727,
+        "recall_interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.38638196480938414,
+          "low": 0.09802725968436155,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "roc_auc": 0.7928694528220595,
+        "value": "Other Race - Including Multi-Racial"
       }
     ],
     "sex": [
@@ -847,79 +1751,387 @@
         "brier_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.1358616925854229,
-          "low": 0.11641219177327819,
+          "high": 0.13383183714170238,
+          "low": 0.11366894785453704,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "brier_score": 0.1265853121817394,
+        "brier_score": 0.12407109618384826,
         "caveat": null,
+        "flagged_share": 0.10359059017746595,
         "group": "sex",
+        "mean_probability": 0.1822698879466351,
         "n": 2423,
         "positives": 442,
-        "precision": 0.5336134453781513,
+        "precision": 0.545816733067729,
         "precision_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.5933741325264092,
-          "low": 0.47033349652238504,
+          "high": 0.5959260685406238,
+          "low": 0.4915858746325385,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
         "prevalence": 0.18241848947585637,
-        "recall": 0.2873303167420814,
+        "recall": 0.30995475113122173,
         "recall_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.32874082809224314,
-          "low": 0.25177796431337285,
+          "high": 0.3416870859543165,
+          "low": 0.2751661006441875,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
+        "roc_auc": 0.7557223487383538,
         "value": "Female"
       },
       {
         "brier_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.1312987169825263,
-          "low": 0.11374352038912551,
+          "high": 0.13002430026863093,
+          "low": 0.11140254664677872,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
-        "brier_score": 0.12207192754487804,
+        "brier_score": 0.12036736918816733,
         "caveat": null,
+        "flagged_share": 0.09620362381363244,
         "group": "sex",
+        "mean_probability": 0.18454793788927135,
         "n": 2318,
         "positives": 428,
-        "precision": 0.5805084745762712,
+        "precision": 0.57847533632287,
         "precision_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.647595292316882,
-          "low": 0.48935473381027594,
+          "high": 0.6489922154428782,
+          "low": 0.5064490933594706,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
         "prevalence": 0.18464193270060397,
-        "recall": 0.32009345794392524,
+        "recall": 0.3014018691588785,
         "recall_interval": {
           "caveat": null,
           "cluster_count": 30,
-          "high": 0.35667646441318496,
-          "low": 0.2672795191123637,
+          "high": 0.3409090909090909,
+          "low": 0.26352654232424677,
           "method": "cluster_bootstrap_percentile",
           "requested_replicates": 1000,
           "valid_replicates": 1000
         },
+        "roc_auc": 0.8025577312960491,
         "value": "Male"
       }
     ]
   },
-  "threshold_capacity": 0.1
+  "threshold_capacity": 0.1,
+  "tuning": {
+    "full_cohort": {
+      "families": {
+        "gradient_boosting": {
+          "inner_log_loss": 0.39469180932260167,
+          "inner_log_loss_se": 0.004747667451577903,
+          "params": {
+            "learning_rate": 0.03,
+            "max_leaf_nodes": 2
+          },
+          "params_at_grid_edge": [
+            "max_leaf_nodes"
+          ]
+        },
+        "logistic_regression": {
+          "inner_log_loss": 0.40053349040590003,
+          "inner_log_loss_se": 0.005170507962370277,
+          "params": {
+            "C": 0.1
+          },
+          "params_at_grid_edge": []
+        },
+        "logistic_spline": {
+          "inner_log_loss": 0.3934841218085521,
+          "inner_log_loss_se": 0.0049909133753490474,
+          "params": {
+            "C": 1.0
+          },
+          "params_at_grid_edge": []
+        },
+        "random_forest": {
+          "inner_log_loss": 0.39438832836540255,
+          "inner_log_loss_se": 0.005247034212218502,
+          "params": {
+            "max_depth": 6,
+            "min_samples_leaf": 2
+          },
+          "params_at_grid_edge": []
+        }
+      },
+      "selected": "logistic_spline"
+    },
+    "grids": {
+      "gradient_boosting": {
+        "learning_rate": [
+          0.01,
+          0.03,
+          0.1
+        ],
+        "max_leaf_nodes": [
+          2,
+          3,
+          4,
+          8,
+          16
+        ]
+      },
+      "logistic_regression": {
+        "C": [
+          0.001,
+          0.01,
+          0.1,
+          1.0,
+          10.0,
+          100.0
+        ]
+      },
+      "logistic_spline": {
+        "C": [
+          0.01,
+          0.1,
+          1.0,
+          10.0,
+          100.0,
+          1000.0
+        ]
+      },
+      "random_forest": {
+        "max_depth": [
+          4,
+          6,
+          10,
+          null
+        ],
+        "min_samples_leaf": [
+          1,
+          2,
+          5,
+          10,
+          20,
+          40
+        ]
+      }
+    },
+    "outer_folds": [
+      {
+        "families": {
+          "gradient_boosting": {
+            "inner_log_loss": 0.3903535262413404,
+            "inner_log_loss_se": 0.009614378811298709,
+            "params": {
+              "learning_rate": 0.01,
+              "max_leaf_nodes": 8
+            },
+            "params_at_grid_edge": [
+              "learning_rate"
+            ]
+          },
+          "logistic_regression": {
+            "inner_log_loss": 0.3971021441548584,
+            "inner_log_loss_se": 0.009227919089032342,
+            "params": {
+              "C": 0.1
+            },
+            "params_at_grid_edge": []
+          },
+          "logistic_spline": {
+            "inner_log_loss": 0.3916959499752055,
+            "inner_log_loss_se": 0.009676366703194822,
+            "params": {
+              "C": 1.0
+            },
+            "params_at_grid_edge": []
+          },
+          "random_forest": {
+            "inner_log_loss": 0.38996182053685063,
+            "inner_log_loss_se": 0.007959497508444562,
+            "params": {
+              "max_depth": 6,
+              "min_samples_leaf": 5
+            },
+            "params_at_grid_edge": []
+          }
+        },
+        "selected": "logistic_regression"
+      },
+      {
+        "families": {
+          "gradient_boosting": {
+            "inner_log_loss": 0.3936422863741786,
+            "inner_log_loss_se": 0.008311160688391555,
+            "params": {
+              "learning_rate": 0.03,
+              "max_leaf_nodes": 3
+            },
+            "params_at_grid_edge": []
+          },
+          "logistic_regression": {
+            "inner_log_loss": 0.40021616959350953,
+            "inner_log_loss_se": 0.008441140587050318,
+            "params": {
+              "C": 0.1
+            },
+            "params_at_grid_edge": []
+          },
+          "logistic_spline": {
+            "inner_log_loss": 0.3931892794424375,
+            "inner_log_loss_se": 0.008153177049575832,
+            "params": {
+              "C": 10.0
+            },
+            "params_at_grid_edge": []
+          },
+          "random_forest": {
+            "inner_log_loss": 0.3956412051422639,
+            "inner_log_loss_se": 0.007920607643473111,
+            "params": {
+              "max_depth": 6,
+              "min_samples_leaf": 2
+            },
+            "params_at_grid_edge": []
+          }
+        },
+        "selected": "logistic_regression"
+      },
+      {
+        "families": {
+          "gradient_boosting": {
+            "inner_log_loss": 0.39456874508655754,
+            "inner_log_loss_se": 0.01070736119474825,
+            "params": {
+              "learning_rate": 0.01,
+              "max_leaf_nodes": 8
+            },
+            "params_at_grid_edge": [
+              "learning_rate"
+            ]
+          },
+          "logistic_regression": {
+            "inner_log_loss": 0.40309101971702727,
+            "inner_log_loss_se": 0.011705015936731279,
+            "params": {
+              "C": 0.1
+            },
+            "params_at_grid_edge": []
+          },
+          "logistic_spline": {
+            "inner_log_loss": 0.3969901424617991,
+            "inner_log_loss_se": 0.011999728277866863,
+            "params": {
+              "C": 10.0
+            },
+            "params_at_grid_edge": []
+          },
+          "random_forest": {
+            "inner_log_loss": 0.39457813801466673,
+            "inner_log_loss_se": 0.010555236639605201,
+            "params": {
+              "max_depth": 6,
+              "min_samples_leaf": 2
+            },
+            "params_at_grid_edge": []
+          }
+        },
+        "selected": "logistic_regression"
+      },
+      {
+        "families": {
+          "gradient_boosting": {
+            "inner_log_loss": 0.3952754310273247,
+            "inner_log_loss_se": 0.006805222811381049,
+            "params": {
+              "learning_rate": 0.1,
+              "max_leaf_nodes": 2
+            },
+            "params_at_grid_edge": [
+              "learning_rate",
+              "max_leaf_nodes"
+            ]
+          },
+          "logistic_regression": {
+            "inner_log_loss": 0.40073039855544196,
+            "inner_log_loss_se": 0.008680242405523737,
+            "params": {
+              "C": 0.1
+            },
+            "params_at_grid_edge": []
+          },
+          "logistic_spline": {
+            "inner_log_loss": 0.3944492722798732,
+            "inner_log_loss_se": 0.007689301096934113,
+            "params": {
+              "C": 1.0
+            },
+            "params_at_grid_edge": []
+          },
+          "random_forest": {
+            "inner_log_loss": 0.39453488480838844,
+            "inner_log_loss_se": 0.007274306125469563,
+            "params": {
+              "max_depth": 6,
+              "min_samples_leaf": 5
+            },
+            "params_at_grid_edge": []
+          }
+        },
+        "selected": "logistic_regression"
+      },
+      {
+        "families": {
+          "gradient_boosting": {
+            "inner_log_loss": 0.3955005213541488,
+            "inner_log_loss_se": 0.0052268055975208776,
+            "params": {
+              "learning_rate": 0.01,
+              "max_leaf_nodes": 8
+            },
+            "params_at_grid_edge": [
+              "learning_rate"
+            ]
+          },
+          "logistic_regression": {
+            "inner_log_loss": 0.401868880575387,
+            "inner_log_loss_se": 0.0052385812101942205,
+            "params": {
+              "C": 0.1
+            },
+            "params_at_grid_edge": []
+          },
+          "logistic_spline": {
+            "inner_log_loss": 0.3947729978252733,
+            "inner_log_loss_se": 0.0033953217743823796,
+            "params": {
+              "C": 10.0
+            },
+            "params_at_grid_edge": []
+          },
+          "random_forest": {
+            "inner_log_loss": 0.39570793059991405,
+            "inner_log_loss_se": 0.005118507704744067,
+            "params": {
+              "max_depth": 6,
+              "min_samples_leaf": 5
+            },
+            "params_at_grid_edge": []
+          }
+        },
+        "selected": "logistic_spline"
+      }
+    ],
+    "rule": "Declared before the nested run: in each fit set every family is tuned by inner grouped 5-fold CV on log loss, and the simplest family (order: logistic_regression, logistic_spline, random_forest, gradient_boosting) whose mean inner log loss is within one standard error of the best family's is selected. The outer folds only measure the result."
+  }
 }

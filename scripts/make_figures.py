@@ -50,11 +50,19 @@ def _style(axis: plt.Axes, title: str) -> None:
 
 
 def _discrimination(axis: plt.Axes, model: dict[str, Any]) -> None:
+    selected = model["selected_model"]
+    labels = {
+        "prevalence_no_skill": ("No-skill reference", GRAY),
+        "logistic_demographics_only": ("Logistic, demographics only", ORANGE),
+        "logistic_regression": ("Logistic, tuned L2", AQUA),
+        "random_forest": ("Random forest (tuned)", AQUA),
+        "gradient_boosting": ("Gradient boosting (tuned)", AQUA),
+        "logistic_spline": ("Spline logistic, selected", AQUA),
+    }
     rows = [
-        ("prevalence_no_skill", "No-skill reference", GRAY),
-        ("logistic_demographics_only", "Logistic, demographics only", ORANGE),
-        ("logistic_regression", "Logistic, 8 pre-lab predictors", BLUE),
-        ("random_forest", "Random forest, 8 predictors", AQUA),
+        (key, label, BLUE if key == selected else color)
+        for key, (label, color) in labels.items()
+        if key in model["models"]
     ]
     for position, (key, _label, color) in enumerate(rows):
         metrics = model["models"][key]
@@ -74,7 +82,7 @@ def _discrimination(axis: plt.Axes, model: dict[str, Any]) -> None:
 
 
 def _calibration(axis: plt.Axes, model: dict[str, Any]) -> None:
-    bins = model["models"]["logistic_regression"]["calibration_bins"]
+    bins = model["models"][model["selected_model"]]["calibration_bins"]
     predicted = [item["mean_probability"] for item in bins]
     observed = [item["observed_rate"] for item in bins]
     axis.plot([0, 0.5], [0, 0.5], color=GRAY, linewidth=1, linestyle="--")
@@ -85,7 +93,7 @@ def _calibration(axis: plt.Axes, model: dict[str, Any]) -> None:
     axis.set_xlabel("Mean predicted probability (quintile)", color=MUTED)
     axis.set_ylabel("Observed indicator rate", color=MUTED)
     axis.grid(axis="y", color=GRID, linewidth=0.8)
-    _style(axis, "B. Logistic model calibration")
+    _style(axis, "B. Selected model calibration (out of fold)")
 
 
 def _spending(axis: plt.Axes, meps: dict[str, Any]) -> None:

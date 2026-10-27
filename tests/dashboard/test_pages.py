@@ -80,8 +80,7 @@ def test_patient_finding_page_has_non_diagnostic_label(dash_client: FlaskClient)
     assert "Logistic regression" in body
     assert "logistic_regression" not in body
     assert "subgroup-metric-grid" in body
-    assert "Subgroup note" in body
-    assert body.index("Cohort n") < body.index("Subgroup note")
+    assert "Hypertension History" in body
     assert "6.9%" in body
     assert "None" not in body
 

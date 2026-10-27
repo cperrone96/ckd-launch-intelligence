@@ -19,20 +19,23 @@ complete-case domain so definition sensitivity is not confused with availability
 
 ## Patient finding model comparison
 
-Logistic regression (pre-specified) on eight pre-laboratory predictors: age, sex,
+Spline logistic regression on eight pre-laboratory predictors: age, sex,
 race/ethnicity, BMI, mean systolic blood pressure, self-reported diabetes,
-self-reported hypertension and smoking status. Evaluated with stratified grouped
-5-fold cross-validation over the 30 NHANES masked variance PSUs on a 4,741-person
-complete-case cohort (indicator prevalence 18.35%). Every person receives one
-out-of-fold prediction.
+self-reported hypertension and smoking status. It was selected from four tuned
+families (L2 logistic, spline logistic, random forest, gradient boosting) by a
+one-standard-error rule on inner grouped-CV log loss, nested inside stratified
+grouped 5-fold cross-validation over the 30 NHANES masked variance PSUs, on a
+4,741-person complete-case cohort (indicator prevalence 18.35%). Every person
+receives one out-of-fold prediction.
 
-- Logistic ROC-AUC: 0.772 (95% CI 0.759–0.784).
-- Logistic PR-AUC: 0.464 (95% CI 0.436–0.494); no-skill reference 0.184.
-- Logistic Brier score: 0.124 (95% CI 0.118–0.131); no-skill reference 0.150.
-- Top-10% operating point: 474 of 4,741 flagged; precision 0.557, recall 0.303.
-- Gain over demographics only: +0.031 ROC-AUC (95% CI 0.018–0.045).
-- Random forest comparator: 0.780 ROC-AUC; difference vs logistic −0.008
-  (95% CI −0.014 to −0.003).
+- Selected model ROC-AUC: 0.779 (95% CI 0.766–0.791); nested estimate of the whole
+  selection procedure 0.773 (0.759–0.786).
+- PR-AUC: 0.484 (95% CI 0.453–0.518); no-skill reference 0.184.
+- Brier score: 0.1223 (95% CI 0.1154–0.1293); no-skill reference 0.1498.
+- Top-10% operating point: 474 of 4,741 flagged; precision 0.561, recall 0.306.
+- Gain over demographics only: +0.039 ROC-AUC (95% CI 0.026–0.051).
+- Tuned random forest: 0.781 ROC-AUC; spline minus forest −0.002
+  (95% CI −0.008 to +0.004).
 - Uncertainty: 1,000 cluster-bootstrap replicates over the 30 PSUs, paired across
   models; fold models are held fixed.
 

@@ -8,7 +8,7 @@
 | ClinicalTrials.gov status is registry metadata | Recruiting counts could be read as treatment success or demand | Preserve registered-study denominator and state that status is not effectiveness or enrollment outcome. |
 | Synthetic journey fixture is not official CMS rows | Demonstration outputs could be generalized to Medicare | Validate and label `public_synthetic` plus `fixture_only`; render “not representative of Medicare beneficiaries.” |
 | Source families lack a shared geography/time key | A composite leaderboard could imply unsupported market truth | Keep panels separate; scenario ranking requires explicit compatible inputs and reports sensitivity. |
-| Few survey clusters for model validation | Metrics and subgroup intervals may be unstable | Grouped 5-fold cross-validation over all 30 PSUs, paired cluster-bootstrap intervals, leakage allowlist, pre-specified model. |
+| Few survey clusters for model validation | Metrics and subgroup intervals may be unstable | Grouped 5-fold cross-validation over all 30 PSUs, paired cluster-bootstrap intervals, leakage allowlist, model family chosen by a declared rule inside nested CV. |
 | Artifact or manifest drift | A dashboard could show stale or tampered results | Require exact sidecar/manifest/computed checksum equality and fail closed with HTTP 503. |
 | API contract drift | Dashboard could silently drop fields or identifiers | Strict nested Pydantic models, OpenAPI inspection, adversarial tests, and versioned route client. |
 | Raw identifiers or proprietary data exposure | Privacy, security, and portfolio-integrity harm | No customer/employer data; no raw source rows in committed outputs; identifier-removal tests and source-specific boundaries. |

@@ -268,11 +268,17 @@ class SubgroupMetric(APIModel):
     recall: StrictFloat
     recall_interval: MetricInterval | None = None
     value: StrictStr
+    roc_auc: StrictFloat | None = None
+    mean_probability: StrictFloat | None = None
+    flagged_share: StrictFloat | None = None
 
 
 class Subgroups(APIModel):
     age_band: list[SubgroupMetric]
     sex: list[SubgroupMetric]
+    race_ethnicity: list[SubgroupMetric] | None = None
+    diabetes_history: list[SubgroupMetric] | None = None
+    hypertension_history: list[SubgroupMetric] | None = None
 
 
 class CohortDefinition(APIModel):
@@ -321,13 +327,7 @@ class PairedDifference(APIModel):
     metric: StrictStr
 
 
-class PairedDifferences(APIModel):
-    logistic_minus_random_forest_brier_score: PairedDifference
-    logistic_minus_random_forest_pr_auc: PairedDifference
-    logistic_minus_random_forest_roc_auc: PairedDifference
-    logistic_minus_demographics_only_brier_score: PairedDifference | None = None
-    logistic_minus_demographics_only_pr_auc: PairedDifference | None = None
-    logistic_minus_demographics_only_roc_auc: PairedDifference | None = None
+PairedDifferences = dict[StrictStr, PairedDifference]
 
 
 class ModelSet(APIModel):
@@ -335,6 +335,9 @@ class ModelSet(APIModel):
     prevalence_no_skill: ModelMetrics
     random_forest: ModelMetrics
     logistic_demographics_only: ModelMetrics | None = None
+    logistic_spline: ModelMetrics | None = None
+    gradient_boosting: ModelMetrics | None = None
+    nested_selection: ModelMetrics | None = None
 
 
 class PerformanceComparison(APIModel):

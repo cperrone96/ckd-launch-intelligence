@@ -4,26 +4,32 @@ import json
 from dataclasses import replace
 from hashlib import sha256
 from pathlib import Path
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
 import pytest
+from sklearn.pipeline import Pipeline  # type: ignore[import-untyped]
 
 from ckd_intelligence.analysis.artifacts import (
     patient_finding_output_paths,
     patient_finding_source_provenance,
 )
 from ckd_intelligence.modeling.patient_finding import (
+    DEMOGRAPHIC_FEATURES,
     PRE_LAB_FEATURES,
     CapacityBoundaryError,
+    FamilyFit,
     FeatureValidationError,
     LeakageError,
     LogisticScorer,
     _metric_intervals,
     _pipeline,
+    _portable_scorer,
     _subgroup_metric_intervals,
     build_pre_lab_features,
     select_capacity_decision,
+    select_family,
     select_operating_threshold,
     train_patient_finding_models,
 )
@@ -63,10 +69,17 @@ def test_official_model_artifact_is_aggregate_checksummed_and_nonclinical() -> N
     assert sha256(artifact_path.read_bytes()).hexdigest() == expected_digest
     assert checksum_parts[1] == artifact_path.as_posix()
     assert artifact["evidence_type"] == "public_observed"
-    assert artifact["split"]["threshold_source"] == "pooled_out_of_fold_logistic_predictions"
+    assert artifact["split"]["threshold_source"] == (
+        "pooled_out_of_fold_selected_model_predictions"
+    )
     assert "not a diagnosis" in artifact["intended_use"].casefold()
     assert artifact["features"] == list(PRE_LAB_FEATURES)
-    assert artifact["selection_policy"] == "logistic_prespecified_before_evaluation"
+    assert artifact["selection_policy"] == "nested_grouped_cv_one_standard_error_rule"
+    # The headline model is the one the declared rule picked on the full cohort; the
+    # nested_selection row estimates the whole selection procedure.
+    assert artifact["selected_model"] == artifact["tuning"]["full_cohort"]["selected"]
+    assert "nested_selection" in artifact["models"]
+    assert all(fold["selected"] in artifact["models"] for fold in artifact["tuning"]["outer_folds"])
     assert artifact["source_provenance"]["path"] == (
         "data/manifests/nhanes-2017-2018-patient-need.json"
     )
@@ -81,8 +94,11 @@ def test_official_model_artifact_is_aggregate_checksummed_and_nonclinical() -> N
     assert set(models) == {
         "prevalence_no_skill",
         "logistic_regression",
+        "logistic_spline",
         "random_forest",
+        "gradient_boosting",
         "logistic_demographics_only",
+        "nested_selection",
     }
     assert models["prevalence_no_skill"]["roc_auc"] == 0.5
     assert models["prevalence_no_skill"]["pr_auc"] == pytest.approx(
@@ -196,7 +212,7 @@ def test_operating_capacity_uses_out_of_fold_predictions_and_respects_capacity()
     assert comparison.operating_capacity.requested_count == decision.requested_count
     assert comparison.operating_capacity.selected_count == decision.selected_count
     assert comparison.operating_capacity.selected_share == decision.selected_share
-    assert comparison.split.threshold_source == "pooled_out_of_fold_logistic_predictions"
+    assert comparison.split.threshold_source == "pooled_out_of_fold_selected_model_predictions"
     assert len(comparison.out_of_fold_probabilities) == len(cohort)
     assert sum(comparison.split.scoring_fold_group_counts) == groups.nunique()
 
@@ -243,7 +259,7 @@ def test_comparison_reports_cluster_aware_uncertainty_and_paired_differences() -
     assert logistic.roc_auc_interval.low <= logistic.roc_auc <= logistic.roc_auc_interval.high
     assert logistic.pr_auc_interval.low <= logistic.pr_auc <= logistic.pr_auc_interval.high
     assert logistic.brier_interval.low <= logistic.brier_score <= logistic.brier_interval.high
-    paired = comparison.paired_differences["logistic_minus_random_forest_roc_auc"]
+    paired = comparison.paired_differences["logistic_regression_minus_random_forest_roc_auc"]
     assert paired.interval.low <= paired.estimate <= paired.interval.high
     assert paired.interval.valid_replicates > 0
     for dimension in ("age_band", "sex"):
@@ -252,12 +268,114 @@ def test_comparison_reports_cluster_aware_uncertainty_and_paired_differences() -
                 assert metric.brier_interval.cluster_count > 1
 
 
-def test_model_selection_is_prespecified_and_not_based_on_evaluation_advantage() -> None:
+def test_without_nested_selection_logistic_is_reported_at_fixed_settings() -> None:
     cohort, groups = _modeling_cohort()
     comparison = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
 
     assert comparison.selected_model == "logistic_regression"
-    assert comparison.selection_policy == "logistic_prespecified_before_evaluation"
+    assert comparison.selection_policy == "fixed_logistic_without_nested_selection"
+
+
+def _fit(name: str, loss: float, se: float | None = 0.01) -> FamilyFit:
+    return FamilyFit(name, Pipeline([]), {}, loss, se)
+
+
+def test_one_standard_error_rule_prefers_the_simplest_family_within_one_se() -> None:
+    fits = {
+        "logistic_regression": _fit("logistic_regression", 0.405),
+        "logistic_spline": _fit("logistic_spline", 0.398),
+        "random_forest": _fit("random_forest", 0.395),
+        "gradient_boosting": _fit("gradient_boosting", 0.390),
+    }
+    # Best is 0.390 with SE 0.01: logistic (0.405) is outside, the spline (0.398) inside.
+    assert select_family(fits) == "logistic_spline"
+    fits["logistic_regression"] = _fit("logistic_regression", 0.399)
+    assert select_family(fits) == "logistic_regression"
+    fits["gradient_boosting"] = _fit("gradient_boosting", 0.300, se=0.001)
+    assert select_family(fits) == "gradient_boosting"
+
+
+def _small_grids(monkeypatch: pytest.MonkeyPatch) -> None:
+    from ckd_intelligence.modeling import patient_finding
+
+    monkeypatch.setattr(
+        patient_finding,
+        "TUNING_GRIDS",
+        {
+            "logistic_regression": {"model__C": [0.1, 1.0]},
+            "logistic_spline": {"model__C": [1.0]},
+            # Deliberately starved tree settings, so a GLM wins and the scorer exports.
+            "random_forest": {"model__min_samples_leaf": [150], "model__max_depth": [1]},
+            "gradient_boosting": {
+                "model__learning_rate": [0.0001],
+                "model__max_leaf_nodes": [2],
+            },
+        },
+    )
+    monkeypatch.setattr(patient_finding, "INNER_SPLITS", 3)
+
+
+def test_nested_selection_reports_the_procedure_and_exports_the_selected_glm(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    _small_grids(monkeypatch)
+    cohort, groups = _modeling_cohort()
+    comparison = train_patient_finding_models(
+        cohort, groups, bootstrap_replicates=20, nested_selection=True
+    )
+
+    assert comparison.selection_policy == "nested_grouped_cv_one_standard_error_rule"
+    tuning = cast(dict[str, Any], comparison.tuning)
+    assert comparison.selected_model == tuning["full_cohort"]["selected"]
+    assert len(tuning["outer_folds"]) == comparison.split.folds
+    # Headline scores are the selected family's; the procedure estimate is reported too.
+    selected = comparison.models[comparison.selected_model]
+    assert selected.mean_probability == pytest.approx(
+        float(np.mean(comparison.out_of_fold_probabilities))
+    )
+    assert comparison.models["nested_selection"].n == comparison.evaluated_n
+    assert comparison.paired_differences
+    assert all(
+        key.startswith(f"{comparison.selected_model}_minus_")
+        for key in comparison.paired_differences
+    )
+    assert comparison.scorer.feature_order == comparison.features
+
+
+def test_selecting_a_family_without_a_portable_scorer_fails_closed(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ckd_intelligence.modeling import patient_finding
+
+    _small_grids(monkeypatch)
+    monkeypatch.setattr(patient_finding, "select_family", lambda fits: "gradient_boosting")
+    cohort, groups = _modeling_cohort()
+    with pytest.raises(FeatureValidationError, match="no portable JSON scorer"):
+        train_patient_finding_models(cohort, groups, bootstrap_replicates=20, nested_selection=True)
+
+
+def test_spline_scorer_matches_the_fitted_pipeline() -> None:
+    cohort, groups = _modeling_cohort()
+    features = list(DEMOGRAPHIC_FEATURES)
+    pipeline = _pipeline("logistic_spline", features, 0).fit(
+        cohort[features], cohort["ckd_indicator"]
+    )
+    scorer = _portable_scorer(pipeline, features, cohort[features])
+    restored = LogisticScorer.from_dict(json.loads(json.dumps(scorer.as_dict())))
+
+    assert restored.numeric_encoding == "cubic_bspline"
+    expected = pipeline.predict_proba(cohort[features])[:, 1]
+    records = cast(list[dict[str, object]], cohort[features].to_dict("records"))
+    scored = [restored.score_one(row) for row in records]
+    assert scored == pytest.approx(expected.tolist(), abs=1e-10)
+    # Ages beyond the training range take the boundary value (constant extrapolation).
+    edge = {
+        "age_years": float(cohort["age_years"].max()),
+        "sex": "Female",
+        "race_ethnicity": "Group B",
+    }
+    beyond = {**edge, "age_years": 110.0}
+    assert restored.score_one(beyond) == pytest.approx(restored.score_one(edge))
 
 
 def test_capacity_policy_never_exceeds_limit_when_probabilities_tie() -> None:
@@ -443,7 +561,9 @@ def test_clinical_predictors_add_a_demographics_only_comparator_on_the_same_fold
         "body_mass_index",
         "diabetes_history",
     )
-    gain = comparison.paired_differences["logistic_minus_demographics_only_roc_auc"]
+    gain = comparison.paired_differences[
+        "logistic_regression_minus_logistic_demographics_only_roc_auc"
+    ]
     assert gain.estimate > 0
     assert gain.comparison == "logistic_regression minus logistic_demographics_only"
     assert comparison.scorer.feature_order == comparison.features

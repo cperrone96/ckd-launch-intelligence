@@ -16,6 +16,9 @@ _MODEL_LABELS = {
     "logistic_regression": "Logistic regression (all pre-lab predictors)",
     "logistic_demographics_only": "Logistic regression (demographics only)",
     "random_forest": "Random forest (all pre-lab predictors)",
+    "logistic_spline": "Spline logistic regression (all pre-lab predictors)",
+    "gradient_boosting": "Gradient boosting (all pre-lab predictors)",
+    "nested_selection": "Selected model, nested CV estimate",
     "prevalence_no_skill": "No-skill reference (prevalence)",
 }
 

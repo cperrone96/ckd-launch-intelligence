@@ -316,6 +316,8 @@ def build(root: Path, *, bootstrap_replicates: int | None = None) -> dict[str, A
         cohort.groups,
         capacity=0.10,
         bootstrap_replicates=bootstrap_replicates or (1000 if official else 200),
+        # The expanded fixture has too few clusters for an inner CV.
+        nested_selection=official,
     )
     finding = patient_finding_artifact(root, loaded, cohort, comparison)
     write_artifact(

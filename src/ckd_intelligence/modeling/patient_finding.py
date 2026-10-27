@@ -12,14 +12,20 @@ from __future__ import annotations
 
 import json
 import math
+import warnings
 from collections.abc import Callable, Mapping, Sequence
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any, cast
 
 import numpy as np
 import pandas as pd
+from scipy.interpolate import BSpline
 from sklearn.compose import ColumnTransformer  # type: ignore[import-untyped]
-from sklearn.ensemble import RandomForestClassifier  # type: ignore[import-untyped]
+from sklearn.ensemble import (  # type: ignore[import-untyped]
+    HistGradientBoostingClassifier,
+    RandomForestClassifier,
+)
+from sklearn.exceptions import ConvergenceWarning  # type: ignore[import-untyped]
 from sklearn.linear_model import LogisticRegression  # type: ignore[import-untyped]
 from sklearn.metrics import (  # type: ignore[import-untyped]
     average_precision_score,
@@ -29,9 +35,16 @@ from sklearn.metrics import (  # type: ignore[import-untyped]
     recall_score,
     roc_auc_score,
 )
-from sklearn.model_selection import StratifiedGroupKFold  # type: ignore[import-untyped]
+from sklearn.model_selection import (  # type: ignore[import-untyped]
+    GridSearchCV,
+    StratifiedGroupKFold,
+)
 from sklearn.pipeline import Pipeline  # type: ignore[import-untyped]
-from sklearn.preprocessing import OneHotEncoder, StandardScaler  # type: ignore[import-untyped]
+from sklearn.preprocessing import (  # type: ignore[import-untyped]
+    OneHotEncoder,
+    SplineTransformer,
+    StandardScaler,
+)
 
 PRE_LAB_FEATURES = (
     "age_years",
@@ -45,6 +58,39 @@ PRE_LAB_FEATURES = (
 )
 DEMOGRAPHIC_FEATURES = ("age_years", "sex", "race_ethnicity")
 DEMOGRAPHICS_MODEL = "logistic_demographics_only"
+# Candidate model families, simplest first. Each is tuned by grid search on an inner
+# grouped CV (log loss) nested inside every outer fit set.
+MODEL_FAMILIES = ("logistic_regression", "logistic_spline", "random_forest", "gradient_boosting")
+SCORER_FAMILIES = frozenset({"logistic_regression", "logistic_spline"})
+TUNING_GRIDS: dict[str, dict[str, list[Any]]] = {
+    "logistic_regression": {"model__C": [0.001, 0.01, 0.1, 1.0, 10.0, 100.0]},
+    "logistic_spline": {"model__C": [0.01, 0.1, 1.0, 10.0, 100.0, 1000.0]},
+    "random_forest": {
+        "model__min_samples_leaf": [1, 2, 5, 10, 20, 40],
+        "model__max_depth": [4, 6, 10, None],
+    },
+    "gradient_boosting": {
+        "model__learning_rate": [0.01, 0.03, 0.1],
+        "model__max_leaf_nodes": [2, 3, 4, 8, 16],
+    },
+}
+# Used only when nested selection is switched off (fixture runs and fast unit tests).
+DEFAULT_PARAMS: dict[str, dict[str, Any]] = {
+    "logistic_regression": {"model__C": 1.0},
+    "logistic_spline": {"model__C": 1.0},
+    "random_forest": {"model__min_samples_leaf": 10, "model__max_depth": 6},
+    "gradient_boosting": {"model__learning_rate": 0.1, "model__max_leaf_nodes": 4},
+}
+INNER_SPLITS = 5
+NESTED_SELECTION_MODEL = "nested_selection"
+SELECTION_RULE = (
+    "Declared before the nested run: in each fit set every family is tuned by inner "
+    f"grouped {INNER_SPLITS}-fold CV on log loss, and the simplest family (order: "
+    + ", ".join(MODEL_FAMILIES)
+    + ") whose mean inner log loss is within one standard error of the best family's "
+    "is selected. The outer folds only measure the result."
+)
+LOGISTIC_MAX_ITER = 5000
 NUMERIC_FEATURES = frozenset({"age_years", "body_mass_index", "systolic_blood_pressure"})
 CATEGORICAL_FEATURES = frozenset(PRE_LAB_FEATURES) - NUMERIC_FEATURES
 LEAKAGE_TOKENS = (
@@ -140,6 +186,9 @@ class SubgroupMetrics:
     recall_interval: UncertaintyInterval | None
     brier_interval: UncertaintyInterval | None
     caveat: str | None
+    roc_auc: float | None = None
+    mean_probability: float | None = None
+    flagged_share: float | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -177,6 +226,20 @@ class LogisticScorer:
     missing_value_policy: str = "reject"
     unknown_category_policy: str = "reject"
     coefficient_precision: str = "float64"
+    numeric_encoding: str = "standardize"
+    spline_knots: Mapping[str, tuple[float, ...]] = field(default_factory=dict)
+    spline_degree: int = 3
+
+    def _numeric_terms(self, name: str, number: float) -> list[float]:
+        if self.numeric_encoding == "standardize":
+            return [(number - self.numeric_means[name]) / self.numeric_scales[name]]
+        # Cubic B-spline basis with constant extrapolation, matching
+        # sklearn.preprocessing.SplineTransformer(extrapolation="constant").
+        knots = np.asarray(self.spline_knots[name], dtype=float)
+        degree = self.spline_degree
+        clamped = min(max(number, float(knots[degree])), float(knots[-degree - 1]))
+        basis = BSpline.design_matrix(np.asarray([clamped]), knots, degree).toarray()[0]
+        return [float(value) for value in basis]
 
     def _validated(self, record: Mapping[str, object]) -> dict[str, object]:
         leaked = sorted(name for name in record if _looks_like_leakage(name))
@@ -220,9 +283,9 @@ class LogisticScorer:
         vector: list[float] = []
         for name in self.feature_order:
             if name in NUMERIC_FEATURES:
-                number = float(cast(float | int | str, values[name]))
-                scale = self.numeric_scales[name]
-                vector.append((number - self.numeric_means[name]) / scale)
+                vector.extend(
+                    self._numeric_terms(name, float(cast(float | int | str, values[name])))
+                )
         for name in self.feature_order:
             if name in CATEGORICAL_FEATURES:
                 vector.extend(
@@ -235,7 +298,7 @@ class LogisticScorer:
         return float(exponential / (1.0 + exponential))
 
     def as_dict(self) -> dict[str, object]:
-        return {
+        payload: dict[str, object] = {
             "format": "portable_logistic_json_v1",
             "artifact_version": self.artifact_version,
             "missing_value_policy": self.missing_value_policy,
@@ -267,6 +330,13 @@ class LogisticScorer:
             "coefficients": list(self.coefficients),
             "intercept": self.intercept,
         }
+        if self.numeric_encoding != "standardize":
+            payload["numeric_encoding"] = self.numeric_encoding
+            payload["spline_knots"] = {
+                name: list(knots) for name, knots in self.spline_knots.items()
+            }
+            payload["spline_degree"] = self.spline_degree
+        return payload
 
     @classmethod
     def from_dict(cls, payload: Mapping[str, object]) -> LogisticScorer:
@@ -289,6 +359,9 @@ class LogisticScorer:
         missing = sorted(required - set(payload))
         if missing:
             raise FeatureValidationError(f"scorer artifact missing fields: {', '.join(missing)}")
+        numeric_encoding = payload.get("numeric_encoding", "standardize")
+        if numeric_encoding not in ("standardize", "cubic_bspline"):
+            raise FeatureValidationError("unsupported numeric encoding")
         if (
             payload["format"] != "portable_logistic_json_v1"
             or payload["artifact_version"] != "1.0.0"
@@ -323,6 +396,15 @@ class LogisticScorer:
                 for value in cast(list[object], payload["coefficients"])
             )
             intercept = float(cast(float | int | str, payload["intercept"]))
+            spline_knots = {
+                str(name): tuple(
+                    float(cast(float | int | str, knot)) for knot in cast(list[object], knots)
+                )
+                for name, knots in cast(
+                    dict[object, object], payload.get("spline_knots", {})
+                ).items()
+            }
+            spline_degree = int(cast(int, payload.get("spline_degree", 3)))
         except (TypeError, ValueError) as exc:
             raise FeatureValidationError("scorer artifact contains invalid field types") from exc
         raw_numeric_values: list[object] = [
@@ -347,7 +429,22 @@ class LogisticScorer:
             not levels or len(set(levels)) != len(levels) for levels in categorical_levels.values()
         ):
             raise FeatureValidationError("scorer categorical levels do not match feature_order")
-        expected_coefficients = sum(name in NUMERIC_FEATURES for name in feature_order) + sum(
+        if numeric_encoding == "cubic_bspline":
+            if set(spline_knots) != expected_numeric or spline_degree != 3:
+                raise FeatureValidationError("spline knots do not match feature_order")
+            if any(
+                len(knots) < 2 * spline_degree + 2
+                or any(b < a for a, b in zip(knots, knots[1:], strict=False))
+                or not all(math.isfinite(knot) for knot in knots)
+                for knots in spline_knots.values()
+            ):
+                raise FeatureValidationError("spline knots must be finite and nondecreasing")
+            terms_per_numeric = {
+                name: len(knots) - spline_degree - 1 for name, knots in spline_knots.items()
+            }
+        else:
+            terms_per_numeric = {name: 1 for name in expected_numeric}
+        expected_coefficients = sum(terms_per_numeric.values()) + sum(
             len(categorical_levels.get(name, ()))
             for name in feature_order
             if name in CATEGORICAL_FEATURES
@@ -373,6 +470,9 @@ class LogisticScorer:
             categorical_levels=categorical_levels,
             coefficients=coefficients,
             intercept=intercept,
+            numeric_encoding=str(numeric_encoding),
+            spline_knots=spline_knots,
+            spline_degree=spline_degree,
         )
         if payload["required_fields"] != scorer.as_dict()["required_fields"]:
             raise FeatureValidationError("required field contract does not match scorer encoding")
@@ -398,6 +498,7 @@ class ModelComparison:
     features: tuple[str, ...]
     intended_use: str
     limitations: tuple[str, ...]
+    tuning: Mapping[str, object] = field(default_factory=dict)
 
     @property
     def brier_score(self) -> float:
@@ -437,6 +538,7 @@ class ModelComparison:
                 name: asdict(difference) for name, difference in self.paired_differences.items()
             },
             "scorer": self.scorer.as_dict(),
+            "tuning": dict(self.tuning),
             "intended_use": self.intended_use,
             "limitations": list(self.limitations),
         }
@@ -507,11 +609,35 @@ def _pipeline(kind: str, features: Sequence[str], random_state: int) -> Pipeline
         ],
         remainder="drop",
     )
-    if kind == "logistic_regression":
-        estimator: Any = LogisticRegression(max_iter=2000, random_state=random_state)
+    if kind == "logistic_spline":
+        # Cubic B-splines with quantile knots let age, BMI and blood pressure bend;
+        # the L2 strength is tuned in the inner loop.
+        transformer = ColumnTransformer(
+            [
+                ("numeric", SplineTransformer(n_knots=5, degree=3, knots="quantile"), numeric),
+                (
+                    "categorical",
+                    OneHotEncoder(handle_unknown="error", sparse_output=False),
+                    categorical,
+                ),
+            ],
+            remainder="drop",
+        )
+        estimator: Any = LogisticRegression(max_iter=LOGISTIC_MAX_ITER, random_state=random_state)
+    elif kind == "gradient_boosting":
+        estimator = HistGradientBoostingClassifier(
+            max_iter=300,
+            min_samples_leaf=20,
+            early_stopping=False,
+            random_state=random_state,
+        )
+    elif kind == "logistic_regression":
+        estimator = LogisticRegression(max_iter=LOGISTIC_MAX_ITER, random_state=random_state)
     elif kind == "random_forest":
+        # n_jobs=1: threaded prediction sums trees in a nondeterministic order, which
+        # changes the last bits of probabilities between runs and machines.
         estimator = RandomForestClassifier(
-            n_estimators=200,
+            n_estimators=300,
             max_depth=6,
             min_samples_leaf=10,
             random_state=random_state,
@@ -520,6 +646,107 @@ def _pipeline(kind: str, features: Sequence[str], random_state: int) -> Pipeline
     else:
         raise ValueError(f"unsupported model kind: {kind}")
     return Pipeline([("preprocess", transformer), ("model", estimator)])
+
+
+def _fit_converged(pipeline: Pipeline, features: pd.DataFrame, y: np.ndarray) -> Pipeline:
+    """Fit, treating any optimizer convergence warning as an error.
+
+    A non-converged solver can stop at platform-dependent iterates, so results would
+    differ across machines; failing loudly keeps the published numbers reproducible.
+    """
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ConvergenceWarning)
+        pipeline.fit(features, y)
+    model = pipeline.named_steps["model"]
+    if isinstance(model, LogisticRegression) and int(np.max(model.n_iter_)) >= model.max_iter:
+        raise FeatureValidationError("logistic regression did not converge")
+    return pipeline
+
+
+@dataclass(frozen=True, slots=True)
+class FamilyFit:
+    """One tuned model family fitted on a fit set."""
+
+    name: str
+    pipeline: Pipeline
+    params: dict[str, Any]
+    inner_log_loss: float
+    inner_log_loss_se: float | None
+
+
+def _tune_family(
+    kind: str,
+    columns: Sequence[str],
+    features: pd.DataFrame,
+    y: np.ndarray,
+    groups: pd.Series,
+    random_state: int,
+    *,
+    nested: bool,
+) -> FamilyFit:
+    """Tune on an inner grouped CV (log loss), then refit the best setting on all rows."""
+
+    frame = features[list(columns)]
+    if not nested:
+        pipeline = _pipeline(kind, columns, random_state).set_params(**DEFAULT_PARAMS[kind])
+        _fit_converged(pipeline, frame, y)
+        params = {key.removeprefix("model__"): value for key, value in DEFAULT_PARAMS[kind].items()}
+        return FamilyFit(kind, pipeline, params, float("nan"), None)
+    inner = StratifiedGroupKFold(n_splits=INNER_SPLITS, shuffle=True, random_state=random_state)
+    splits = _validated_grouped_splits(inner, frame, y, groups, context="inner")
+    search = GridSearchCV(
+        _pipeline(kind, columns, random_state),
+        TUNING_GRIDS[kind],
+        scoring="neg_log_loss",
+        cv=splits,
+        error_score="raise",
+        refit=False,
+        # Candidates are independent fits, so parallelizing them cannot change results.
+        n_jobs=-1,
+    )
+    with warnings.catch_warnings():
+        warnings.simplefilter("error", ConvergenceWarning)
+        search.fit(frame, y)
+    best = int(search.best_index_)
+    losses = np.asarray(
+        [-search.cv_results_[f"split{fold}_test_score"][best] for fold in range(INNER_SPLITS)]
+    )
+    pipeline = _pipeline(kind, columns, random_state).set_params(**search.best_params_)
+    _fit_converged(pipeline, frame, y)
+    return FamilyFit(
+        name=kind,
+        pipeline=pipeline,
+        params={key.removeprefix("model__"): value for key, value in search.best_params_.items()},
+        inner_log_loss=float(losses.mean()),
+        inner_log_loss_se=float(losses.std(ddof=1) / math.sqrt(len(losses))),
+    )
+
+
+def select_family(fits: Mapping[str, FamilyFit]) -> str:
+    """One-standard-error rule: the simplest family within one SE of the best inner loss."""
+
+    best = min(fits.values(), key=lambda fit: fit.inner_log_loss)
+    if best.inner_log_loss_se is None or not math.isfinite(best.inner_log_loss):
+        return MODEL_FAMILIES[0]
+    limit = best.inner_log_loss + best.inner_log_loss_se
+    return next(
+        name for name in MODEL_FAMILIES if name in fits and fits[name].inner_log_loss <= limit
+    )
+
+
+def _fit_record(fit: FamilyFit) -> dict[str, Any]:
+    grid = {key.removeprefix("model__"): values for key, values in TUNING_GRIDS[fit.name].items()}
+    return {
+        "params": dict(fit.params),
+        "inner_log_loss": fit.inner_log_loss if math.isfinite(fit.inner_log_loss) else None,
+        "inner_log_loss_se": fit.inner_log_loss_se,
+        "params_at_grid_edge": sorted(
+            name
+            for name, value in fit.params.items()
+            if len(grid[name]) > 1 and value in (grid[name][0], grid[name][-1])
+        ),
+    }
 
 
 def _calibration_bins(y: np.ndarray, probabilities: np.ndarray) -> tuple[CalibrationBin, ...]:
@@ -777,6 +1004,9 @@ def _subgroups(
         ).astype("string"),
         "sex": evaluated["sex"].astype("string"),
     }
+    for name in ("race_ethnicity", "diabetes_history", "hypertension_history"):
+        if name in evaluated:
+            dimensions[name] = evaluated[name].astype("string")
     output: dict[str, tuple[SubgroupMetrics, ...]] = {}
     for dimension, values in dimensions.items():
         records: list[SubgroupMetrics] = []
@@ -852,6 +1082,13 @@ def _subgroups(
                     recall_interval=intervals["recall"],
                     brier_interval=intervals["brier"],
                     caveat=" ".join(caveats) or None,
+                    roc_auc=(
+                        float(roc_auc_score(group_y, group_p))
+                        if 0 < positives < len(group_y)
+                        else None
+                    ),
+                    mean_probability=float(group_p.mean()),
+                    flagged_share=float(predicted.mean()),
                 )
             )
         output[dimension] = tuple(records)
@@ -912,27 +1149,42 @@ def _subgroup_metric_intervals(
     }
 
 
-def _portable_scorer(pipeline: Pipeline, features: Sequence[str]) -> LogisticScorer:
+def _portable_scorer(
+    pipeline: Pipeline, features: Sequence[str], training: pd.DataFrame
+) -> LogisticScorer:
     preprocess: ColumnTransformer = pipeline.named_steps["preprocess"]
     model: LogisticRegression = pipeline.named_steps["model"]
     numeric = [name for name in features if name in NUMERIC_FEATURES]
     categorical = [name for name in features if name in CATEGORICAL_FEATURES]
-    scaler: StandardScaler = preprocess.named_transformers_["numeric"]
+    numeric_step = preprocess.named_transformers_["numeric"]
     encoder: OneHotEncoder = preprocess.named_transformers_["categorical"]
+    if isinstance(numeric_step, SplineTransformer):
+        means = {name: float(training[name].mean()) for name in numeric}
+        scales = {name: float(training[name].std(ddof=0)) for name in numeric}
+        encoding = "cubic_bspline"
+        knots = {
+            name: tuple(float(knot) for knot in spline.t)
+            for name, spline in zip(numeric, numeric_step.bsplines_, strict=True)
+        }
+        degree = int(numeric_step.degree)
+    else:
+        scaler = cast(StandardScaler, numeric_step)
+        means = {name: float(value) for name, value in zip(numeric, scaler.mean_, strict=True)}
+        scales = {name: float(value) for name, value in zip(numeric, scaler.scale_, strict=True)}
+        encoding, knots, degree = "standardize", {}, 3
     return LogisticScorer(
         feature_order=tuple(features),
-        numeric_means={
-            name: float(value) for name, value in zip(numeric, scaler.mean_, strict=True)
-        },
-        numeric_scales={
-            name: float(value) for name, value in zip(numeric, scaler.scale_, strict=True)
-        },
+        numeric_means=means,
+        numeric_scales=scales,
         categorical_levels={
             name: tuple(str(value) for value in levels)
             for name, levels in zip(categorical, encoder.categories_, strict=True)
         },
         coefficients=tuple(float(value) for value in model.coef_[0]),
         intercept=float(model.intercept_[0]),
+        numeric_encoding=encoding,
+        spline_knots=knots,
+        spline_degree=degree,
     )
 
 
@@ -1058,16 +1310,19 @@ def train_patient_finding_models(
     target_column: str = "ckd_indicator",
     bootstrap_replicates: int = 200,
     n_splits: int = 5,
+    nested_selection: bool = False,
 ) -> ModelComparison:
-    """Compare a no-skill reference, logistic regression and a random forest.
+    """Select and evaluate a screening model with nested grouped cross-validation.
 
-    Evaluation uses grouped K-fold cross-validation: survey clusters never appear in
-    both the fitting and the scoring folds, and every person receives exactly one
-    out-of-fold prediction. Metrics and cluster-bootstrap intervals are computed on
-    the pooled out-of-fold predictions. Logistic regression is pre-specified as the
-    reported model; the deployable scorer is refit on the full cohort. When the
-    cohort contains clinical predictors beyond demographics, a demographics-only
-    logistic model is evaluated on the same folds to show their incremental value.
+    Survey clusters never appear in both the fitting and the scoring folds, and every
+    person receives exactly one out-of-fold prediction. With ``nested_selection`` each
+    outer fit set tunes every family in :data:`MODEL_FAMILIES` on an inner grouped CV
+    and picks one by :data:`SELECTION_RULE`; the outer scoring fold then measures that
+    whole procedure, so the reported estimate is not inflated by the choice. The same
+    procedure run on the full cohort picks the deployed model. Without it (fixture
+    runs and fast tests) logistic regression and a random forest are fitted at fixed
+    settings and logistic regression is reported. A demographics-only logistic model
+    and a constant-prevalence score are evaluated on the same folds as baselines.
     """
 
     if target_column != "ckd_indicator":
@@ -1099,35 +1354,78 @@ def train_patient_finding_models(
     splitter = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
     folds = _validated_grouped_splits(splitter, features, y, group_series, context="outer")
 
-    specifications: dict[str, tuple[str, list[str]]] = {
-        "logistic_regression": ("logistic_regression", feature_names),
-        "random_forest": ("random_forest", feature_names),
-    }
+    families = MODEL_FAMILIES if nested_selection else ("logistic_regression", "random_forest")
     has_clinical_features = set(feature_names) != set(DEMOGRAPHIC_FEATURES)
-    if has_clinical_features:
-        specifications[DEMOGRAPHICS_MODEL] = (
-            "logistic_regression",
-            [name for name in feature_names if name in DEMOGRAPHIC_FEATURES],
-        )
-    out_of_fold = {name: np.zeros(len(y), dtype=float) for name in specifications}
+    demographic_columns = [name for name in feature_names if name in DEMOGRAPHIC_FEATURES]
+    baselines = [DEMOGRAPHICS_MODEL] if has_clinical_features else []
+    out_of_fold = {name: np.zeros(len(y), dtype=float) for name in [*families, *baselines]}
+    selected_oof = np.zeros(len(y), dtype=float)
+    fold_records: list[dict[str, Any]] = []
     for fit_index, score_index in folds:
-        for name, (kind, columns) in specifications.items():
-            pipeline = _pipeline(kind, columns, random_state)
-            pipeline.fit(features.iloc[fit_index][columns], y[fit_index])
-            out_of_fold[name][score_index] = pipeline.predict_proba(
-                features.iloc[score_index][columns]
+        fit_features = features.iloc[fit_index].reset_index(drop=True)
+        fit_groups = group_series.iloc[fit_index].reset_index(drop=True)
+        fits = {
+            name: _tune_family(
+                name,
+                feature_names,
+                fit_features,
+                y[fit_index],
+                fit_groups,
+                random_state,
+                nested=nested_selection,
+            )
+            for name in families
+        }
+        chosen = select_family(fits) if nested_selection else "logistic_regression"
+        for name, fit in fits.items():
+            out_of_fold[name][score_index] = fit.pipeline.predict_proba(
+                features.iloc[score_index][feature_names]
             )[:, 1]
+        selected_oof[score_index] = out_of_fold[chosen][score_index]
+        if has_clinical_features:
+            baseline = _fit_converged(
+                _pipeline("logistic_regression", demographic_columns, random_state),
+                features.iloc[fit_index][demographic_columns],
+                y[fit_index],
+            )
+            out_of_fold[DEMOGRAPHICS_MODEL][score_index] = baseline.predict_proba(
+                features.iloc[score_index][demographic_columns]
+            )[:, 1]
+        fold_records.append(
+            {"selected": chosen, "families": {name: _fit_record(fit) for name, fit in fits.items()}}
+        )
 
-    final_logistic = _pipeline("logistic_regression", feature_names, random_state)
-    final_logistic.fit(features, y)
-    scorer = _portable_scorer(final_logistic, feature_names)
+    final_fits = {
+        name: _tune_family(
+            name,
+            feature_names,
+            features.reset_index(drop=True),
+            y,
+            group_series.reset_index(drop=True),
+            random_state,
+            nested=nested_selection,
+        )
+        for name in families
+    }
+    selected_model = select_family(final_fits) if nested_selection else "logistic_regression"
+    if selected_model not in SCORER_FAMILIES:
+        raise FeatureValidationError(
+            f"selected family {selected_model} has no portable JSON scorer; "
+            "export support must be added before it can be deployed"
+        )
+    scorer = _portable_scorer(final_fits[selected_model].pipeline, feature_names, features)
 
-    logistic = out_of_fold["logistic_regression"]
+    # Headline scores: the selected family, tuned inside each outer fold. The
+    # nested_selection row (family re-chosen inside each outer fold) is the
+    # conservative estimate of the whole selection procedure.
+    logistic = out_of_fold[selected_model]
     operating = select_capacity_decision(logistic.tolist(), capacity)
     # A constant score at the cohort prevalence: ROC-AUC 0.5, PR-AUC equal to prevalence
     # and Brier score p(1 - p) by construction.
     no_skill = np.full(len(y), float(y.mean()), dtype=float)
     evaluated = {"prevalence_no_skill": no_skill, **out_of_fold}
+    if nested_selection:
+        evaluated[NESTED_SELECTION_MODEL] = selected_oof
     metrics = {
         name: _metrics(
             y,
@@ -1157,26 +1455,35 @@ def train_patient_finding_models(
             }
 
     paired: dict[str, PairedDifference] = {}
-    comparisons = [("random_forest", "logistic_minus_random_forest")]
-    if has_clinical_features:
-        comparisons.append((DEMOGRAPHICS_MODEL, "logistic_minus_demographics_only"))
-    for offset, (other, prefix) in enumerate(comparisons):
+    # The selected family's out-of-fold scores against every alternative, paired on
+    # the same bootstrap replicates: is any rival reliably better than it?
+    rivals = [name for name in [*families, *baselines] if name != selected_model]
+    for offset, other in enumerate(rivals):
         differences = _paired_metric_differences(
             y,
             logistic,
             out_of_fold[other],
             group_array,
-            first_name="logistic_regression",
+            first_name=selected_model,
             second_name=other,
             replicates=bootstrap_replicates,
             random_state=random_state + 50 + offset,
         )
-        paired.update({f"{prefix}_{metric}": value for metric, value in differences.items()})
+        paired.update(
+            {
+                f"{selected_model}_minus_{other}_{metric}": value
+                for metric, value in differences.items()
+            }
+        )
 
     return ModelComparison(
         models=metrics,
-        selected_model="logistic_regression",
-        selection_policy="logistic_prespecified_before_evaluation",
+        selected_model=selected_model,
+        selection_policy=(
+            "nested_grouped_cv_one_standard_error_rule"
+            if nested_selection
+            else "fixed_logistic_without_nested_selection"
+        ),
         out_of_fold_probabilities=tuple(float(value) for value in logistic),
         selected_threshold=operating.threshold,
         threshold_capacity=capacity,
@@ -1196,7 +1503,7 @@ def train_patient_finding_models(
             scoring_fold_group_counts=tuple(
                 int(group_series.iloc[score].nunique()) for _, score in folds
             ),
-            threshold_source="pooled_out_of_fold_logistic_predictions",
+            threshold_source="pooled_out_of_fold_selected_model_predictions",
             random_state=random_state,
         ),
         subgroups=_subgroups(
@@ -1212,6 +1519,19 @@ def train_patient_finding_models(
         cohort_sensitivity=sensitivity,
         paired_differences=paired,
         scorer=scorer,
+        tuning={
+            "rule": SELECTION_RULE if nested_selection else "no nested selection (fixed settings)",
+            "grids": {
+                name: {key.removeprefix("model__"): values for key, values in grid.items()}
+                for name, grid in TUNING_GRIDS.items()
+                if name in families
+            },
+            "outer_folds": fold_records,
+            "full_cohort": {
+                "selected": selected_model,
+                "families": {name: _fit_record(fit) for name, fit in final_fits.items()},
+            },
+        },
         features=tuple(feature_names),
         intended_use=(
             "Educational comparison of population-level screening opportunity; "

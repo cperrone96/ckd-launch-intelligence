@@ -8,9 +8,10 @@
   files (BMI, mean systolic blood pressure, self-reported diabetes and hypertension,
   smoking status). Replaced the single 6-PSU holdout with stratified grouped 5-fold
   cross-validation over all 30 PSUs, with 1,000-replicate cluster-bootstrap
-  intervals. Logistic ROC-AUC is 0.772 (95% CI 0.759–0.784) on 4,741 out-of-fold
-  predictions; the clinical predictors add +0.031 (0.018–0.045) over demographics
-  alone. The earlier 0.755 came from one fold whose 6-cluster interval understated
+  intervals. Four tuned families compete under nested grouped CV, and a declared
+  one-standard-error rule on inner log loss selects spline logistic regression:
+  ROC-AUC 0.779 (95% CI 0.766–0.791) on 4,741 out-of-fold predictions, +0.039
+  (0.026–0.051) over demographics alone. The earlier 0.755 came from one fold whose 6-cluster interval understated
   uncertainty.
 - **MEPS variance.** The Diabetes Care Survey population is now a domain of the full
   HC-243 design instead of a subset, which had dropped PSUs and understated standard
