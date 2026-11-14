@@ -1460,6 +1460,14 @@ def train_patient_finding_models(
     selected_model = select_family(final_fits) if nested_selection else "logistic_regression"
     scorer: LogisticScorer | None = None
     if export_scorer:
+        # The deployed scorer is pre-lab only; LogisticScorer.from_dict enforces the same
+        # rule at load time, so fail here instead of shipping an unloadable artifact.
+        outside = sorted(set(feature_names) - set(PRE_LAB_FEATURES))
+        if outside:
+            raise FeatureValidationError(
+                "scorer export allows only pre-laboratory features; "
+                f"set export_scorer=False to train with: {', '.join(outside)}"
+            )
         if selected_model not in SCORER_FAMILIES:
             raise FeatureValidationError(
                 f"selected family {selected_model} has no portable JSON scorer; "

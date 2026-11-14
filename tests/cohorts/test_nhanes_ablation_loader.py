@@ -150,3 +150,41 @@ def test_sas_pseudo_zero_codes_become_true_zero() -> None:
 
     assert normalized["HUQ051"].tolist() == [0.0, 3.0]
     assert ablation.care_visits_band(normalized["HUQ051"]).tolist() == ["0", "2-5"]
+
+
+def test_topical_ophthalmic_and_nystatin_are_not_systemic_classes() -> None:
+    rx = pd.DataFrame(
+        {
+            "SEQN": [1, 2, 3, 4],
+            "RXDUSE": [1.0, 1.0, 1.0, 1.0],
+            "RXDDRUG": [
+                "NYSTATIN",
+                "DORZOLAMIDE; TIMOLOL OPHTHALMIC",
+                "DICLOFENAC TOPICAL",
+                "EZETIMIBE; SIMVASTATIN",
+            ],
+        }
+    )
+
+    out = ablation.medication_features(rx).set_index("SEQN")
+
+    assert out.loc[1, "medication_statin"] == "No"
+    assert out.loc[2, "medication_other_antihypertensive"] == "No"
+    assert out.loc[3, "medication_nsaid"] == "No"
+    assert out.loc[4, "medication_statin"] == "Yes"
+    # They still count as prescriptions taken.
+    assert out["prescription_count_band"].tolist() == ["1-2"] * 4
+
+
+def test_beta_blockers_include_carvedilol_labetalol_and_sotalol() -> None:
+    rx = pd.DataFrame(
+        {
+            "SEQN": [1, 2, 3],
+            "RXDUSE": [1.0, 1.0, 1.0],
+            "RXDDRUG": ["CARVEDILOL", "LABETALOL", "SOTALOL"],
+        }
+    )
+
+    out = ablation.medication_features(rx)
+
+    assert out["medication_other_antihypertensive"].tolist() == ["Yes", "Yes", "Yes"]

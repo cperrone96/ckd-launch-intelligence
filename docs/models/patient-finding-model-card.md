@@ -170,35 +170,43 @@ All numbers in this section come from
 `data/processed/patient_finding_predictor_ablation.json`, built by
 `python -m ckd_intelligence.analysis.predictor_ablation`. Four feature sets go through
 the same nested grouped cross-validation and selection rule as the deployed model. They
-share one cohort: 4,321 adults complete on all 30 predictors (695 of the 5,016 in the
-indicator domain are excluded; indicator prevalence 18.2%). The medical-history
-questions are asked only of adults 20 and older, so this cohort has no 18- or
-19-year-olds. That's why its current-model row (0.771) sits below the headline 0.779.
-The rule picked plain logistic regression for every set.
+share one cohort: 4,321 adults complete on all 30 predictors (indicator prevalence
+18.2%). That's 420 fewer people than the published cohort. 216 of them are 18 or 19
+(the medical-history questions are asked only of adults 20 and older); 204 are missing
+another added item.
+
+On this cohort the rule picked plain logistic regression for every set, not the
+deployed spline model. That choice explains most of the gap between the current-model
+row (0.771) and the headline 0.779: on the published cohort, plain logistic scores
+0.772 against the spline's 0.779. The gains below are measured over plain logistic.
 
 | Feature set | Predictors | ROC-AUC (95% CI) | Gain over current (paired 95% CI) | PR-AUC | Precision / recall at top 10% |
 |---|---|---|---|---|---|
 | Current pre-lab model | 8 | 0.771 (0.758–0.784) | — | 0.455 | 0.549 / 0.301 |
-| + survey, exam and prescription predictors | 28 | 0.780 (0.767–0.792) | +0.008 (+0.003 to +0.013) | 0.484 | 0.560 / 0.307 |
+| + survey, exam and prescription predictors | 28 | 0.780 (0.768–0.792) | +0.009 (+0.004 to +0.014) | 0.487 | 0.569 / 0.312 |
 | + HbA1c and hemoglobin | 10 | 0.783 (0.771–0.795) | +0.012 (+0.007 to +0.017) | 0.489 | 0.567 / 0.311 |
-| + all of the above | 30 | 0.791 (0.780–0.802) | +0.020 (+0.014 to +0.026) | 0.511 | 0.593 / 0.325 |
+| + all of the above | 30 | 0.792 (0.781–0.802) | +0.021 (+0.014 to +0.027) | 0.514 | 0.593 / 0.325 |
 
 The 20 extra survey, exam and prescription predictors are waist circumference,
 diastolic blood pressure, six history items (heart failure, coronary disease, heart
-attack, stroke, gout, anemia treatment), six medication classes taken from drug names,
-the number of prescriptions, income, education, self-rated health, a past-year
-hospital stay and health-care visits. Prescription reason codes are never read,
-because some of them name a kidney diagnosis.
+attack, stroke, gout, anemia treatment), six medication classes taken from drug names
+(eye drops and skin products excluded), the number of prescriptions, income,
+education, self-rated health, a past-year hospital stay and health-care visits.
+Prescription reason codes are never read, because some of them name a kidney diagnosis.
 
-Every addition helps a little; none clears 0.80. Two fingerstick labs add more than
-all 20 survey, exam and prescription predictors. The deployed score stays on the eight
-pre-lab predictors, so it still needs no blood test.
+Every addition helps a little; none clears 0.80. The two labs have a larger point
+estimate than all 20 survey, exam and prescription predictors combined. Their intervals
+overlap, though, and the two sets weren't compared head to head. Fingerstick devices
+can measure both labs, but NHANES measured them on venous blood in a laboratory, so a
+point-of-care version would add its own measurement error. The deployed score stays on
+the eight pre-lab predictors, so it still needs no blood test.
 
-**Why the target stays.** Of the 788 indicator-positive adults in this cohort, 443
-(56%) have albuminuria with eGFR ≥60; 217 have low eGFR only and 128 have both. Scored
-against low eGFR alone, the published model reaches ROC-AUC 0.858 (table above). That
-target would leave out the 56% whose only sign is albuminuria, so the primary
-definition stays.
+**Why the target stays.** Of the 788 indicator-positive adults in the shared cohort,
+443 (56%) have albuminuria with eGFR ≥60; 217 have low eGFR only and 128 have both. No
+model was retrained on low eGFR alone. Scored against that target on the published
+cohort, the deployed model's existing scores reach ROC-AUC 0.858 (table above). A
+program built on that target would leave out the 56% whose only sign is albuminuria,
+so the primary definition stays.
 
 ## Scoring artifact
 

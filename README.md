@@ -9,7 +9,7 @@ How many U.S. adults have laboratory signs of chronic kidney disease (CKD), can 
 | Share of U.S. adults with the CKD lab indicator (eGFR <60 or UACR ≥30 mg/g) | **13.9%** | 95% CI 12.5–15.3%; survey-weighted, n = 5,016 |
 | How well 8 pre-lab predictors rank who has it (selected model: spline logistic regression) | **ROC-AUC 0.779** | 95% CI 0.766–0.791; tuned random forest 0.781, paired difference −0.002 (−0.008 to +0.004); no-skill 0.500 |
 | What the clinical predictors add over age, sex and race/ethnicity | **+0.039 ROC-AUC** | paired 95% CI +0.026 to +0.051 |
-| What 22 more predictors add, including HbA1c and hemoglobin | **+0.020 ROC-AUC**, to 0.791 | paired 95% CI +0.014 to +0.026; shared cohort of 4,321 adults 20+; deployed model unchanged |
+| What 22 more predictors add, including HbA1c and hemoglobin | **+0.021 ROC-AUC** (0.771 → 0.792) | paired 95% CI +0.014 to +0.027; plain logistic on a shared cohort of 4,321 adults 20+; deployed model unchanged |
 | Yield of screening the top 10% by predicted risk | **56.1% positive**, 30.6% of all positives found | base rate 18.4% (3.1× lift) |
 | Extra yearly health spending for adults with diabetes who report kidney problems | **+$10,974** per person ($26,494 vs $15,520) | 95% CI $6,172–$15,775; MEPS 2022 |
 | Registered CKD studies on ClinicalTrials.gov | **3,706**, of which 419 recruiting | full snapshot, 2026-09-11 |
@@ -20,9 +20,9 @@ How many U.S. adults have laboratory signs of chronic kidney disease (CKD), can 
 
 **How the model was chosen.** Four families were tuned inside nested grouped cross-validation: L2 logistic, spline logistic, random forest and gradient boosting. A rule written before the nested run picks the simplest family within one standard error of the best inner log loss. It chose the spline logistic model, which is also the best calibrated (Brier 0.1223). No tuned rival beats it reliably, and it ships as a small JSON scorer. The choice was close: inside the outer folds the rule picked plain logistic in 4 of 5 fit sets, so the conservative estimate for the whole procedure is ROC-AUC 0.773 (0.759–0.786).
 
-**What else was tried.** Twenty more predictors from the survey, exam and prescription files raised ROC-AUC by 0.008 on a shared cohort of 4,321 adults. Two fingerstick labs (HbA1c, hemoglobin) raised it by 0.012; all 22 together raised it by 0.020, to 0.791. Retargeting to low eGFR alone would score 0.858 but would miss the 56% of indicator-positive adults whose only sign is albuminuria, so the deployed score stays on the eight pre-lab predictors ([model card](docs/models/patient-finding-model-card.md#what-else-was-tried)).
+**What else was tried.** On a shared cohort of 4,321 adults, plain logistic regression rises from 0.771 to 0.792 when 22 predictors are added: 20 from the survey, exam and prescription files (+0.009 alone) plus HbA1c with hemoglobin (+0.012 alone), labs that fingerstick devices can measure but NHANES measured on venous blood. Scored against low eGFR alone on the published cohort, the deployed model reaches 0.858, but that target would leave out the 56% of indicator-positive adults in the shared cohort whose only sign is albuminuria. The deployed score therefore stays on the eight pre-lab predictors ([model card](docs/models/patient-finding-model-card.md#what-else-was-tried)).
 
-Numbers come from `data/processed/patient_need_summary.json`, `patient_finding_model_comparison.json`, `meps_hc243_2022_landscape.json` and `clinicaltrials_ckd_landscape.json`. The [model card](docs/models/patient-finding-model-card.md) has calibration, subgroup and definition-sensitivity results.
+Numbers come from `data/processed/patient_need_summary.json`, `patient_finding_model_comparison.json`, `patient_finding_predictor_ablation.json`, `meps_hc243_2022_landscape.json` and `clinicaltrials_ckd_landscape.json`. The [model card](docs/models/patient-finding-model-card.md) has calibration, subgroup and definition-sensitivity results.
 
 ## Approach
 

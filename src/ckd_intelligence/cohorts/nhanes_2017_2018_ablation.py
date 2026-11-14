@@ -48,15 +48,19 @@ MEDICATION_CLASS_PATTERNS: dict[str, str] = {
         r"SPIRONOLACTONE|TRIAMTERENE|INDAPAMIDE|METOLAZONE|EPLERENONE"
     ),
     "medication_insulin": r"INSULIN",
-    "medication_statin": r"STATIN\b",
+    # VASTATIN, not STATIN: nystatin is an antifungal.
+    "medication_statin": r"VASTATIN\b",
     "medication_nsaid": (
         r"IBUPROFEN|NAPROXEN|MELOXICAM|DICLOFENAC|CELECOXIB|INDOMETHACIN|ETODOLAC|NABUMETONE"
     ),
     "medication_other_antihypertensive": (
-        r"AMLODIPINE|NIFEDIPINE|DILTIAZEM|VERAPAMIL|OLOL\b|CLONIDINE|HYDRALAZINE|"
+        r"AMLODIPINE|NIFEDIPINE|DILTIAZEM|VERAPAMIL|OLOL\b|ALOL\b|ILOL\b|CLONIDINE|HYDRALAZINE|"
         r"DOXAZOSIN|TERAZOSIN"
     ),
 }
+# Eye drops and skin products don't count toward systemic classes (timolol eye drops
+# are not a blood-pressure pill), though they still count as prescriptions taken.
+NON_SYSTEMIC_PATTERN = r"OPHTHALMIC|TOPICAL"
 _YES_NO = {1.0: "Yes", 2.0: "No"}
 _HEALTH = {1.0: "Excellent", 2.0: "Very good", 3.0: "Good", 4.0: "Fair", 5.0: "Poor"}
 _VISITS = {0.0: "0", 1.0: "1", 2.0: "2-5", 3.0: "2-5", 4.0: "6-9", 5.0: "6-9"}
@@ -128,8 +132,9 @@ def medication_features(rx: pd.DataFrame) -> pd.DataFrame:
     taking["drug"] = taking["RXDDRUG"].fillna("").astype(str).str.upper()
     out = pd.DataFrame(index=use.index)
     answered = use.isin([1.0, 2.0])
+    systemic = taking.loc[~taking["drug"].str.contains(NON_SYSTEMIC_PATTERN, regex=True)]
     for name, pattern in MEDICATION_CLASS_PATTERNS.items():
-        users = set(taking.loc[taking["drug"].str.contains(pattern, regex=True), "SEQN"])
+        users = set(systemic.loc[systemic["drug"].str.contains(pattern, regex=True), "SEQN"])
         flags = pd.Series(np.where(out.index.isin(users), "Yes", "No"), index=out.index)
         out[name] = flags.where(answered).astype("string")
     count = taking.groupby("SEQN").size().reindex(out.index, fill_value=0)

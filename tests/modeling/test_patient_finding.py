@@ -736,3 +736,16 @@ def test_scorer_export_can_be_skipped_when_a_tree_family_is_selected(
     assert comparison.selected_model == "gradient_boosting"
     assert comparison.scorer is None
     assert comparison.to_artifact()["scorer"] is None
+
+
+def test_scorer_export_refuses_features_outside_the_pre_lab_set() -> None:
+    cohort, groups = _modeling_cohort()
+    cohort["hba1c_percent"] = 5.5 + (cohort["age_years"] % 7) * 0.3
+
+    with pytest.raises(FeatureValidationError, match="pre-laboratory"):
+        train_patient_finding_models(
+            cohort,
+            groups,
+            bootstrap_replicates=20,
+            features=[*DEMOGRAPHIC_FEATURES, "hba1c_percent"],
+        )

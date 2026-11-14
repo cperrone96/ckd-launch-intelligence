@@ -7,9 +7,10 @@
 - **Predictor ablation.** `python -m ckd_intelligence.analysis.predictor_ablation`
   writes `data/processed/patient_finding_predictor_ablation.json`. Four feature sets
   run through the deployed model's nested grouped CV on one shared cohort of 4,321
-  adults. Twenty more survey, exam and prescription predictors add +0.008 ROC-AUC
-  (paired 95% CI +0.003 to +0.013). HbA1c with hemoglobin adds +0.012 (+0.007 to
-  +0.017). All 22 together add +0.020 (+0.014 to +0.026), reaching 0.791 (0.780–0.802).
+  adults, where the rule picks plain logistic (0.771). Twenty more survey, exam and
+  prescription predictors add +0.009 ROC-AUC (paired 95% CI +0.004 to +0.014). HbA1c
+  with hemoglobin adds +0.012 (+0.007 to +0.017). All 22 together add +0.021 (+0.014 to
+  +0.027), reaching 0.792 (0.781–0.802).
 - **Five more NHANES files** (`GHB_J`, `CBC_J`, `MCQ_J`, `HUQ_J`, `RXQ_RX_J`) under
   their own checksum manifest. Prescription reason codes are never read.
 

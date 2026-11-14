@@ -47,13 +47,14 @@ subgroups and definitions.
 
 Four feature sets scored by the same nested grouped CV and selection rule as the
 deployed model, on one complete-case cohort of 4,321 adults aged 20+ (indicator
-prevalence 18.2%). Each richer set is compared with the current eight predictors on
-the same 1,000 cluster-bootstrap replicates.
+prevalence 18.2%). The rule picked plain logistic regression for every set. Each richer
+set is compared with the current eight predictors on the same 1,000 cluster-bootstrap
+replicates.
 
-- Current eight predictors: ROC-AUC 0.771 (95% CI 0.758–0.784) on this cohort.
-- Plus 20 survey, exam and prescription predictors: 0.780; gain +0.008 (+0.003 to +0.013).
+- Current eight predictors, plain logistic: ROC-AUC 0.771 (95% CI 0.758–0.784).
+- Plus 20 survey, exam and prescription predictors: 0.780; gain +0.009 (+0.004 to +0.014).
 - Plus HbA1c and hemoglobin: 0.783; gain +0.012 (+0.007 to +0.017).
-- Plus all 22: 0.791 (0.780–0.802); gain +0.020 (+0.014 to +0.026).
+- Plus all 22: 0.792 (0.781–0.802); gain +0.021 (+0.014 to +0.027).
 - Target coverage: 443 of 788 indicator-positive adults (56%) have albuminuria
   without low eGFR.
 
