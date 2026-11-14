@@ -10,6 +10,7 @@ fixture can never overwrite official output.
 from __future__ import annotations
 
 import json
+from collections.abc import Sequence
 from dataclasses import asdict, dataclass
 from hashlib import sha256
 from pathlib import Path
@@ -194,21 +195,27 @@ class ModelingCohort:
     attrition: dict[str, object]
 
 
-def modeling_cohort(loaded: LoadedPeople) -> ModelingCohort:
-    """Complete-case cohort on the indicator domain and every available predictor."""
+def modeling_cohort(
+    loaded: LoadedPeople, features: Sequence[str] = PRE_LAB_FEATURES
+) -> ModelingCohort:
+    """Complete-case cohort on the indicator domain and every available predictor.
+
+    ``features`` defaults to the deployed pre-lab set; the predictor-ablation analysis
+    passes a longer list so every feature set is scored on the same people.
+    """
 
     people = loaded.people
     if loaded.evidence_type == "fixture_only":
         people = nhanes.add_ckd_indicators(_expanded_fixture(people))
     domain = nhanes.eligible_domain(people) & people[PRIMARY].notna()
     analytic = people.loc[domain].copy()
-    features = [name for name in PRE_LAB_FEATURES if name in analytic.columns]
-    complete = analytic.dropna(subset=features).copy()
+    available = [name for name in features if name in analytic.columns]
+    complete = analytic.dropna(subset=available).copy()
     attrition: dict[str, object] = {
         "indicator_domain": len(analytic),
         "missing_by_predictor": {
             name: int(analytic[name].isna().sum())
-            for name in features
+            for name in available
             if analytic[name].isna().any()
         },
         "excluded_any_missing_predictor": len(analytic) - len(complete),
@@ -216,7 +223,7 @@ def modeling_cohort(loaded: LoadedPeople) -> ModelingCohort:
     }
     complete["ckd_indicator"] = complete[PRIMARY].astype(int)
     columns = [
-        *features,
+        *available,
         "ckd_indicator",
         CKDDefinition.egfr_only().name,
         CKDDefinition.albuminuria_only().name,

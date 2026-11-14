@@ -1,0 +1,586 @@
+{
+  "artifact_schema": "ckd_patient_finding_predictor_ablation_v1",
+  "capacity": 0.1,
+  "cohort_attrition": {
+    "excluded_any_missing_predictor": 695,
+    "indicator_domain": 5016,
+    "missing_by_predictor": {
+      "anemia_treatment": 10,
+      "body_mass_index": 60,
+      "care_visits_band": 12,
+      "coronary_disease_history": 251,
+      "diabetes_history": 3,
+      "diastolic_blood_pressure": 231,
+      "education_level": 243,
+      "gout_history": 242,
+      "hba1c_percent": 4,
+      "heart_attack_history": 246,
+      "heart_failure_history": 249,
+      "hemoglobin_g_dl": 3,
+      "hospitalized_past_year": 1,
+      "hypertension_history": 10,
+      "medication_ace_or_arb": 8,
+      "medication_diuretic": 8,
+      "medication_insulin": 8,
+      "medication_nsaid": 8,
+      "medication_other_antihypertensive": 8,
+      "medication_statin": 8,
+      "prescription_count_band": 8,
+      "self_rated_health": 6,
+      "stroke_history": 243,
+      "systolic_blood_pressure": 219,
+      "waist_cm": 216
+    },
+    "model_cohort": 4321
+  },
+  "evaluated_n": 4321,
+  "evaluated_prevalence": 0.18236519324230502,
+  "feature_sets": {
+    "current_pre_lab": {
+      "evaluated_n": 4321,
+      "features": [
+        "age_years",
+        "sex",
+        "race_ethnicity",
+        "body_mass_index",
+        "systolic_blood_pressure",
+        "diabetes_history",
+        "hypertension_history",
+        "smoking_status"
+      ],
+      "nested_selection_roc_auc": 0.7724313614491932,
+      "nested_selection_roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7844503189226449,
+        "low": 0.7596149322371719,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "pr_auc": 0.45507137856219987,
+      "pr_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.4875362094965326,
+        "low": 0.42344626916199407,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision_at_capacity": 0.5486111111111112,
+      "precision_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5915624281821464,
+        "low": 0.48283356498485897,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall_at_capacity": 0.30076142131979694,
+      "recall_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.31851851851851853,
+        "low": 0.27135200542590254,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "roc_auc": 0.7712021965485681,
+      "roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7840033481309113,
+        "low": 0.7582786524469304,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_model": "logistic_regression"
+    },
+    "plus_labs_and_questionnaire": {
+      "evaluated_n": 4321,
+      "features": [
+        "age_years",
+        "sex",
+        "race_ethnicity",
+        "body_mass_index",
+        "systolic_blood_pressure",
+        "diabetes_history",
+        "hypertension_history",
+        "smoking_status",
+        "hba1c_percent",
+        "hemoglobin_g_dl",
+        "waist_cm",
+        "diastolic_blood_pressure",
+        "heart_failure_history",
+        "coronary_disease_history",
+        "heart_attack_history",
+        "stroke_history",
+        "gout_history",
+        "anemia_treatment",
+        "medication_ace_or_arb",
+        "medication_diuretic",
+        "medication_insulin",
+        "medication_statin",
+        "medication_nsaid",
+        "medication_other_antihypertensive",
+        "prescription_count_band",
+        "income_poverty_band",
+        "education_level",
+        "self_rated_health",
+        "hospitalized_past_year",
+        "care_visits_band"
+      ],
+      "nested_selection_roc_auc": 0.7897675434374376,
+      "nested_selection_roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.8016824478586246,
+        "low": 0.7762375416530234,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "pr_auc": 0.5107393787465562,
+      "pr_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5414847382106456,
+        "low": 0.47829569228834956,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision_at_capacity": 0.5925925925925926,
+      "precision_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.6385886302044839,
+        "low": 0.5473271747498076,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall_at_capacity": 0.3248730964467005,
+      "recall_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.34523809523809523,
+        "low": 0.3080416548482516,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "roc_auc": 0.7911500845544762,
+      "roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.8020051258749878,
+        "low": 0.7800443060780354,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_model": "logistic_regression"
+    },
+    "plus_point_of_care_labs": {
+      "evaluated_n": 4321,
+      "features": [
+        "age_years",
+        "sex",
+        "race_ethnicity",
+        "body_mass_index",
+        "systolic_blood_pressure",
+        "diabetes_history",
+        "hypertension_history",
+        "smoking_status",
+        "hba1c_percent",
+        "hemoglobin_g_dl"
+      ],
+      "nested_selection_roc_auc": 0.7865735825092206,
+      "nested_selection_roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7974892369033553,
+        "low": 0.7747384957798328,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "pr_auc": 0.48940907324235783,
+      "pr_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5247596973268841,
+        "low": 0.45531936850826127,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision_at_capacity": 0.5671296296296297,
+      "precision_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.6061408106219427,
+        "low": 0.5209302325581395,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall_at_capacity": 0.31091370558375636,
+      "recall_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.3311083661193648,
+        "low": 0.28979512606953506,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "roc_auc": 0.783122438042474,
+      "roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7948139672471941,
+        "low": 0.7712427501800834,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_model": "logistic_regression"
+    },
+    "plus_questionnaire": {
+      "evaluated_n": 4321,
+      "features": [
+        "age_years",
+        "sex",
+        "race_ethnicity",
+        "body_mass_index",
+        "systolic_blood_pressure",
+        "diabetes_history",
+        "hypertension_history",
+        "smoking_status",
+        "waist_cm",
+        "diastolic_blood_pressure",
+        "heart_failure_history",
+        "coronary_disease_history",
+        "heart_attack_history",
+        "stroke_history",
+        "gout_history",
+        "anemia_treatment",
+        "medication_ace_or_arb",
+        "medication_diuretic",
+        "medication_insulin",
+        "medication_statin",
+        "medication_nsaid",
+        "medication_other_antihypertensive",
+        "prescription_count_band",
+        "income_poverty_band",
+        "education_level",
+        "self_rated_health",
+        "hospitalized_past_year",
+        "care_visits_band"
+      ],
+      "nested_selection_roc_auc": 0.7799076438108568,
+      "nested_selection_roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.7918787790366719,
+        "low": 0.7672743493399921,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "pr_auc": 0.48397639493091266,
+      "pr_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.5151169643963831,
+        "low": 0.4545497434918517,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "precision_at_capacity": 0.5601851851851852,
+      "precision_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.6177827715355805,
+        "low": 0.5137552690304984,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "recall_at_capacity": 0.30710659898477155,
+      "recall_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.33170149565632745,
+        "low": 0.28719013441280583,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "roc_auc": 0.7795150438002244,
+      "roc_auc_interval": {
+        "caveat": null,
+        "cluster_count": 30,
+        "high": 0.792336131106178,
+        "low": 0.7670200487029926,
+        "method": "cluster_bootstrap_percentile",
+        "requested_replicates": 1000,
+        "valid_replicates": 1000
+      },
+      "selected_model": "logistic_regression"
+    }
+  },
+  "intended_use": "Exploratory measurement of how much extra predictors change discrimination; not a deployed model, a diagnosis or a clinical decision tool.",
+  "limitations": [
+    "Every feature set is scored on the ablation cohort (complete on all predictors), so its current_pre_lab row can differ slightly from the published model.",
+    "Medical-history and education questions are asked only of adults 20 and older, so the ablation cohort excludes 18- and 19-year-olds.",
+    "Low hemoglobin is partly a consequence of CKD, not only a risk factor.",
+    "Medication classes come from drug names; prescription reason codes are excluded.",
+    "The ablation design was written after exploratory runs on the same data.",
+    "No scorer is exported; a richer set may select a tree family."
+  ],
+  "paired_vs_current": {
+    "plus_labs_and_questionnaire": {
+      "brier_score": {
+        "comparison": "plus_labs_and_questionnaire minus current_pre_lab",
+        "estimate": -0.005622239825363695,
+        "interpretation": "plus_labs_and_questionnaire has lower error.",
+        "interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": -0.003652466339613968,
+          "low": -0.007706812835627061,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "metric": "brier_score"
+      },
+      "pr_auc": {
+        "comparison": "plus_labs_and_questionnaire minus current_pre_lab",
+        "estimate": 0.0556680001843563,
+        "interpretation": "plus_labs_and_questionnaire has higher discrimination.",
+        "interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.07294953025792532,
+          "low": 0.035482951202801837,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "metric": "pr_auc"
+      },
+      "roc_auc": {
+        "comparison": "plus_labs_and_questionnaire minus current_pre_lab",
+        "estimate": 0.019947888005908077,
+        "interpretation": "plus_labs_and_questionnaire has higher discrimination.",
+        "interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.02641272895620982,
+          "low": 0.013566472524388185,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "metric": "roc_auc"
+      }
+    },
+    "plus_point_of_care_labs": {
+      "brier_score": {
+        "comparison": "plus_point_of_care_labs minus current_pre_lab",
+        "estimate": -0.0033498060253955714,
+        "interpretation": "plus_point_of_care_labs has lower error.",
+        "interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": -0.0018943300912784467,
+          "low": -0.0048595432388032055,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "metric": "brier_score"
+      },
+      "pr_auc": {
+        "comparison": "plus_point_of_care_labs minus current_pre_lab",
+        "estimate": 0.03433769468015796,
+        "interpretation": "plus_point_of_care_labs has higher discrimination.",
+        "interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.04990086721481733,
+          "low": 0.017921120673935156,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "metric": "pr_auc"
+      },
+      "roc_auc": {
+        "comparison": "plus_point_of_care_labs minus current_pre_lab",
+        "estimate": 0.011920241493905803,
+        "interpretation": "plus_point_of_care_labs has higher discrimination.",
+        "interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.017361737159682217,
+          "low": 0.006866315959760805,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "metric": "roc_auc"
+      }
+    },
+    "plus_questionnaire": {
+      "brier_score": {
+        "comparison": "plus_questionnaire minus current_pre_lab",
+        "estimate": -0.002713231235333999,
+        "interpretation": "plus_questionnaire has lower error.",
+        "interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": -0.0013507068054183031,
+          "low": -0.004012947552232094,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "metric": "brier_score"
+      },
+      "pr_auc": {
+        "comparison": "plus_questionnaire minus current_pre_lab",
+        "estimate": 0.028905016368712788,
+        "interpretation": "plus_questionnaire has higher discrimination.",
+        "interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.04400218158639619,
+          "low": 0.015955272372188065,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "metric": "pr_auc"
+      },
+      "roc_auc": {
+        "comparison": "plus_questionnaire minus current_pre_lab",
+        "estimate": 0.008312847251656263,
+        "interpretation": "plus_questionnaire has higher discrimination.",
+        "interval": {
+          "caveat": null,
+          "cluster_count": 30,
+          "high": 0.013362286557186577,
+          "low": 0.0027996579498222236,
+          "method": "cluster_bootstrap_percentile",
+          "requested_replicates": 1000,
+          "valid_replicates": 1000
+        },
+        "metric": "roc_auc"
+      }
+    }
+  },
+  "selection_policy": "nested_grouped_cv_one_standard_error_rule",
+  "source_provenance": {
+    "files": [
+      {
+        "bytes": 3412720,
+        "name": "DEMO_J.xpt",
+        "sha256": "c0b46e0345ea19404928656277c8b0d10b0cca348a9b2fe4fc3c67e8b7ee73ec",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DEMO_J.xpt"
+      },
+      {
+        "bytes": 2106080,
+        "name": "BIOPRO_J.xpt",
+        "sha256": "5bcd5722c1892883b96a9d7fed0befadabacae313f800fadc0133cd5dd00c4c6",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BIOPRO_J.xpt"
+      },
+      {
+        "bytes": 509760,
+        "name": "ALB_CR_J.xpt",
+        "sha256": "0017a7b8d87d29009923e22300b4ec393b06c9bbf6147eb6b2d777aca605bcbf",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/ALB_CR_J.xpt"
+      },
+      {
+        "bytes": 1466000,
+        "name": "BMX_J.xpt",
+        "sha256": "8d675e42d8826ac98714b2c3dd4c5138a5e353fb4424f7eff5e6db4a01ce838a",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BMX_J.xpt"
+      },
+      {
+        "bytes": 1466000,
+        "name": "BPX_J.xpt",
+        "sha256": "f98f1d9a4c18173e715c749b4294f6f1525140d5ad5751316bb17cc038fb3423",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BPX_J.xpt"
+      },
+      {
+        "bytes": 3851840,
+        "name": "DIQ_J.xpt",
+        "sha256": "1ecbf5360dfc331d1efbf32198553dc30e9a1f4cff0a907ed30ca72bac797f89",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/DIQ_J.xpt"
+      },
+      {
+        "bytes": 544560,
+        "name": "BPQ_J.xpt",
+        "sha256": "63cfe1c331a1e7d3534328ac86312a21ffee3e01aa189bc1f74d06855239e5aa",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/BPQ_J.xpt"
+      },
+      {
+        "bytes": 2305600,
+        "name": "SMQ_J.xpt",
+        "sha256": "73c3708e540cbf520a566508aa629c3e4ba53cad77dae9388ca36384646455f4",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/SMQ_J.xpt"
+      },
+      {
+        "bytes": 103520,
+        "name": "GHB_J.xpt",
+        "sha256": "35f07094573a0061a03ed609a5a363b34eb1b1c7065d1623b43d72e132a8a654",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/GHB_J.xpt"
+      },
+      {
+        "bytes": 1476320,
+        "name": "CBC_J.xpt",
+        "sha256": "00f964098dc91272e415344554cbf1b627ecaeb2eda201518527446a7d81e742",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/CBC_J.xpt"
+      },
+      {
+        "bytes": 5420800,
+        "name": "MCQ_J.xpt",
+        "sha256": "79c50c805a377fcd61d44fae8b86a16af0a5741f8b1aeebda918d7d743c68f98",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/MCQ_J.xpt"
+      },
+      {
+        "bytes": 742480,
+        "name": "HUQ_J.xpt",
+        "sha256": "0d8814ca6a72c003eb89885a3a24dcff3b475dfed454089cf4890f9ab9da06d2",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HUQ_J.xpt"
+      },
+      {
+        "bytes": 9627680,
+        "name": "RXQ_RX_J.xpt",
+        "sha256": "6196e6753f9bf23b47456f4fcc2d32de05f89388b512594d02b0735949165545",
+        "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/RXQ_RX_J.xpt"
+      }
+    ],
+    "manifests": [
+      "data/manifests/nhanes-2017-2018-patient-need.json",
+      "data/manifests/nhanes-2017-2018-predictor-ablation.json"
+    ]
+  },
+  "target_coverage": {
+    "albuminuria_only": 443,
+    "both": 128,
+    "low_egfr_only": 217,
+    "primary_positives": 788,
+    "share_of_primary_positives_with_low_egfr": 0.43781725888324874
+  }
+}

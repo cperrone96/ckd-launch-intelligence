@@ -53,6 +53,7 @@ data: check-venv
 # `scripts/build_public_landscape.py partd trials` after their retrieve_* scripts.
 artifacts: check-venv
 	"$(PYTHON)" -m ckd_intelligence.analysis.nhanes_pipeline
+	"$(PYTHON)" -m ckd_intelligence.analysis.predictor_ablation
 	"$(PYTHON)" scripts/build_public_landscape.py meps
 
 figures: check-venv

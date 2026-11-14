@@ -85,8 +85,9 @@ deployed patient-finding model does not use any of them.
 
 Refused and don't-know answers to clinical questions stay missing, as in the base
 loader; people missing any ablation predictor leave the ablation cohort and are
-counted in its attrition. Income and education nonresponse is its own
-"Not reported" level. Diastolic pressure is the mean of readings above zero, because
+counted in its attrition. The medical-history and education questions are asked only
+of adults 20 and older, so the ablation cohort is in effect adults 20+. Income
+nonresponse (about one in eight) is its own "Not reported" level. Diastolic pressure is the mean of readings above zero, because
 NHANES records an inaudible diastolic as 0.
 
 Prescription reason codes (`RXDRSC1`-`RXDRSC3`) are never read. Some name a kidney

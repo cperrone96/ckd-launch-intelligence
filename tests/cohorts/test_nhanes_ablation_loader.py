@@ -76,18 +76,18 @@ def test_care_visit_codes_map_to_bands() -> None:
     assert bands.iloc[8:].isna().all()
 
 
-def test_income_and_education_nonresponse_is_not_reported() -> None:
+def test_income_nonresponse_is_not_reported() -> None:
     income = ablation.income_poverty_band(pd.Series([0.5, 1.0, 1.5, 3.0, 5.0, np.nan]))
-    education = ablation.education_level(pd.Series([1.0, 5.0, 7.0, 9.0, np.nan]))
 
     assert income.tolist() == ["<1", "1-2", "1-2", "2-4", "4+", "Not reported"]
-    assert education.tolist() == [
-        "<9th grade",
-        "College graduate",
-        "Not reported",
-        "Not reported",
-        "Not reported",
-    ]
+
+
+def test_education_nonresponse_stays_missing() -> None:
+    # Only a handful of adults refuse; a level that small breaks cross-validation folds.
+    education = ablation.education_level(pd.Series([1.0, 5.0, 7.0, 9.0, np.nan]))
+
+    assert education.iloc[:2].tolist() == ["<9th grade", "College graduate"]
+    assert education.iloc[2:].isna().all()
 
 
 def test_diastolic_ignores_zero_readings() -> None:
@@ -132,3 +132,21 @@ def test_verified_snapshot_has_one_row_per_participant() -> None:
     ]
     assert len(predictors) == 9254
     assert predictors["hba1c_percent"].dropna().between(3.0, 20.0).all()
+    # Code 0 ("no visits") survives the SAS pseudo-zero encoding.
+    assert (predictors["care_visits_band"] == "0").sum() > 1000
+
+
+def test_diastolic_treats_sas_pseudo_zero_as_zero() -> None:
+    # SAS XPORT stores 0 as 5.397605346934028e-79; it must not count as a reading.
+    readings = pd.DataFrame({"a": [5.397605346934028e-79], "b": [70.0], "c": [74.0]})
+
+    assert ablation.mean_positive_readings(readings).iloc[0] == pytest.approx(72.0)
+
+
+def test_sas_pseudo_zero_codes_become_true_zero() -> None:
+    frame = pd.DataFrame({"SEQN": [1.0, 2.0], "HUQ051": [5.397605346934028e-79, 3.0]})
+
+    normalized = ablation.normalize_sas_zero(frame)
+
+    assert normalized["HUQ051"].tolist() == [0.0, 3.0]
+    assert ablation.care_visits_band(normalized["HUQ051"]).tolist() == ["0", "2-5"]

@@ -3,8 +3,10 @@
 Five more public-use files (``data/manifests/nhanes-2017-2018-predictor-ablation.json``)
 plus extra columns from three files the base loader already verifies. Coding follows
 the base loader: refused (7/77) or don't-know (9/99) answers to clinical questions stay
-missing and are never recoded to "No". Income and education nonresponse is common and
-informative, so it becomes its own ``"Not reported"`` level.
+missing and are never recoded to "No". Income nonresponse is common (about one in
+eight) and informative, so it becomes its own ``"Not reported"`` level. The medical
+history and education questions are asked only of adults 20 and older, so younger
+adults leave the ablation cohort.
 
 Prescription reason codes (``RXDRSC1``-``RXDRSC3``) are never read: some name a kidney
 diagnosis. The drug name is the only medication input.
@@ -96,15 +98,16 @@ def income_poverty_band(ratio: pd.Series) -> pd.Series:
 
 
 def education_level(codes: pd.Series) -> pd.Series:
-    """DMDEDUC2 (adults 20+); refused, don't know and under-20 become Not reported."""
+    """DMDEDUC2 (asked of adults 20+); refused, don't know and not asked stay missing."""
 
-    return codes.map(_EDUCATION).astype("string").fillna(NOT_REPORTED)
+    return codes.map(_EDUCATION).astype("string")
 
 
 def mean_positive_readings(readings: pd.DataFrame) -> pd.Series:
     """Mean of the readings above zero; NHANES records an inaudible diastolic as 0."""
 
-    return readings.where(readings > 0).mean(axis=1, skipna=True)
+    # SAS XPORT encodes 0 as ~5.4e-79, so compare against a small tolerance, not 0.
+    return readings.where(readings > 1e-12).mean(axis=1, skipna=True)
 
 
 def medication_features(rx: pd.DataFrame) -> pd.DataFrame:
@@ -135,10 +138,23 @@ def medication_features(rx: pd.DataFrame) -> pd.DataFrame:
     return out.reset_index()
 
 
+def normalize_sas_zero(frame: pd.DataFrame) -> pd.DataFrame:
+    """Replace the SAS XPORT pseudo-zero (about 5.4e-79) with a true 0 in numeric columns.
+
+    Without this, code 0 answers (such as "no health-care visits") miss their mapping
+    and become missing.
+    """
+
+    out = frame.copy()
+    numeric = out.select_dtypes(include="number").columns
+    out[numeric] = out[numeric].mask(out[numeric].abs() < 1e-12, 0.0)
+    return out
+
+
 def _read(raw_dir: Path, name: str) -> pd.DataFrame:
     frame = pd.read_sas(raw_dir / name, format="xport", encoding="latin1")
     # Select immediately so no unlisted column (such as RXDRSC*) travels further.
-    return frame.loc[:, ["SEQN", *ABLATION_COMPONENT_COLUMNS[name]]]
+    return normalize_sas_zero(frame.loc[:, ["SEQN", *ABLATION_COMPONENT_COLUMNS[name]]])
 
 
 def load_ablation_predictors(root: Path) -> pd.DataFrame:
