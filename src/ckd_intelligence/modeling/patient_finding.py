@@ -56,6 +56,33 @@ PRE_LAB_FEATURES = (
     "hypertension_history",
     "smoking_status",
 )
+# Two fingerstick-capable labs that are not kidney tests. Used only by the
+# predictor-ablation analysis; the deployed scorer stays on PRE_LAB_FEATURES.
+POINT_OF_CARE_LAB_FEATURES = ("hba1c_percent", "hemoglobin_g_dl")
+# Questionnaire, exam and medication predictors tested in the ablation analysis.
+QUESTIONNAIRE_ABLATION_FEATURES = (
+    "waist_cm",
+    "diastolic_blood_pressure",
+    "heart_failure_history",
+    "coronary_disease_history",
+    "heart_attack_history",
+    "stroke_history",
+    "gout_history",
+    "anemia_treatment",
+    "medication_ace_or_arb",
+    "medication_diuretic",
+    "medication_insulin",
+    "medication_statin",
+    "medication_nsaid",
+    "medication_other_antihypertensive",
+    "prescription_count_band",
+    "income_poverty_band",
+    "education_level",
+    "self_rated_health",
+    "hospitalized_past_year",
+    "care_visits_band",
+)
+ALLOWED_FEATURES = PRE_LAB_FEATURES + POINT_OF_CARE_LAB_FEATURES + QUESTIONNAIRE_ABLATION_FEATURES
 DEMOGRAPHIC_FEATURES = ("age_years", "sex", "race_ethnicity")
 DEMOGRAPHICS_MODEL = "logistic_demographics_only"
 # Candidate model families, simplest first. Each is tuned by grid search on an inner
@@ -91,8 +118,18 @@ SELECTION_RULE = (
     "is selected. The outer folds only measure the result."
 )
 LOGISTIC_MAX_ITER = 5000
-NUMERIC_FEATURES = frozenset({"age_years", "body_mass_index", "systolic_blood_pressure"})
-CATEGORICAL_FEATURES = frozenset(PRE_LAB_FEATURES) - NUMERIC_FEATURES
+NUMERIC_FEATURES = frozenset(
+    {
+        "age_years",
+        "body_mass_index",
+        "systolic_blood_pressure",
+        "hba1c_percent",
+        "hemoglobin_g_dl",
+        "waist_cm",
+        "diastolic_blood_pressure",
+    }
+)
+CATEGORICAL_FEATURES = frozenset(ALLOWED_FEATURES) - NUMERIC_FEATURES
 LEAKAGE_TOKENS = (
     "ckd",
     "egfr",
@@ -105,6 +142,13 @@ LEAKAGE_TOKENS = (
     "blood_urea",
     "proteinuria",
     "dialysis",
+    # Prescription reason codes (RXDRSC1-3) can name a kidney diagnosis.
+    "rxdrsc",
+    "reason_code",
+    # Analytes from the biochemistry panel are drawn with serum creatinine.
+    "lbxs",
+    "biopro",
+    "uric_acid",
 )
 
 
@@ -494,7 +538,7 @@ class ModelComparison:
     subgroups: Mapping[str, tuple[SubgroupMetrics, ...]]
     cohort_sensitivity: Mapping[str, Mapping[str, float | int | str]]
     paired_differences: Mapping[str, PairedDifference]
-    scorer: LogisticScorer
+    scorer: LogisticScorer | None
     features: tuple[str, ...]
     intended_use: str
     limitations: tuple[str, ...]
@@ -537,7 +581,7 @@ class ModelComparison:
             "paired_differences": {
                 name: asdict(difference) for name, difference in self.paired_differences.items()
             },
-            "scorer": self.scorer.as_dict(),
+            "scorer": self.scorer.as_dict() if self.scorer is not None else None,
             "tuning": dict(self.tuning),
             "intended_use": self.intended_use,
             "limitations": list(self.limitations),
@@ -561,6 +605,10 @@ def _numeric_range(name: str) -> tuple[float, float]:
         "age_years": (18.0, 120.0),
         "body_mass_index": (10.0, 80.0),
         "systolic_blood_pressure": (60.0, 260.0),
+        "hba1c_percent": (3.0, 20.0),
+        "hemoglobin_g_dl": (5.0, 25.0),
+        "waist_cm": (40.0, 200.0),
+        "diastolic_blood_pressure": (1.0, 150.0),
     }
     return ranges[name]
 
@@ -578,7 +626,7 @@ def build_pre_lab_features(
     leaked = sorted(name for name in chosen if _looks_like_leakage(name))
     if leaked:
         raise LeakageError(f"outcome-defining or derived fields requested: {', '.join(leaked)}")
-    unsupported = sorted(set(chosen) - set(PRE_LAB_FEATURES))
+    unsupported = sorted(set(chosen) - set(ALLOWED_FEATURES))
     if unsupported:
         raise FeatureValidationError(
             f"fields not in the pre-laboratory allowlist: {', '.join(unsupported)}"
@@ -1311,6 +1359,8 @@ def train_patient_finding_models(
     bootstrap_replicates: int = 200,
     n_splits: int = 5,
     nested_selection: bool = False,
+    features: Sequence[str] | None = None,
+    export_scorer: bool = True,
 ) -> ModelComparison:
     """Select and evaluate a screening model with nested grouped cross-validation.
 
@@ -1344,15 +1394,15 @@ def train_patient_finding_models(
     if group_series.isna().any() or group_series.nunique() < 10:
         raise FeatureValidationError("at least ten complete groups are required")
 
-    features = _validate_training_features(build_pre_lab_features(train))
-    if not set(DEMOGRAPHIC_FEATURES).issubset(features.columns):
+    feature_frame = _validate_training_features(build_pre_lab_features(train, features))
+    if not set(DEMOGRAPHIC_FEATURES).issubset(feature_frame.columns):
         raise FeatureValidationError("age_years, sex, and race_ethnicity are required")
-    feature_names = list(features.columns)
+    feature_names = list(feature_frame.columns)
     y = y_series.astype(int).to_numpy()
     group_array = group_series.astype(str).to_numpy()
 
     splitter = StratifiedGroupKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
-    folds = _validated_grouped_splits(splitter, features, y, group_series, context="outer")
+    folds = _validated_grouped_splits(splitter, feature_frame, y, group_series, context="outer")
 
     families = MODEL_FAMILIES if nested_selection else ("logistic_regression", "random_forest")
     has_clinical_features = set(feature_names) != set(DEMOGRAPHIC_FEATURES)
@@ -1362,7 +1412,7 @@ def train_patient_finding_models(
     selected_oof = np.zeros(len(y), dtype=float)
     fold_records: list[dict[str, Any]] = []
     for fit_index, score_index in folds:
-        fit_features = features.iloc[fit_index].reset_index(drop=True)
+        fit_features = feature_frame.iloc[fit_index].reset_index(drop=True)
         fit_groups = group_series.iloc[fit_index].reset_index(drop=True)
         fits = {
             name: _tune_family(
@@ -1379,17 +1429,17 @@ def train_patient_finding_models(
         chosen = select_family(fits) if nested_selection else "logistic_regression"
         for name, fit in fits.items():
             out_of_fold[name][score_index] = fit.pipeline.predict_proba(
-                features.iloc[score_index][feature_names]
+                feature_frame.iloc[score_index][feature_names]
             )[:, 1]
         selected_oof[score_index] = out_of_fold[chosen][score_index]
         if has_clinical_features:
             baseline = _fit_converged(
                 _pipeline("logistic_regression", demographic_columns, random_state),
-                features.iloc[fit_index][demographic_columns],
+                feature_frame.iloc[fit_index][demographic_columns],
                 y[fit_index],
             )
             out_of_fold[DEMOGRAPHICS_MODEL][score_index] = baseline.predict_proba(
-                features.iloc[score_index][demographic_columns]
+                feature_frame.iloc[score_index][demographic_columns]
             )[:, 1]
         fold_records.append(
             {"selected": chosen, "families": {name: _fit_record(fit) for name, fit in fits.items()}}
@@ -1399,7 +1449,7 @@ def train_patient_finding_models(
         name: _tune_family(
             name,
             feature_names,
-            features.reset_index(drop=True),
+            feature_frame.reset_index(drop=True),
             y,
             group_series.reset_index(drop=True),
             random_state,
@@ -1408,12 +1458,14 @@ def train_patient_finding_models(
         for name in families
     }
     selected_model = select_family(final_fits) if nested_selection else "logistic_regression"
-    if selected_model not in SCORER_FAMILIES:
-        raise FeatureValidationError(
-            f"selected family {selected_model} has no portable JSON scorer; "
-            "export support must be added before it can be deployed"
-        )
-    scorer = _portable_scorer(final_fits[selected_model].pipeline, feature_names, features)
+    scorer: LogisticScorer | None = None
+    if export_scorer:
+        if selected_model not in SCORER_FAMILIES:
+            raise FeatureValidationError(
+                f"selected family {selected_model} has no portable JSON scorer; "
+                "export support must be added before it can be deployed"
+            )
+        scorer = _portable_scorer(final_fits[selected_model].pipeline, feature_names, feature_frame)
 
     # Headline scores: the selected family, tuned inside each outer fold. The
     # nested_selection row (family re-chosen inside each outer fold) is the
@@ -1507,7 +1559,7 @@ def train_patient_finding_models(
             random_state=random_state,
         ),
         subgroups=_subgroups(
-            features,
+            feature_frame,
             y,
             logistic,
             np.asarray(operating.selected, dtype=bool),

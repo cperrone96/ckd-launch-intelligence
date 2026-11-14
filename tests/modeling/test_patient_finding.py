@@ -118,6 +118,11 @@ def test_official_model_artifact_is_aggregate_checksummed_and_nonclinical() -> N
     assert "respondent_id" not in payload
 
 
+def _exported_scorer(comparison: Any) -> LogisticScorer:
+    assert comparison.scorer is not None
+    return cast(LogisticScorer, comparison.scorer)
+
+
 def _modeling_cohort() -> tuple[pd.DataFrame, pd.Series]:
     """Create a deterministic cohort with nontrivial signal and clustered groups."""
 
@@ -339,7 +344,7 @@ def test_nested_selection_reports_the_procedure_and_exports_the_selected_glm(
         key.startswith(f"{comparison.selected_model}_minus_")
         for key in comparison.paired_differences
     )
-    assert comparison.scorer.feature_order == comparison.features
+    assert _exported_scorer(comparison).feature_order == comparison.features
 
 
 def test_selecting_a_family_without_a_portable_scorer_fails_closed(
@@ -499,7 +504,7 @@ def test_scoring_artifact_rejects_incomplete_out_of_range_and_extra_input() -> N
     comparison = train_patient_finding_models(
         cohort, groups, capacity=0.15, bootstrap_replicates=20
     )
-    scorer = comparison.scorer
+    scorer = _exported_scorer(comparison)
 
     probability = scorer.score_one({"age_years": 67, "sex": "Female", "race_ethnicity": "Group B"})
 
@@ -532,7 +537,7 @@ def test_portable_json_scorer_reproduces_the_full_cohort_logistic_fit() -> None:
     )
 
     probabilities = [
-        comparison.scorer.score_one(
+        _exported_scorer(comparison).score_one(
             {
                 "age_years": row.age_years,
                 "sex": row.sex,
@@ -566,17 +571,18 @@ def test_clinical_predictors_add_a_demographics_only_comparator_on_the_same_fold
     ]
     assert gain.estimate > 0
     assert gain.comparison == "logistic_regression minus logistic_demographics_only"
-    assert comparison.scorer.feature_order == comparison.features
+    assert _exported_scorer(comparison).feature_order == comparison.features
 
 
 def test_portable_scorer_round_trip_is_validated_and_numerically_stable() -> None:
     cohort, groups = _modeling_cohort()
     comparison = train_patient_finding_models(cohort, groups, bootstrap_replicates=20)
-    payload = json.loads(json.dumps(comparison.scorer.as_dict(), allow_nan=False))
+    payload = json.loads(json.dumps(_exported_scorer(comparison).as_dict(), allow_nan=False))
     reloaded = LogisticScorer.from_dict(payload)
     row = {"age_years": 67, "sex": "Female", "race_ethnicity": "Group B"}
 
-    assert reloaded.score_one(row) == pytest.approx(comparison.scorer.score_one(row), abs=1e-15)
+    expected = _exported_scorer(comparison).score_one(row)
+    assert reloaded.score_one(row) == pytest.approx(expected, abs=1e-15)
     assert payload["artifact_version"] == "1.0.0"
     assert payload["missing_value_policy"] == "reject"
     assert payload["unknown_category_policy"] == "reject"
@@ -672,3 +678,61 @@ def test_model_artifact_uses_strict_json_without_nan_tokens() -> None:
 
     assert "NaN" not in payload
     assert "Infinity" not in payload
+
+
+@pytest.mark.parametrize(
+    "column", ["rxdrsc1", "medication_reason_code", "lbxsua_uric_acid", "biopro_glucose"]
+)
+def test_reason_codes_and_kidney_panel_analytes_are_rejected(column: str) -> None:
+    frame = pd.DataFrame({column: ["x"], "age_years": [50]})
+
+    with pytest.raises(LeakageError):
+        build_pre_lab_features(frame, requested=[column])
+
+
+def test_default_features_ignore_extra_allowed_columns() -> None:
+    frame = pd.DataFrame(
+        {
+            "age_years": [45],
+            "sex": ["Female"],
+            "race_ethnicity": ["Group A"],
+            "hba1c_percent": [6.1],
+        }
+    )
+
+    assert list(build_pre_lab_features(frame).columns) == ["age_years", "sex", "race_ethnicity"]
+    assert list(
+        build_pre_lab_features(frame, requested=["age_years", "hba1c_percent"]).columns
+    ) == ["age_years", "hba1c_percent"]
+
+
+def test_out_of_range_lab_value_is_rejected() -> None:
+    cohort, groups = _modeling_cohort()
+    cohort["hba1c_percent"] = 5.5 + (cohort["age_years"] % 7) * 0.3
+    cohort.loc[0, "hba1c_percent"] = 25.0
+
+    with pytest.raises(FeatureValidationError, match="between 3 and 20"):
+        train_patient_finding_models(
+            cohort,
+            groups,
+            bootstrap_replicates=20,
+            features=[*DEMOGRAPHIC_FEATURES, "hba1c_percent"],
+        )
+
+
+def test_scorer_export_can_be_skipped_when_a_tree_family_is_selected(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from ckd_intelligence.modeling import patient_finding
+
+    _small_grids(monkeypatch)
+    monkeypatch.setattr(patient_finding, "select_family", lambda fits: "gradient_boosting")
+    cohort, groups = _modeling_cohort()
+
+    comparison = train_patient_finding_models(
+        cohort, groups, bootstrap_replicates=20, nested_selection=True, export_scorer=False
+    )
+
+    assert comparison.selected_model == "gradient_boosting"
+    assert comparison.scorer is None
+    assert comparison.to_artifact()["scorer"] is None
