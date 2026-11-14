@@ -1,5 +1,23 @@
 # Release notes
 
+## Unreleased — predictor ablation (2026-11-14)
+
+### Added
+
+- **Predictor ablation.** `python -m ckd_intelligence.analysis.predictor_ablation`
+  writes `data/processed/patient_finding_predictor_ablation.json`. Four feature sets
+  run through the deployed model's nested grouped CV on one shared cohort of 4,321
+  adults. Twenty more survey, exam and prescription predictors add +0.008 ROC-AUC
+  (paired 95% CI +0.003 to +0.013). HbA1c with hemoglobin adds +0.012 (+0.007 to
+  +0.017). All 22 together add +0.020 (+0.014 to +0.026), reaching 0.791 (0.780–0.802).
+- **Five more NHANES files** (`GHB_J`, `CBC_J`, `MCQ_J`, `HUQ_J`, `RXQ_RX_J`) under
+  their own checksum manifest. Prescription reason codes are never read.
+
+### Unchanged
+
+- The deployed model, its scorer and `patient_finding_model_comparison.json` rebuild
+  byte for byte.
+
 ## 0.2.0 — 2026-10-23
 
 ### Changed results

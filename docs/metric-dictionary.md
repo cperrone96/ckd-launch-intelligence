@@ -43,6 +43,23 @@ Metrics are unweighted analytic-cohort performance, not population performance.
 See the [model card](models/patient-finding-model-card.md) for calibration,
 subgroups and definitions.
 
+## Patient finding predictor ablation
+
+Four feature sets scored by the same nested grouped CV and selection rule as the
+deployed model, on one complete-case cohort of 4,321 adults aged 20+ (indicator
+prevalence 18.2%). Each richer set is compared with the current eight predictors on
+the same 1,000 cluster-bootstrap replicates.
+
+- Current eight predictors: ROC-AUC 0.771 (95% CI 0.758–0.784) on this cohort.
+- Plus 20 survey, exam and prescription predictors: 0.780; gain +0.008 (+0.003 to +0.013).
+- Plus HbA1c and hemoglobin: 0.783; gain +0.012 (+0.007 to +0.017).
+- Plus all 22: 0.791 (0.780–0.802); gain +0.020 (+0.014 to +0.026).
+- Target coverage: 443 of 788 indicator-positive adults (56%) have albuminuria
+  without low eGFR.
+
+Exploratory only; no scorer is exported. Source:
+`data/processed/patient_finding_predictor_ablation.json`.
+
 ## Care and prescribing context
 
 MEPS reports a diabetes-care proxy domain, not confirmed CKD. The Diabetes Care
