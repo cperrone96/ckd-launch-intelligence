@@ -71,3 +71,23 @@ digests in `data/manifests/nhanes-2017-2018-patient-need.json`: `DEMO_J`,
 with `python scripts/retrieve_surveys.py`; `ckd_intelligence.cohorts.nhanes_2017_2018`
 joins them one-to-one on `SEQN`.
 
+
+## Predictor-ablation snapshot
+
+The predictor-ablation analysis reads five more 2017-2018 files listed with SHA-256
+digests in `data/manifests/nhanes-2017-2018-predictor-ablation.json`: `GHB_J`
+(HbA1c), `CBC_J` (hemoglobin), `MCQ_J` (medical conditions), `HUQ_J` (health-care
+use) and `RXQ_RX_J` (prescription medications). It also reads income-to-poverty
+ratio and education from `DEMO_J`, waist circumference from `BMX_J` and diastolic
+readings from `BPX_J`. `scripts/retrieve_surveys.py` downloads both manifests;
+`ckd_intelligence.cohorts.nhanes_2017_2018_ablation` derives the predictors. The
+deployed patient-finding model does not use any of them.
+
+Refused and don't-know answers to clinical questions stay missing, as in the base
+loader; people missing any ablation predictor leave the ablation cohort and are
+counted in its attrition. Income and education nonresponse is its own
+"Not reported" level. Diastolic pressure is the mean of readings above zero, because
+NHANES records an inaudible diastolic as 0.
+
+Prescription reason codes (`RXDRSC1`-`RXDRSC3`) are never read. Some name a kidney
+diagnosis, which would leak the outcome; medication classes come from drug names only.

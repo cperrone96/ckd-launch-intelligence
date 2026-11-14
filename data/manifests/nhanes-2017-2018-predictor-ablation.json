@@ -1,0 +1,22 @@
+{
+  "retrieved_at": "2026-11-14",
+  "source": "CDC/NCHS NHANES",
+  "release": "2017-2018",
+  "purpose": "Extra predictors for the patient-finding ablation analysis only; the deployed model does not use them.",
+  "variable_documentation": {
+    "glycohemoglobin": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/GHB_J.htm",
+    "complete_blood_count": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/CBC_J.htm",
+    "medical_conditions": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/MCQ_J.htm",
+    "hospital_utilization": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HUQ_J.htm",
+    "prescription_medications": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/RXQ_RX_J.htm"
+  },
+  "files": [
+    {"name": "GHB_J.xpt", "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/GHB_J.xpt", "sha256": "35f07094573a0061a03ed609a5a363b34eb1b1c7065d1623b43d72e132a8a654", "bytes": 103520},
+    {"name": "CBC_J.xpt", "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/CBC_J.xpt", "sha256": "00f964098dc91272e415344554cbf1b627ecaeb2eda201518527446a7d81e742", "bytes": 1476320},
+    {"name": "MCQ_J.xpt", "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/MCQ_J.xpt", "sha256": "79c50c805a377fcd61d44fae8b86a16af0a5741f8b1aeebda918d7d743c68f98", "bytes": 5420800},
+    {"name": "HUQ_J.xpt", "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/HUQ_J.xpt", "sha256": "0d8814ca6a72c003eb89885a3a24dcff3b475dfed454089cf4890f9ab9da06d2", "bytes": 742480},
+    {"name": "RXQ_RX_J.xpt", "url": "https://wwwn.cdc.gov/Nchs/Data/Nhanes/Public/2017/DataFiles/RXQ_RX_J.xpt", "sha256": "6196e6753f9bf23b47456f4fcc2d32de05f89388b512594d02b0735949165545", "bytes": 9627680}
+  ],
+  "cache_policy": "Raw XPT files are gitignored and never downloaded during CI. Reruns use exact HTTPS URLs and must verify these checksums before analysis.",
+  "join_policy": "Each file is left-joined to DEMO_J on SEQN only, within this survey cycle; prescription reason codes (RXDRSC1-3) are never read."
+}

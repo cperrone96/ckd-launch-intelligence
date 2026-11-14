@@ -1,5 +1,8 @@
 """Download the NHANES 2017-2018 and MEPS HC-243 public-use files and verify checksums.
 
+NHANES files come from two manifests: the patient-need files and the five extra
+files used only by the predictor-ablation analysis.
+
 Files land under the gitignored ``data/raw`` directory. Each file is checked against
 the SHA-256 recorded in the committed manifest; a mismatch aborts without
 overwriting a verified file. Files already present and verified are skipped.
@@ -21,6 +24,7 @@ from urllib.request import Request, urlopen
 ROOT = Path(__file__).resolve().parents[1]
 NHANES_MANIFEST = ROOT / "data/manifests/nhanes-2017-2018-patient-need.json"
 NHANES_DIR = ROOT / "data/raw/nhanes/2017-2018"
+NHANES_ABLATION_MANIFEST = ROOT / "data/manifests/nhanes-2017-2018-predictor-ablation.json"
 MEPS_MANIFEST = ROOT / "data/manifests/meps_hc243_2022_landscape.json"
 MEPS_PATH = ROOT / "data/raw/meps/HC-243-2022/h243dat.zip"
 
@@ -62,10 +66,11 @@ def fetch_verified(url: str, destination: Path, expected_sha256: str) -> str:
 
 
 def main() -> int:
-    nhanes = json.loads(NHANES_MANIFEST.read_text(encoding="utf-8"))
-    for item in nhanes["files"]:
-        status = fetch_verified(item["url"], NHANES_DIR / item["name"], item["sha256"])
-        print(f"NHANES {item['name']}: {status}")
+    for manifest_path in (NHANES_MANIFEST, NHANES_ABLATION_MANIFEST):
+        nhanes = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for item in nhanes["files"]:
+            status = fetch_verified(item["url"], NHANES_DIR / item["name"], item["sha256"])
+            print(f"NHANES {item['name']}: {status}")
     meps = json.loads(MEPS_MANIFEST.read_text(encoding="utf-8"))
     status = fetch_verified(meps["source_url"], MEPS_PATH, meps["source_sha256"])
     print(f"MEPS {MEPS_PATH.name}: {status}")
